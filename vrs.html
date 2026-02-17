@@ -417,6 +417,48 @@
         Everything runs locally in the browser.
       </div>
     </div>
+
+    <!-- ✅ ADIÇÃO: Region-grouped table (English) -->
+    <div class="card">
+      <div class="small" style="margin-bottom:10px;">
+        VRS Rating — Region Ranking<br/>
+        02/17/2026
+      </div>
+
+      <div class="row" style="margin-bottom:12px;">
+        <div>
+          <label>Select Region</label>
+          <select id="regionRankingSelect" disabled>
+            <option value="">—</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="overflow:auto; max-height: 70vh;">
+        <table>
+          <thead>
+            <tr>
+              <th class="right">Position</th>
+              <th>Team</th>
+              <th class="right">Points</th>
+              <th class="right">Points Diff</th>
+              <th>Region</th>
+              <th>Tier</th>
+              <th class="right">Indicator</th>
+              <th class="right small">Old → New</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyRegion">
+            <tr><td colspan="8" class="small">No data yet. Load the files and click “Compare”.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        This table ranks teams within the selected region and computes movement (Old → New) within that region.
+      </div>
+    </div>
+    <!-- ✅ FIM ADIÇÃO -->
   </div>
 
   <script>
@@ -687,6 +729,163 @@
       $("#btnClearFilters").disabled = !enabled;
     }
 
+    /* ✅ ADIÇÃO: Region Ranking state + helpers */
+    let lastRegionCombined = null;
+
+    function updateRegionRankingSelectOptions(combined){
+      const select = $("#regionRankingSelect");
+      const current = select.value;
+
+      const regions = new Set();
+      for (const r of combined){ if (r.region) regions.add(r.region); }
+
+      const preferredOrder = ["AM","EU","AS/SIS/ESEA"];
+      const list = Array.from(regions).sort((a,b) => {
+        const ia = preferredOrder.indexOf(a);
+        const ib = preferredOrder.indexOf(b);
+        if (ia !== -1 || ib !== -1){
+          return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        }
+        return a.localeCompare(b, "pt-BR");
+      });
+
+      select.innerHTML = list.length
+        ? list.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(regionLabel(v))}</option>`).join("")
+        : `<option value="">—</option>`;
+
+      if (list.includes(current)) select.value = current;
+      else select.value = list[0] || "";
+    }
+
+    function computeRegionCombined(regionValue){
+      if (!oldRowsCache || !newRowsCache) return [];
+
+      const oldRegionRows = oldRowsCache.filter(r => {
+        const keys = Object.keys(r || {});
+        if (!keys.length) return false;
+        // reuse existing parsing by buildingRanking on full; here we need region column quickly:
+        // safest: buildRanking expects sheet-to-json rows; we filter by reading region field using header map
+        return true;
+      });
+
+      // Build header maps once for accurate region filtering with same column aliases
+      const oldHeaderMap = buildHeaderMap(oldRowsCache || []);
+      const newHeaderMap = buildHeaderMap(newRowsCache || []);
+
+      const oldFiltered = (oldRowsCache || []).filter(rr => {
+        const reg = String(getColumn(rr, oldHeaderMap, "region") ?? "").trim();
+        return reg === regionValue;
+      });
+      const newFiltered = (newRowsCache || []).filter(rr => {
+        const reg = String(getColumn(rr, newHeaderMap, "region") ?? "").trim();
+        return reg === regionValue;
+      });
+
+      const oldTeamsR = buildRanking(oldFiltered);
+      const newTeamsR = buildRanking(newFiltered);
+
+      const oldPosMapR = mapPositions(oldTeamsR);
+      const oldPointsMapR = mapPoints(oldTeamsR);
+
+      const combinedR = newTeamsR.map(t => {
+        const key = t.team.toLowerCase();
+        const oldPos = oldPosMapR.get(key);
+        const oldPts = oldPointsMapR.get(key);
+
+        let posDelta = { text: "NEW", cls: "new" };
+        if (oldPos){
+          posDelta = computeDelta(oldPos, t.pos);
+        }
+
+        let ptsDelta = { text: "NEW", cls: "new" };
+        if (oldPts !== undefined){
+          ptsDelta = computePointsDiff(oldPts, t.points);
+        }
+
+        return {
+          team: t.team,
+          points: t.points,
+          region: t.region,
+          tier: t.tier,
+          oldPos: oldPos ?? null,
+          newPos: t.pos,
+          deltaText: oldPos ? posDelta.text : "NEW",
+          deltaCls: oldPos ? posDelta.cls : "new",
+          pointsDiffText: (oldPts !== undefined) ? ptsDelta.text : "NEW",
+          pointsDiffCls: (oldPts !== undefined) ? ptsDelta.cls : "new"
+        };
+      });
+
+      return combinedR;
+    }
+
+    function renderRegionTable(regionCombined){
+      const tbody = $("#tbodyRegion");
+
+      if (!regionCombined || !regionCombined.length){
+        tbody.innerHTML = `<tr><td colspan="8" class="small">No results for the selected region.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = regionCombined.map(r => {
+        const oldToNew = (r.oldPos ? r.oldPos : "—") + " → " + r.newPos;
+
+        const deltaCell = r.deltaText === "NEW"
+          ? `<span class="delta new">NEW</span>`
+          : `<span class="delta ${r.deltaCls}">${r.deltaText}</span>`;
+
+        const diffCell = r.pointsDiffText === "NEW"
+          ? `<span class="delta new">NEW</span>`
+          : `<span class="delta ${r.pointsDiffCls}">${r.pointsDiffText}</span>`;
+
+        let rowClass = "";
+        if (r.newPos === 1) rowClass = "top1 wave";
+        else if (r.newPos === 2) rowClass = "top2 wave";
+        else if (r.newPos === 3) rowClass = "top3 wave";
+        else if (r.newPos >= 4 && r.newPos <= 10) rowClass = "top4to10 wave";
+
+        let nameClass = "";
+        if (r.newPos === 1) nameClass = "name-top1";
+        else if (r.newPos === 2) nameClass = "name-top2";
+        else if (r.newPos === 3) nameClass = "name-top3";
+        else if (r.newPos >= 4 && r.newPos <= 10) nameClass = "name-top4to10";
+
+        const teamHtml = nameClass
+          ? `<span class="teamName ${nameClass}">${escapeHtml(r.team)}</span>`
+          : `${escapeHtml(r.team)}`;
+
+        return `
+          <tr class="${rowClass}">
+            <td class="right mono">${r.newPos}</td>
+            <td>${teamHtml}</td>
+            <td class="right mono">${r.points}</td>
+            <td class="right mono">${diffCell}</td>
+            <td>${escapeHtml(regionLabel(r.region))}</td>
+            <td>${escapeHtml(r.tier || "")}</td>
+            <td class="right">${deltaCell}</td>
+            <td class="right mono small">${oldToNew}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function enableRegionRanking(enabled){
+      $("#regionRankingSelect").disabled = !enabled;
+    }
+
+    function recomputeRegionRanking(){
+      const regionValue = $("#regionRankingSelect").value;
+      if (!regionValue){
+        $("#tbodyRegion").innerHTML = `<tr><td colspan="8" class="small">Select a region to display the ranking.</td></tr>`;
+        lastRegionCombined = null;
+        return;
+      }
+      const combinedR = computeRegionCombined(regionValue);
+      lastRegionCombined = combinedR;
+      renderRegionTable(combinedR);
+    }
+    /* ✅ FIM ADIÇÃO */
+
     function recomputeAndRender(){
       if (!oldRowsCache || !newRowsCache){
         $("#status").textContent = "Ainda não foi possível carregar os dois arquivos (old e new).";
@@ -749,6 +948,12 @@
       renderTable(combined);
       $("#btnDownloadCsv").disabled = false;
 
+      /* ✅ ADIÇÃO: initialize/update Region Ranking table */
+      updateRegionRankingSelectOptions(combined);
+      enableRegionRanking(true);
+      recomputeRegionRanking();
+      /* ✅ FIM ADIÇÃO */
+
       $("#status").textContent = "Ranking generated.";
     }
 
@@ -800,6 +1005,12 @@
 
     enableFilters(false);
 
+    /* ✅ ADIÇÃO: region select handler */
+    $("#regionRankingSelect").addEventListener("change", () => {
+      recomputeRegionRanking();
+    });
+    /* ✅ FIM ADIÇÃO */
+
     (async () => {
       try{
         $("#status").textContent = "Carregando Old e New automaticamente…";
@@ -833,4 +1044,3 @@
   </script>
 </body>
 </html>
-``
