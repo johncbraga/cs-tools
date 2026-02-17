@@ -38,8 +38,6 @@
       margin:0;
       font-family: var(--sans);
       color: var(--text);
-
-      /* smoother, less “banding” background */
       background:
         radial-gradient(900px 600px at 15% 10%, rgba(124,92,255,.24), transparent 62%),
         radial-gradient(800px 520px at 85% 25%, rgba(35,213,171,.18), transparent 58%),
@@ -178,6 +176,7 @@
       gap: 8px;
       user-select:none;
       background: rgba(255,255,255,.05);
+      white-space: nowrap;
     }
     .btn:hover{ background: rgba(255,255,255,.08); }
 
@@ -192,7 +191,7 @@
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      min-width: 920px;
+      min-width: 980px;
     }
     thead th{
       text-align:left;
@@ -278,11 +277,6 @@
       display:none;
     }
 
-    .small{
-      font-size: 12px;
-      color: rgba(255,255,255,.80);
-    }
-
     .chartCard{
       background: var(--card2);
       border: 1px solid rgba(255,255,255,.08);
@@ -337,7 +331,6 @@
       height: 100% !important;
     }
 
-    /* Last 5 matches list */
     .last5{
       display:flex;
       flex-direction:column;
@@ -413,7 +406,7 @@
 
     <div class="top-actions">
       <button id="updateBtn" class="btn btn-primary" type="button" title="Force reload the Excel file">Update</button>
-      <a href="index.html" class="btn" title="Back to the main menu">Back to Menu</a>
+      <a class="btn" href="index.html" title="Go back to the main menu">Back to Menu</a>
     </div>
   </header>
 
@@ -504,13 +497,6 @@
                   <span class="badge neutral">Select a team</span>
                   <span class="matchVs">to display matches</span>
                 </div>
-                <div class="matchLine2">
-                  <span class="badge neutral">—</span>
-                  <span class="badge neutral">—</span>
-                </div>
-              </div>
-              <div class="matchRight">
-                <span class="badge neutral">—</span>
               </div>
             </div>
           </div>
@@ -542,13 +528,14 @@
       </div>
     </section>
 
+    <!-- MATCH TABLE (UPDATED: Opponent filter + Result Win/Lose relative to searched team) -->
     <section class="panel">
       <div class="panel-head">
         <h2>Matches</h2>
         <div class="filters">
           <div class="field">
-            <label for="searchInput">Search</label>
-            <input id="searchInput" type="text" placeholder="Team name…" autocomplete="off" />
+            <label for="searchInput">Search team</label>
+            <input id="searchInput" type="text" placeholder="Type a team name…" autocomplete="off" />
           </div>
 
           <div class="field">
@@ -558,12 +545,11 @@
             </select>
           </div>
 
+          <!-- NEW FILTER: Opponent -->
           <div class="field">
-            <label for="winnerSelect">Winner side</label>
-            <select id="winnerSelect">
-              <option value="">Any</option>
-              <option value="Team 1">Team 1</option>
-              <option value="Team 2">Team 2</option>
+            <label for="opponentSelect">Opponent</label>
+            <select id="opponentSelect" disabled>
+              <option value="">All opponents</option>
             </select>
           </div>
 
@@ -579,8 +565,8 @@
               <th>Team 1</th>
               <th>Team 2</th>
               <th>Map</th>
-              <th>Result</th>
-              <th>Winner</th>
+              <th>Score</th>
+              <th>Result</th> <!-- renamed from Winner -->
             </tr>
           </thead>
           <tbody id="matchesTbody">
@@ -592,7 +578,7 @@
       </div>
 
       <div class="hint">
-        Tip: Press <kbd>0</kbd> to go back (works only when you are not typing in a field).
+        Result is shown as <b>Win/Lose</b> from the perspective of the searched team.
       </div>
     </section>
 
@@ -602,8 +588,8 @@
   </main>
 
   <script>
-    // Uses file/history.xlsx (exists as history.xlsx in your files). 
-    // Last 5 matches section aligns with your requirements list. 
+    // Excel file: [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5) (used at file/history.xlsx). [2](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
+    // Opponent filter requirement is explicitly described in [to-do-games.txt](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1&EntityRepresentationId=ef1630bf-291b-4bdd-8538-b6e3c6b4f612). [1](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1)
 
     const EXCEL_PATH = "file/history.xlsx";
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
@@ -616,10 +602,12 @@
       team2Wins: document.getElementById("team2Wins"),
       topMap: document.getElementById("topMap"),
       tbody: document.getElementById("matchesTbody"),
+
       search: document.getElementById("searchInput"),
       mapSelect: document.getElementById("mapSelect"),
-      winnerSelect: document.getElementById("winnerSelect"),
+      opponentSelect: document.getElementById("opponentSelect"),
       clearBtn: document.getElementById("clearBtn"),
+
       sourceInfo: document.getElementById("sourceInfo"),
       errorBox: document.getElementById("errorBox"),
       updateBtn: document.getElementById("updateBtn"),
@@ -647,14 +635,18 @@
     let wlChart = null;
     let mapPlayChart = null;
 
+    // Cached team lookup for exact match
+    let teamLowerToCanonical = new Map();
+    let canonicalTeams = [];
+
     init();
 
     async function init(){
       els.sourceInfo.textContent = `Source: ${EXCEL_PATH}`;
       setupShortcutBack();
-      setupFilters();
       setupUpdateButton();
       setupTeamControls();
+      setupMatchTableControls();
       buildCharts();
       await reloadExcel(true);
     }
@@ -670,12 +662,18 @@
 
         allMatches = await loadExcelMatches(EXCEL_PATH, force);
 
+        rebuildTeamLookup(allMatches);
         populateMapOptions(allMatches);
         populateTeamOptions(allMatches);
 
+        // Update opponent list based on current "focus team"
+        refreshOpponentOptions();
+
+        // Render table + dashboard
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
 
+        // Update team areas (charts/last5/overview)
         reconcileTeamSelectionsAfterReload();
         updateTeamSections();
 
@@ -733,35 +731,123 @@
       });
     }
 
-    /* ----------- Match table filters ----------- */
-    function setupFilters(){
-      const onChange = () => {
+    /* ----------------------------
+       TEAM LOOKUP (exact match)
+    -----------------------------*/
+    function rebuildTeamLookup(matches){
+      const teams = new Set();
+      for (const m of matches){ teams.add(m.team1); teams.add(m.team2); }
+      canonicalTeams = [...teams].sort((a,b)=>a.localeCompare(b));
+      teamLowerToCanonical = new Map();
+      for (const t of canonicalTeams) teamLowerToCanonical.set(t.toLowerCase(), t);
+    }
+
+    function resolveCanonicalTeam(userText){
+      const key = (userText || "").trim().toLowerCase();
+      if (!key) return null;
+      return teamLowerToCanonical.get(key) || null;
+    }
+
+    /* ----------------------------
+       MATCH TABLE CONTROLS (UPDATED)
+    -----------------------------*/
+    function setupMatchTableControls(){
+      const onAnyChange = () => {
+        refreshOpponentOptions();          // keep opponent list aligned to focus team
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
       };
-      els.search.addEventListener("input", onChange);
-      els.mapSelect.addEventListener("change", onChange);
-      els.winnerSelect.addEventListener("change", onChange);
+
+      els.search.addEventListener("input", onAnyChange);
+      els.mapSelect.addEventListener("change", onAnyChange);
+      els.opponentSelect.addEventListener("change", () => {
+        applyMatchFilters();
+        renderStats(getFilteredMatchesFromControls());
+      });
 
       els.clearBtn.addEventListener("click", () => {
         els.search.value = "";
         els.mapSelect.value = "";
-        els.winnerSelect.value = "";
+        els.opponentSelect.value = "";
+        els.opponentSelect.disabled = true;
+        els.opponentSelect.innerHTML = `<option value="">All opponents</option>`;
         render(allMatches);
         renderStats(allMatches);
       });
     }
 
+    // Focus team for "Result Win/Lose" and opponent list:
+    // - If search matches exactly a team name, use it.
+    // - Else if Team Performance dropdown is selected AND search is empty, use that.
+    function getFocusTeam(){
+      const exactFromSearch = resolveCanonicalTeam(els.search.value);
+      if (exactFromSearch) return exactFromSearch;
+
+      const searchEmpty = (els.search.value || "").trim() === "";
+      if (searchEmpty && els.teamSelect.value) return els.teamSelect.value;
+
+      return null;
+    }
+
+    function refreshOpponentOptions(){
+      const focus = getFocusTeam();
+      const prev = els.opponentSelect.value;
+
+      if (!focus){
+        els.opponentSelect.disabled = true;
+        els.opponentSelect.innerHTML = `<option value="">All opponents</option>`;
+        return;
+      }
+
+      const opponents = new Set();
+      for (const m of allMatches){
+        if (m.team1 === focus) opponents.add(m.team2);
+        else if (m.team2 === focus) opponents.add(m.team1);
+      }
+      const sortedOpp = [...opponents].sort((a,b)=>a.localeCompare(b));
+
+      els.opponentSelect.disabled = false;
+      els.opponentSelect.innerHTML = `<option value="">All opponents</option>`;
+      for (const o of sortedOpp){
+        const opt = document.createElement("option");
+        opt.value = o;
+        opt.textContent = o;
+        els.opponentSelect.appendChild(opt);
+      }
+
+      // keep previous selection if still valid
+      if (prev && sortedOpp.includes(prev)) els.opponentSelect.value = prev;
+      else els.opponentSelect.value = "";
+    }
+
     function getFilteredMatchesFromControls(){
       const q = (els.search.value || "").trim().toLowerCase();
       const map = els.mapSelect.value;
-      const winnerSide = els.winnerSelect.value;
+      const focus = getFocusTeam();
+      const opponent = els.opponentSelect.value;
 
       return allMatches.filter(m => {
-        const matchesQuery = !q || m.team1.toLowerCase().includes(q) || m.team2.toLowerCase().includes(q);
+        // search filter (substring)
+        const matchesQuery =
+          !q ||
+          m.team1.toLowerCase().includes(q) ||
+          m.team2.toLowerCase().includes(q);
+
+        if (!matchesQuery) return false;
+
+        // map filter
         const matchesMap = !map || m.map === map;
-        const matchesWinner = !winnerSide || m.winnerSide === winnerSide;
-        return matchesQuery && matchesMap && matchesWinner;
+        if (!matchesMap) return false;
+
+        // opponent filter depends on focus team
+        if (opponent && focus){
+          const isPair =
+            (m.team1 === focus && m.team2 === opponent) ||
+            (m.team2 === focus && m.team1 === opponent);
+          if (!isPair) return false;
+        }
+
+        return true;
       });
     }
 
@@ -769,27 +855,21 @@
       render(getFilteredMatchesFromControls());
     }
 
-    function populateMapOptions(matches){
-      while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
-      const maps = [...new Set(matches.map(m => m.map))].sort((a,b) => a.localeCompare(b));
-      for (const mp of maps){
-        const opt = document.createElement("option");
-        opt.value = mp;
-        opt.textContent = mp;
-        els.mapSelect.appendChild(opt);
-      }
-    }
-
     function render(matches){
+      const focus = getFocusTeam();
       els.tbody.innerHTML = "";
+
       if (!matches.length){
         els.tbody.innerHTML = `
           <tr><td colspan="6"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
         return;
       }
+
       matches.forEach((m, idx) => {
-        const winnerBadgeClass = m.winnerSide === "Team 1" ? "ok" : "danger";
-        const winnerText = `${m.winner} (${m.winnerSide})`;
+        // NEW: Result is Win/Lose from perspective of focus team (when available)
+        const rel = computeRelativeResult(m, focus);
+        const resultCell = formatRelativeResultBadge(rel);
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${idx + 1}</td>
@@ -797,10 +877,31 @@
           <td>${escapeHtml(m.team2)}</td>
           <td>${escapeHtml(m.map)}</td>
           <td><span class="badge neutral">${m.score1}x${m.score2}</span></td>
-          <td><span class="badge ${winnerBadgeClass}">${escapeHtml(winnerText)}</span></td>
+          <td>${resultCell}</td>
         `;
         els.tbody.appendChild(tr);
       });
+    }
+
+    function computeRelativeResult(match, focusTeam){
+      if (!focusTeam) return { status: "none" };
+
+      const as1 = match.team1 === focusTeam;
+      const as2 = match.team2 === focusTeam;
+      if (!as1 && !as2) return { status: "none" };
+
+      // Tie safety
+      if (match.winnerSide === "Tie") return { status: "tie" };
+
+      const win = (as1 && match.winnerSide === "Team 1") || (as2 && match.winnerSide === "Team 2");
+      return { status: win ? "win" : "lose" };
+    }
+
+    function formatRelativeResultBadge(rel){
+      if (rel.status === "win") return `<span class="badge ok">Win</span>`;
+      if (rel.status === "lose") return `<span class="badge danger">Lose</span>`;
+      if (rel.status === "tie") return `<span class="badge neutral">Tie</span>`;
+      return `<span class="badge neutral">—</span>`;
     }
 
     function renderStats(matches){
@@ -817,12 +918,27 @@
       els.topMap.textContent = topMap;
     }
 
-    /* ----------- Team controls + charts ----------- */
+    function populateMapOptions(matches){
+      while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
+      const maps = [...new Set(matches.map(m => m.map))].sort((a,b)=>a.localeCompare(b));
+      for (const mp of maps){
+        const opt = document.createElement("option");
+        opt.value = mp; opt.textContent = mp;
+        els.mapSelect.appendChild(opt);
+      }
+    }
+
+    /* ----------------------------
+       TEAM PERFORMANCE (unchanged)
+    -----------------------------*/
     function setupTeamControls(){
       els.teamSelect.addEventListener("change", () => {
         rebuildTeamMapOptions();
+        // if search is empty, this team becomes focus -> refresh opponents too
+        refreshOpponentOptions();
         updateTeamSections();
       });
+
       els.teamMapSelect.addEventListener("change", () => updateTeamSections());
     }
 
@@ -872,16 +988,9 @@
         els.teamMapSelect.appendChild(opt);
       }
       els.teamMapSelect.disabled = false;
-
-      // keep current selection if possible
-      const current = els.teamMapSelect.value;
-      if (![...els.teamMapSelect.options].some(o => o.value === current)) els.teamMapSelect.value = GENERAL_MAP_VALUE;
-    }
-
-    function updateTeamSections(){
-      updateWLChartAndBoxes();
-      updateLast5();         // ✅ now follows map filter
-      updateGeneralOverview();
+      if (![...els.teamMapSelect.options].some(o => o.value === els.teamMapSelect.value)){
+        els.teamMapSelect.value = GENERAL_MAP_VALUE;
+      }
     }
 
     function computeTeamStats(team, mapValue){
@@ -955,6 +1064,12 @@
       });
     }
 
+    function updateTeamSections(){
+      updateWLChartAndBoxes();
+      updateLast5();
+      updateGeneralOverview();
+    }
+
     function updateWLChartAndBoxes(){
       const team = els.teamSelect.value;
       const mapValue = els.teamMapSelect.value || GENERAL_MAP_VALUE;
@@ -973,19 +1088,15 @@
       els.winsBox.textContent = s.wins.toString();
       els.lossesBox.textContent = s.losses.toString();
       els.rateBox.textContent = (s.total > 0 ? `${s.rate.toFixed(1)}%` : "0%");
-
       wlChart.data.datasets[0].data = [s.wins, s.losses];
       wlChart.update();
     }
 
-    // ✅ UPDATED: last 5 now respects map filter from teamMapSelect
     function updateLast5(){
       const team = els.teamSelect.value;
       const mapValue = els.teamMapSelect.value || GENERAL_MAP_VALUE;
 
       els.last5List.innerHTML = "";
-
-      // scope label
       els.last5Scope.textContent =
         (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `Scope: ${mapValue}` : "Scope: General";
 
@@ -1002,7 +1113,7 @@
         return;
       }
 
-      const last = getLastMatches(team, 5, mapValue); // ✅ filter applied here
+      const last = getLastMatches(team, 5, mapValue);
 
       if (!last.length){
         const label = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `No matches found on ${escapeHtml(mapValue)}.` : "No matches found for this team.";
@@ -1044,11 +1155,10 @@
       }
     }
 
-    // ✅ UPDATED: accepts map filter
     function getLastMatches(team, n, mapValue){
       const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
-
       const out = [];
+
       for (let i = allMatches.length - 1; i >= 0 && out.length < n; i--){
         const m = allMatches[i];
         if (mapFilter && m.map !== mapFilter) continue;
@@ -1119,7 +1229,6 @@
       els.bestMapMeta.textContent = ` (${best[1].rate.toFixed(1)}% • ${best[1].wins}W-${best[1].losses}L • ${best[1].total})`;
       els.worstMapMeta.textContent = ` (${worst[1].rate.toFixed(1)}% • ${worst[1].wins}W-${worst[1].losses}L • ${worst[1].total})`;
 
-      // ascending by matches played
       const asc = entries.slice().sort((a,b) => (a[1].total - b[1].total) || a[0].localeCompare(b[0]));
       mapPlayChart.data.labels = asc.map(e => e[0]);
       mapPlayChart.data.datasets[0].data = asc.map(e => e[1].total);
@@ -1129,11 +1238,12 @@
         const s = byMap.get(map);
         return ` ${s.total} matches • ${s.wins}W-${s.losses}L • ${s.rate.toFixed(1)}% win rate`;
       };
-
       mapPlayChart.update();
     }
 
-    /* ----------- Excel loading ----------- */
+    /* ----------------------------
+       EXCEL LOADING
+    -----------------------------*/
     async function loadExcelMatches(path, forceReload){
       const url = forceReload ? `${path}?v=${Date.now()}` : path;
       const res = await fetch(url, { cache: "no-store" });
