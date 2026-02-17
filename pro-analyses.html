@@ -425,7 +425,6 @@
   </header>
 
   <main class="container">
-
     <!-- Dashboard -->
     <section class="panel">
       <div class="panel-head">
@@ -601,7 +600,6 @@
               <div class="metaBox"><span class="badge teamA" id="probTeamABadge">Team A</span>: <b id="probABox">—</b></div>
               <div class="metaBox"><span class="badge teamB" id="probTeamBBadge">Team B</span>: <b id="probBBox">—</b></div>
 
-              <!-- NEW: map win rates for both teams -->
               <div class="metaBox"><span class="badge teamA">A map win rate</span>: <b id="mapRateABox">—</b></div>
               <div class="metaBox"><span class="badge teamB">B map win rate</span>: <b id="mapRateBBox">—</b></div>
             </div>
@@ -705,6 +703,11 @@
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
     const GENERAL_MAP_VALUE = "__general__";
 
+    // ✅ ADDED: highlight colors for General Overview map labels
+    const MAP_LABEL_BEST_COLOR = "#ffcc66";  // yellow
+    const MAP_LABEL_WORST_COLOR = "#7c5cff"; // lilac
+    const MAP_LABEL_DEFAULT_COLOR = "rgba(255,255,255,0.80)";
+
     const els = {
       statusPill: document.getElementById("statusPill"),
       totalMatches: document.getElementById("totalMatches"),
@@ -760,7 +763,6 @@
       probTeamBBadge: document.getElementById("probTeamBBadge"),
       probDataHint: document.getElementById("probDataHint"),
 
-      // NEW: map win rate boxes
       mapRateABox: document.getElementById("mapRateABox"),
       mapRateBBox: document.getElementById("mapRateBBox"),
 
@@ -780,6 +782,10 @@
 
     let teamLowerToCanonical = new Map();
     let canonicalTeams = [];
+
+    // ✅ ADDED: sets used by the General Overview axis label color callback
+    let bestMapsSet = new Set();
+    let worstMapsSet = new Set();
 
     init();
 
@@ -883,20 +889,16 @@
       return teamLowerToCanonical.get(key) || null;
     }
 
-    /* ✅ CHANGED (minimal): resolve a unique team from Search input (exact OR unique substring) */
     function resolveFocusTeamFromSearch(){
       const q = (els.search.value || "").trim().toLowerCase();
       if (!q) return null;
 
-      // 1) exact match wins
       const exact = resolveCanonicalTeam(q);
       if (exact) return exact;
 
-      // 2) otherwise: if only ONE canonical team contains the query, use it
       const hits = canonicalTeams.filter(t => t.toLowerCase().includes(q));
       if (hits.length === 1) return hits[0];
 
-      // 3) ambiguous (0 or many) -> no single focus team
       return null;
     }
 
@@ -928,7 +930,6 @@
       });
     }
 
-    /* ✅ CHANGED (minimal): Matches focus team comes ONLY from Search team (no Team Performance fallback) */
     function getFocusTeam(){
       return resolveFocusTeamFromSearch();
     }
@@ -1259,8 +1260,13 @@
       return out;
     }
 
+    // ✅ CHANGED: highlight 2 best + 2 worst maps by coloring Y-axis labels
     function updateGeneralOverview(){
       const team = els.teamSelect.value;
+
+      // reset sets every update
+      bestMapsSet = new Set();
+      worstMapsSet = new Set();
 
       if (!team){
         els.bestMapBox.textContent = "—";
@@ -1269,6 +1275,8 @@
         els.worstMapMeta.textContent = "";
         mapPlayChart.data.labels = [];
         mapPlayChart.data.datasets[0].data = [];
+
+        // keep default tick colors
         mapPlayChart.update();
         return;
       }
@@ -1293,6 +1301,7 @@
       const entries = [...byMap.entries()];
       if (!entries.length) return;
 
+      // Best/Worst single (existing logic)
       const best = entries.slice().sort((a,b) => (b[1].rate - a[1].rate) || (b[1].total - a[1].total))[0];
       const worst = entries.slice().sort((a,b) => (a[1].rate - b[1].rate) || (b[1].total - a[1].total))[0];
 
@@ -1301,6 +1310,21 @@
       els.bestMapMeta.textContent = ` (${best[1].rate.toFixed(1)}% • ${best[1].wins}W-${best[1].losses}L • ${best[1].total})`;
       els.worstMapMeta.textContent = ` (${worst[1].rate.toFixed(1)}% • ${worst[1].wins}W-${worst[1].losses}L • ${worst[1].total})`;
 
+      // ✅ NEW: top 2 best & top 2 worst sets
+      const best2 = entries.slice()
+        .sort((a,b) => (b[1].rate - a[1].rate) || (b[1].total - a[1].total))
+        .slice(0, 2)
+        .map(e => e[0]);
+
+      const worst2 = entries.slice()
+        .sort((a,b) => (a[1].rate - b[1].rate) || (b[1].total - a[1].total))
+        .slice(0, 2)
+        .map(e => e[0]);
+
+      bestMapsSet = new Set(best2);
+      worstMapsSet = new Set(worst2);
+
+      // existing chart data (ascending by total)
       const asc = entries.slice().sort((a,b) => (a[1].total - b[1].total) || a[0].localeCompare(b[0]));
       mapPlayChart.data.labels = asc.map(e => e[0]);
       mapPlayChart.data.datasets[0].data = asc.map(e => e[1].total);
@@ -1310,12 +1334,13 @@
         const s = byMap.get(map);
         return ` ${s.total} matches • ${s.wins}W-${s.losses}L • ${s.rate.toFixed(1)}% win rate`;
       };
+
+      // ✅ Force update so the tick color callback uses updated sets
       mapPlayChart.update();
     }
 
     /* ----------------------------
-       COMPARISON
-       (unchanged)
+       COMPARISON (unchanged)
     -----------------------------*/
     function setupComparisonControls(){
       els.compareTeamA.addEventListener("change", () => {
@@ -1622,7 +1647,19 @@
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx)=>` ${ctx.raw} matches` } } },
           scales: {
             x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
-            y: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.00)" } }
+
+            // ✅ CHANGED: y-axis tick labels use a color callback to highlight best/worst maps
+            y: {
+              ticks: {
+                color: (ctx) => {
+                  const label = ctx && ctx.tick ? String(ctx.tick.label) : "";
+                  if (bestMapsSet && bestMapsSet.has(label)) return MAP_LABEL_BEST_COLOR;
+                  if (worstMapsSet && worstMapsSet.has(label)) return MAP_LABEL_WORST_COLOR;
+                  return MAP_LABEL_DEFAULT_COLOR;
+                }
+              },
+              grid: { color: "rgba(255,255,255,0.00)" }
+            }
           }
         }
       });
