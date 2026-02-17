@@ -406,6 +406,36 @@
       border-color: #38bdf8;
       background: rgba(2,6,23,0.78);
     }
+
+    /* =========================================
+       ✅ NOVO: Botão Back to Menu ao lado do Update
+       (visual igual ao botão Update)
+    ============================================ */
+    .btn-menu{
+      background: rgba(2,6,23,0.66);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+      min-height: 38px;
+      display:inline-flex;
+      align-items:center;
+      text-decoration:none;
+    }
+    .btn-menu:hover{
+      border-color: var(--border-strong);
+      background: rgba(2,6,23,0.72);
+    }
+    .btn-menu:focus{
+      outline: none;
+      box-shadow: var(--ring);
+      border-color: #38bdf8;
+      background: rgba(2,6,23,0.78);
+    }
   </style>
 </head>
 
@@ -419,13 +449,16 @@
       <div class="logo"></div>
       <div>
         <h1>Team's Ranking Dashboard</h1>
-        <div class="subtitle">Visual moderno • Filtros rápidos • Leituras claras</div>
+        <div class="subtitle">KZ Studio • by Kilzys • amateur project</div>
       </div>
     </div>
 
     <div class="hstack">
       <!-- Onde antes ficava o input file -->
       <button id="updateBtn" class="btn-update" type="button">Update</button>
+
+      <!-- ✅ NOVO: Back to Menu -->
+      <a class="btn-menu" href="index.html">Back to Menu</a>
     </div>
   </div>
 
@@ -479,7 +512,7 @@
 
       <div class="card-header" style="margin-top:14px">
         <h3>General Table</h3>
-        <div style="color:var(--muted);font-size:12px">ordenada pela métrica</div>
+        <div style="color:var(--muted);font-size:12px">ordr by metric</div>
       </div>
       <div class="table-container" id="dataTableWrap">
         <div class="state" id="dataTableState">Load an Excel file to see the data.</div>
@@ -528,16 +561,16 @@
       <div class="card-header">
         <h3>Team vs Team — Comparison</h3>
         <div class="hstack" style="gap:10px; margin-left:auto;">
-          <label for="teamCompareA" style="color:var(--muted);font-size:12px">Time A</label>
+          <label for="teamCompareA" style="color:var(--muted);font-size:12px">Team A</label>
           <select id="teamCompareA" style="min-width:200px"></select>
 
-          <label for="teamCompareB" style="color:var(--muted);font-size:12px">Time B</label>
+          <label for="teamCompareB" style="color:var(--muted);font-size:12px">Team B</label>
           <select id="teamCompareB" style="min-width:200px"></select>
         </div>
       </div>
 
       <div style="color:var(--muted);font-size:12px;margin:-6px 0 10px 0;">
-        Comparação normalizada (0–100) por métrica • Tooltip mostra o valor real
+        Comparison • Tooltip show the real value
       </div>
 
       <div id="teamCompareWrap">
@@ -628,7 +661,7 @@
        Footer
   ============================================ -->
   <div class="footer">
-    Feito com ❤️ para leitura rápida e clara. Dica: use a busca para filtrar por time imediatamente.
+    Made by Kilzys. Tip: use the filter option to help you out.
   </div>
 
   <!-- =========================================
@@ -1123,7 +1156,6 @@
       }
     }
 
-    // Estado helper
     function toggleState(chartId, ok){
       const stateId = chartId + 'State';
       const canvas = document.getElementById(chartId);
@@ -1138,7 +1170,6 @@
       if(canvas){ canvas.style.display = 'none'; }
     }
 
-    // Barras genérico
     function renderMetricBarChart(canvasId, labels, values, colors){
       const ctx = document.getElementById(canvasId).getContext('2d');
       if(canvasId === 'streakChart' && streakChart) { streakChart.destroy(); }
@@ -1173,7 +1204,6 @@
       if(canvasId === 'pointsChart') pointsChart = chart;
     }
 
-    // Linha genérico
     function renderLineComparison(canvasId, labels, values, colors){
       const ctx = document.getElementById(canvasId).getContext('2d');
       if(canvasId === 'comparisonChart' && comparisonChart) comparisonChart.destroy();
@@ -1215,7 +1245,6 @@
 
     /* ===========================
        Pizza por time
-       (com "Total de partidas" no canto superior direito)
     ============================ */
     function populateTeamPieSelect(){
       const select = document.getElementById('teamPieSelect');
@@ -1287,7 +1316,6 @@
 
       const total = victories + loses;
 
-      // Plugin para exibir o "Total de partidas" no canto superior direito do gráfico
       const totalBoxPlugin = {
         id: 'totalBox',
         afterDraw(chart) {
@@ -1302,14 +1330,13 @@
           ctx.font = '600 12px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
           const textMetrics = ctx.measureText(text);
           const textWidth = textMetrics.width;
-          const textHeight = 14; // aproximação
+          const textHeight = 14;
 
           const boxWidth = textWidth + paddingX * 2;
           const boxHeight = textHeight + paddingY * 2;
-          const x = chartArea.right - boxWidth - 8;  // margem interna
+          const x = chartArea.right - boxWidth - 8;
           const y = chartArea.top + 8;
 
-          // Caixa com estilo "glass"
           ctx.fillStyle = 'rgba(2,6,23,0.65)';
           ctx.strokeStyle = 'rgba(56,189,248,0.35)';
           ctx.lineWidth = 1;
@@ -1329,7 +1356,6 @@
           ctx.fill();
           ctx.stroke();
 
-          // Texto
           ctx.fillStyle = '#cbd5e1';
           ctx.fillText(text, x + paddingX, y + paddingY + textHeight - 3);
           ctx.restore();
@@ -1377,8 +1403,7 @@
     }
 
     /* ===========================
-       Team vs Team (Radar Normalizado)
-       Métricas: Victories, Loses, Streak, Points, Prestige
+       Team vs Team
     ============================ */
     function populateTeamCompareSelects(){
       const selA = document.getElementById('teamCompareA');
@@ -1400,7 +1425,7 @@
       const curA = selA.value;
       const curB = selB.value;
 
-      const desiredLen = teams.length + 1; // + placeholder
+      const desiredLen = teams.length + 1;
       if(selA.options.length !== desiredLen || selB.options.length !== desiredLen){
         const opts = `<option value="">Choose a team…</option>` +
           teams.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
@@ -1481,7 +1506,6 @@
       const rawA = metricIdxs.map(i => num(rowA[i]));
       const rawB = metricIdxs.map(i => num(rowB[i]));
 
-      // Normalização por métrica (0–100) usando min/max global
       const mins = metricIdxs.map(i => Math.min(...rows.map(r => num(r[i]))));
       const maxs = metricIdxs.map(i => Math.max(...rows.map(r => num(r[i]))));
 
@@ -1533,7 +1557,7 @@
               callbacks:{
                 label: (tt) => {
                   const idx = tt.dataIndex;
-                  const who = tt.datasetIndex; // 0=A, 1=B
+                  const who = tt.datasetIndex;
                   const raw = (who === 0 ? rawA[idx] : rawB[idx]);
                   const nm  = (who === 0 ? normA[idx] : normB[idx]);
                   return ` ${tt.dataset.label}: ${nm}% (valor real: ${raw})`;

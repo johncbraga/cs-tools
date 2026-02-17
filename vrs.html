@@ -355,24 +355,24 @@
         </div>
 
         <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-          <button id="btnCompare">Comparar</button>
+          <button id="btnCompare">Compare</button>
           <button class="secondary" id="btnUpdateOld">Update Old</button>
           <button class="secondary" id="btnUpdateNew">Update New</button>
-          <button class="secondary" id="btnDownloadCsv" disabled>Baixar CSV</button>
+          <button class="secondary" id="btnDownloadCsv" disabled>Download CSV</button>
         </div>
       </div>
 
       <div class="row" style="margin-top:12px;">
         <div>
-          <label>Filtrar por Região</label>
+          <label>Filter by Region</label>
           <select id="filterRegion" disabled>
-            <option value="">Todas</option>
+            <option value="">Global</option>
           </select>
         </div>
         <div>
-          <label>Filtrar por Tier</label>
+          <label>Filter by Tier</label>
           <select id="filterTier" disabled>
-            <option value="">Todos</option>
+            <option value="">All</option>
             <option value="Tier S">Tier S</option>
             <option value="Tier 1">Tier 1</option>
             <option value="Tier 2">Tier 2</option>
@@ -380,11 +380,11 @@
           </select>
         </div>
         <div style="margin-left:auto;">
-          <label>Filtrar por time (texto)</label>
+          <label>Filter by team (text)</label>
           <input id="filterText" type="text" placeholder="Digite parte do nome..." disabled />
         </div>
         <div style="display:flex; gap:10px; align-items:end;">
-          <button class="secondary" id="btnClearFilters" disabled>Limpar filtros</button>
+          <button class="secondary" id="btnClearFilters" disabled>Clear filters</button>
         </div>
       </div>
 
@@ -405,8 +405,8 @@
 
     <div class="card">
       <div class="small" style="margin-bottom:10px;">
-        By Kilzys<br/>
-        17/02/26
+        VRS Rating<br/>
+        02/17/2026
       </div>
 
       <div style="overflow:auto; max-height: 70vh;">
@@ -430,7 +430,7 @@
       </div>
 
       <div class="footer">
-        Tudo roda localmente no navegador.
+        Everything runs locally in the browser.
       </div>
     </div>
   </div>
@@ -774,7 +774,7 @@
       renderTable(combined);
       $("#btnDownloadCsv").disabled = false;
 
-      $("#status").textContent = "Ranking Gerado.";
+      $("#status").textContent = "Ranking generated.";
     }
 
     // ✅ botões
