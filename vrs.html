@@ -303,10 +303,36 @@
       tbody tr.wave::after{ animation: none !important; }
       .teamName{ animation: none !important; }
     }
+
+    /* ================================
+       ✅ NOVO: Back to Menu fixo no topo direito
+       ================================ */
+    .backToMenu{
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#0c1426;
+      color:var(--text);
+      font-weight:700;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .backToMenu:hover{ filter: brightness(1.08); }
+    .backToMenu:active{ transform: translateY(1px); }
   </style>
 </head>
 
 <body>
+  <!-- ✅ NOVO: botão no canto superior direito -->
+  <a class="backToMenu" href="index.html">← Back to Menu</a>
+
   <div class="grid">
     <div class="card">
       <h1>VRS Rating</h1>
@@ -379,7 +405,8 @@
 
     <div class="card">
       <div class="small" style="margin-bottom:10px;">
-        By Kilzys<br/>17/02/26
+        By Kilzys<br/>
+        17/02/26
       </div>
 
       <div style="overflow:auto; max-height: 70vh;">
