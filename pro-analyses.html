@@ -1,114 +1,654 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1220" />
-  <title>PRO Analyses</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pro Analyses</title>
+
+  <!-- SheetJS (XLSX reader) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     :root{
-      --bg1:#070a12; --bg2:#0b1220;
-      --text:#e5e7eb; --muted:#a7b0c0;
-      --stroke:#ffffff1a; --shadow: 0 20px 60px rgba(0,0,0,.45);
-      --radius: 18px; --ring: 0 0 0 4px rgba(34,197,94,.18);
+      --bg: #0b1020;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.65);
+      --accent: #7c5cff;
+      --accent2:#23d5ab;
+      --danger:#ff4d6d;
+      --ok:#2ee59d;
+
+      --radius: 16px;
+      --shadow: 0 14px 45px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
+
     *{ box-sizing:border-box; }
+    html,body{ height:100%; }
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color:var(--text);
+      font-family: var(--sans);
+      color: var(--text);
       background:
-        radial-gradient(900px 700px at 10% 15%, rgba(34,197,94,.28), transparent 60%),
-        radial-gradient(900px 700px at 90% 25%, rgba(168,85,247,.32), transparent 60%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
+        radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,.35), transparent 50%),
+        radial-gradient(900px 500px at 80% 20%, rgba(35,213,171,.25), transparent 45%),
+        radial-gradient(900px 700px at 40% 100%, rgba(255,77,109,.16), transparent 55%),
+        var(--bg);
     }
-    .wrap{ min-height:100vh; padding:34px 18px; display:flex; justify-content:center; }
-    .container{ width:min(1100px,100%); }
+
     .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-      margin-bottom:16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 18px 22px;
+      backdrop-filter: blur(12px);
+      background: rgba(11,16,32,.65);
+      border-bottom: 1px solid var(--stroke);
     }
-    .title{ display:flex; align-items:center; gap:12px; }
-    .badge{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:8px 12px; border:1px solid var(--stroke);
-      background:rgba(255,255,255,.05); border-radius:999px;
-      backdrop-filter: blur(10px);
+
+    .brand{ display:flex; gap:14px; align-items:center; }
+    .logo{
+      width:44px; height:44px;
+      border-radius:14px;
+      display:grid; place-items:center;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 28px rgba(124,92,255,.25);
+      font-weight:800;
+      letter-spacing:.3px;
+      user-select:none;
     }
-    h1{ margin:0; font-size: clamp(22px, 2.8vw, 34px); letter-spacing:-0.03em; }
-    .btn{
-      text-decoration:none; color:var(--text);
-      padding:10px 14px; border-radius: 12px;
-      border:1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.06);
-      display:inline-flex; align-items:center; gap:10px;
-      font-weight:600; transition: transform .2s ease, background .2s ease, border-color .2s ease;
+    .title{ margin:0; font-size: 18px; line-height: 1.1; }
+    .subtitle{ margin:3px 0 0; color: var(--muted); font-size: 12.5px; }
+
+    .container{
+      max-width: 1150px;
+      margin: 0 auto;
+      padding: 18px 18px 36px;
+    }
+
+    .panel{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-top: 16px;
+      overflow: hidden;
+    }
+
+    .panel-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    .panel-head h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.88);
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px;
+      padding: 14px 16px 18px;
+    }
+    .stat{
+      background: var(--card2);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 14px 14px 12px;
+      min-height: 76px;
+    }
+    .stat-label{ color: var(--muted); font-size: 12px; }
+    .stat-value{ font-size: 20px; margin-top: 6px; font-weight: 750; }
+
+    .filters{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      align-items:end;
+      justify-content:flex-end;
+    }
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    label{ font-size: 11.5px; color: var(--muted); }
+    input, select{
+      width: 220px;
+      padding: 10px 11px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
       outline:none;
     }
-    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.28); }
-    .btn:focus-visible{ box-shadow: var(--ring); }
+    input::placeholder{ color: rgba(255,255,255,.40); }
+    input:focus, select:focus{
+      border-color: rgba(124,92,255,.70);
+      box-shadow: 0 0 0 4px rgba(124,92,255,.16);
+    }
 
-    .card{
-      border-radius: var(--radius);
-      border:1px solid var(--stroke);
-      background: rgba(15, 23, 42, .55);
-      backdrop-filter: blur(12px);
-      box-shadow: var(--shadow);
-      padding:18px;
+    .btn{
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor:pointer;
+      font-weight:650;
+      text-decoration:none;
+      color: var(--text);
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      user-select:none;
     }
-    .muted{ color:var(--muted); line-height:1.6; }
-    .hr{ height:1px; background:rgba(255,255,255,.10); margin:14px 0; }
-    .appArea{
-      border:1px dashed rgba(255,255,255,.18);
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(124,92,255,.95), rgba(35,213,171,.85));
+      border-color: rgba(255,255,255,.0);
+    }
+    .btn-primary:hover{ filter: brightness(1.06); }
+    .btn-ghost{
+      background: rgba(255,255,255,.05);
+    }
+    .btn-ghost:hover{ background: rgba(255,255,255,.08); }
+
+    .table-wrap{ overflow:auto; }
+    .table{
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 900px;
+    }
+    thead th{
+      text-align:left;
+      font-size: 12px;
+      color: rgba(255,255,255,.78);
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.15);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(8px);
+    }
+    tbody td{
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+      color: rgba(255,255,255,.90);
+      vertical-align: middle;
+    }
+    tbody tr:hover td{ background: rgba(255,255,255,.03); }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      white-space: nowrap;
+    }
+    .badge.ok{ border-color: rgba(46,229,157,.25); background: rgba(46,229,157,.12); }
+    .badge.danger{ border-color: rgba(255,77,109,.25); background: rgba(255,77,109,.12); }
+    .badge.neutral{ border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+
+    .pill{
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.82);
+      white-space: nowrap;
+    }
+    .pill-good{ border-color: rgba(46,229,157,.25); background: rgba(46,229,157,.12); }
+    .pill-bad{ border-color: rgba(255,77,109,.25); background: rgba(255,77,109,.12); }
+    .pill-neutral{ border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+
+    .hint{
+      padding: 12px 16px 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: rgba(255,255,255,.85);
+    }
+    .footer{
+      color: var(--muted);
+      font-size: 12px;
+      padding: 12px 6px 0;
+      text-align:right;
+    }
+
+    .errorBox{
+      margin: 10px 16px 16px;
+      padding: 12px 14px;
       border-radius: 14px;
-      padding:16px;
-      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,77,109,.25);
+      background: rgba(255,77,109,.10);
+      color: rgba(255,255,255,.88);
+      line-height: 1.35;
+      display:none;
     }
-    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small{
+      font-size: 12px;
+      color: rgba(255,255,255,.80);
+    }
+
+    @media (max-width: 980px){
+      .stats{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      input, select{ width: 180px; }
+    }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="container">
-
-      <div class="topbar">
-        <div class="title">
-          <div class="badge">🧠 PRO Analyses</div>
-          <h1>PRO Analyses</h1>
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a class="btn" href="index.html">← Voltar ao Portal</a>
-          <a class="btn" href="hltv.html">Ir para HLTV →</a>
-          <a class="btn" href="vrs.html">Ir para VRS →</a>
-        </div>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">PA</div>
+      <div>
+        <h1 class="title">Pro Analyses</h1>
+        <p class="subtitle">Match results from Excel • auto winner detection</p>
       </div>
-
-      <div class="card">
-        <p class="muted">
-          Tudo no mesmo repositório: esta página é <code>pro-analyses.html</code>. Para acessar arquivos compartilhados use <code>file/</code>.
-          Ex.: <code>file/pro.xlsx</code>.
-        </p>
-
-        <div class="hr"></div>
-
-        <div class="appArea">
-          <!-- =========================
-               COLE AQUI O CONTEÚDO DO SEU SITE PRO ANALYSES
-               ========================= -->
-          <h2 style="margin:0 0 8px 0;">Seu conteúdo PRO Analyses</h2>
-          <p class="muted" style="margin:0;">
-            Substitua esta área pelo HTML/JS do seu PRO. Exemplo:
-            <code>file/analyses.xlsx</code>
-          </p>
-          <!-- ========================= -->
-        </div>
-      </div>
-
     </div>
-  </div>
+
+    <a class="btn btn-ghost" href="index.html" title="Go back to the main menu">
+      Back to Menu
+    </a>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Dashboard</h2>
+        <span id="statusPill" class="pill pill-neutral">Loading…</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Total Matches</div>
+          <div class="stat-value" id="totalMatches">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Team 1 Wins</div>
+          <div class="stat-value" id="team1Wins">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Team 2 Wins</div>
+          <div class="stat-value" id="team2Wins">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Most Played Map</div>
+          <div class="stat-value" id="topMap">—</div>
+        </div>
+      </div>
+
+      <div id="errorBox" class="errorBox"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Matches</h2>
+        <div class="filters">
+          <div class="field">
+            <label for="searchInput">Search</label>
+            <input id="searchInput" type="text" placeholder="Team name…" autocomplete="off" />
+          </div>
+
+          <div class="field">
+            <label for="mapSelect">Map</label>
+            <select id="mapSelect">
+              <option value="">All maps</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="winnerSelect">Winner</label>
+            <select id="winnerSelect">
+              <option value="">Any</option>
+              <option value="Team 1">Team 1</option>
+              <option value="Team 2">Team 2</option>
+            </select>
+          </div>
+
+          <button id="clearBtn" class="btn btn-primary" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Match list">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Team 1</th>
+              <th>Team 2</th>
+              <th>Map</th>
+              <th>Result</th>
+              <th>Winner</th>
+            </tr>
+          </thead>
+          <tbody id="matchesTbody">
+            <tr>
+              <td colspan="6"><span class="badge neutral">Loading</span> Reading Excel…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="hint">
+        Tip: Press <kbd>0</kbd> to go back (works only when you are not typing in a field).
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span id="sourceInfo">Source: file/history.xlsx</span>
+    </footer>
+  </main>
+
+  <script>
+    /* Pro Analyses - Single file HTML (CSS + JS inline)
+       Reads an XLSX from /file and determines winners from "Result" (e.g., 13x11).
+       Result is interpreted as: Team 1 score x Team 2 score (position matters).
+    */
+
+    const EXCEL_PATH = "file/history.xlsx"; // default found as "history.xlsx" in your files [1](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
+    const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
+
+    const els = {
+      statusPill: document.getElementById("statusPill"),
+      totalMatches: document.getElementById("totalMatches"),
+      team1Wins: document.getElementById("team1Wins"),
+      team2Wins: document.getElementById("team2Wins"),
+      topMap: document.getElementById("topMap"),
+      tbody: document.getElementById("matchesTbody"),
+      search: document.getElementById("searchInput"),
+      mapSelect: document.getElementById("mapSelect"),
+      winnerSelect: document.getElementById("winnerSelect"),
+      clearBtn: document.getElementById("clearBtn"),
+      sourceInfo: document.getElementById("sourceInfo"),
+      errorBox: document.getElementById("errorBox")
+    };
+
+    let allMatches = [];
+
+    init();
+
+    async function init(){
+      els.sourceInfo.textContent = `Source: ${EXCEL_PATH}`;
+      setupShortcutBack();
+      setupFilters();
+
+      try{
+        setStatus("Loading Excel…", "neutral");
+        const matches = await loadExcelMatches(EXCEL_PATH);
+        allMatches = matches;
+
+        populateMapOptions(allMatches);
+        render(allMatches);
+        renderStats(allMatches);
+
+        setStatus(`Loaded ${allMatches.length} matches`, "good");
+        hideError();
+      }catch(err){
+        console.error(err);
+        setStatus("Failed to load Excel", "bad");
+        showError(
+          `Could not load <b>${EXCEL_PATH}</b>.<br><span class="small">Make sure the file exists in <code>file/</code> and you are running the site via a local server (e.g., VS Code Live Server). Browsers usually block <code>fetch</code> from local files when opened by double-click.</span>`
+        );
+
+        els.tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <span class="badge danger">Error</span>
+              Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function setStatus(text, state){
+      els.statusPill.textContent = text;
+      els.statusPill.className = "pill " + (state === "good" ? "pill-good" : state === "bad" ? "pill-bad" : "pill-neutral");
+    }
+
+    function showError(html){
+      els.errorBox.style.display = "block";
+      els.errorBox.innerHTML = html;
+    }
+
+    function hideError(){
+      els.errorBox.style.display = "none";
+      els.errorBox.innerHTML = "";
+    }
+
+    function setupShortcutBack(){
+      document.addEventListener("keydown", (e) => {
+        // Shortcut: press "0" to go back, but NOT while typing in a field
+        if (e.key !== "0") return;
+
+        const a = document.activeElement;
+        const isTypingContext =
+          a && (
+            a.tagName === "INPUT" ||
+            a.tagName === "TEXTAREA" ||
+            a.tagName === "SELECT" ||
+            a.isContentEditable
+          );
+
+        if (isTypingContext) return;
+
+        e.preventDefault();
+        window.history.back();
+      });
+    }
+
+    function setupFilters(){
+      const apply = () => {
+        const q = (els.search.value || "").trim().toLowerCase();
+        const map = els.mapSelect.value;
+        const winnerSide = els.winnerSelect.value; // "Team 1" | "Team 2" | ""
+
+        const filtered = allMatches.filter(m => {
+          const matchesQuery =
+            !q ||
+            m.team1.toLowerCase().includes(q) ||
+            m.team2.toLowerCase().includes(q);
+
+          const matchesMap = !map || m.map === map;
+          const matchesWinner = !winnerSide || m.winnerSide === winnerSide;
+
+          return matchesQuery && matchesMap && matchesWinner;
+        });
+
+        render(filtered);
+        renderStats(filtered, true);
+      };
+
+      els.search.addEventListener("input", apply);
+      els.mapSelect.addEventListener("change", apply);
+      els.winnerSelect.addEventListener("change", apply);
+
+      els.clearBtn.addEventListener("click", () => {
+        els.search.value = "";
+        els.mapSelect.value = "";
+        els.winnerSelect.value = "";
+        render(allMatches);
+        renderStats(allMatches);
+      });
+    }
+
+    function populateMapOptions(matches){
+      // clear existing (keep first option)
+      while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
+
+      const maps = [...new Set(matches.map(m => m.map))].sort((a,b) => a.localeCompare(b));
+      for (const m of maps){
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        els.mapSelect.appendChild(opt);
+      }
+    }
+
+    function render(matches){
+      els.tbody.innerHTML = "";
+
+      if (!matches.length){
+        els.tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <span class="badge neutral">No results</span>
+              Try clearing filters.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      matches.forEach((m, idx) => {
+        const winnerBadgeClass = m.winnerSide === "Team 1" ? "ok" : "danger";
+        const winnerText = `${m.winner} (${m.winnerSide})`;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(m.team1)}</td>
+          <td>${escapeHtml(m.team2)}</td>
+          <td>${escapeHtml(m.map)}</td>
+          <td><span class="badge neutral">${m.score1}x${m.score2}</span></td>
+          <td><span class="badge ${winnerBadgeClass}">${escapeHtml(winnerText)}</span></td>
+        `;
+        els.tbody.appendChild(tr);
+      });
+    }
+
+    function renderStats(matches){
+      els.totalMatches.textContent = matches.length.toString();
+
+      const t1 = matches.filter(m => m.winnerSide === "Team 1").length;
+      const t2 = matches.filter(m => m.winnerSide === "Team 2").length;
+
+      els.team1Wins.textContent = t1.toString();
+      els.team2Wins.textContent = t2.toString();
+
+      // Most played map
+      const mapCounts = new Map();
+      for (const m of matches){
+        mapCounts.set(m.map, (mapCounts.get(m.map) || 0) + 1);
+      }
+      let topMap = "—";
+      let topCount = 0;
+      for (const [map, count] of mapCounts.entries()){
+        if (count > topCount){
+          topCount = count;
+          topMap = map;
+        }
+      }
+      els.topMap.textContent = topMap;
+    }
+
+    async function loadExcelMatches(path){
+      const res = await fetch(path, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${path}`);
+
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+
+      const firstSheetName = wb.SheetNames[0];
+      if (!firstSheetName) throw new Error("No sheets found in workbook");
+
+      const ws = wb.Sheets[firstSheetName];
+
+      // Read as JSON using header row
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      // Soft validation of headers
+      const keys = rows.length ? Object.keys(rows[0]) : [];
+      const hasExpected = EXPECTED_HEADERS.every(h => keys.includes(h));
+      if (!hasExpected){
+        console.warn("Unexpected headers detected:", keys);
+      }
+
+      // Transform rows into match objects
+      const matches = rows
+        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"])) // ignore empty lines
+        .map((r) => normalizeRow(r))
+        .filter(Boolean);
+
+      return matches;
+    }
+
+    function normalizeRow(r){
+      const team1 = String(r["Team 1"] ?? "").trim();
+      const team2 = String(r["Team 2"] ?? "").trim();
+      const map   = String(r["Map"] ?? "").trim();
+      const resultRaw = String(r["Result"] ?? "").trim();
+
+      const { s1, s2 } = parseResult(resultRaw);
+      if (team1 === "" || team2 === "" || map === "" || s1 === null || s2 === null){
+        // skip malformed line
+        return null;
+      }
+
+      // winner depends on score and Team position:
+      // Result is "Team 1 score x Team 2 score"
+      let winnerSide = "Team 1";
+      let winner = team1;
+
+      if (s2 > s1){
+        winnerSide = "Team 2";
+        winner = team2;
+      } else if (s1 === s2){
+        // Not expected, but handled gracefully
+        winnerSide = "Tie";
+        winner = "Tie";
+      }
+
+      return {
+        team1,
+        team2,
+        map,
+        score1: s1,
+        score2: s2,
+        winnerSide,
+        winner,
+        resultRaw
+      };
+    }
+
+    function parseResult(text){
+      // Accept "13x11", "13X11", "13 x 11"
+      const cleaned = String(text).replace(/\s+/g, "");
+      const m = cleaned.match(/^(\d+)[xX](\d+)$/);
+      if (!m) return { s1: null, s2: null };
+      return { s1: Number(m[1]), s2: Number(m[2]) };
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
 </body>
 </html>
-``
