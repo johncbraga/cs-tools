@@ -144,9 +144,6 @@
     }
     tbody tr:hover{filter: brightness(1.06);}
 
-    /* =================================
-       ONDA / BRILHO PARA FUNDOS (TR)
-       ================================= */
     @keyframes waveMove {
       0%   { background-position: 0% 50%; }
       50%  { background-position: 100% 50%; }
@@ -181,9 +178,6 @@
     }
     tbody tr.wave > td{ position: relative; z-index:1; }
 
-    /* =================================
-       FUNDOS: Top 1/2/3 (vivos) + 4-10
-       ================================= */
     tbody tr.top1{
       background-image: linear-gradient(120deg,
         rgba(255, 220, 90, .42),
@@ -226,9 +220,6 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
     }
 
-    /* =================================
-       TEXTO (NOME DO TIME) - ONDA
-       ================================= */
     @keyframes textWave{
       0%   { background-position: 0% 50%; }
       100% { background-position: 200% 50%; }
@@ -278,7 +269,6 @@
       text-shadow: 0 2px 10px rgba(0,0,0,.35);
     }
 
-    /* ===== OUTROS ===== */
     .mono{font-family:var(--mono);}
     .delta{
       font-family:var(--mono);
@@ -304,9 +294,6 @@
       .teamName{ animation: none !important; }
     }
 
-    /* ================================
-       ✅ NOVO: Back to Menu fixo no topo direito
-       ================================ */
     .backToMenu{
       position: fixed;
       top: 16px;
@@ -330,7 +317,6 @@
 </head>
 
 <body>
-  <!-- ✅ NOVO: botão no canto superior direito -->
   <a class="backToMenu" href="index.html">← Back to Menu</a>
 
   <div class="grid">
@@ -341,8 +327,6 @@
         Filter for <span class="mono">Region</span> and <span class="mono">Tier</span> avaliable.
       </p>
 
-      <!-- ✅ REMOVIDO: inputs de arquivo
-           ✅ ADICIONADO: botões Update Old / Update New -->
       <div class="row">
         <div style="min-width:320px;">
           <label>Old Rating source</label>
@@ -444,12 +428,9 @@
       "AS/SIS/ESEA": "Asia"
     };
 
-    // =============================
-    // ✅ NOVO: leitura por URL (pasta file/)
-    // =============================
     const OLD_URL = "file/old.xlsx";
-    const NEW_URL_PRIMARY = "file/ranking.xlsx"; // como você escreveu
-    const NEW_URL_FALLBACK = "file/ranking.xlsx"; // fallback se existir com o nome correto
+    const NEW_URL_PRIMARY = "file/ranking.xlsx";
+    const NEW_URL_FALLBACK = "file/ranking.xlsx";
 
     let oldRowsCache = null;
     let newRowsCache = null;
@@ -477,15 +458,11 @@
         newRowsCache = await readExcelFromUrl(NEW_URL_PRIMARY + bust);
         return "primary";
       }catch(e){
-        // tenta fallback
         newRowsCache = await readExcelFromUrl(NEW_URL_FALLBACK + bust);
         return "fallback";
       }
     }
 
-    // =============================
-    // resto do seu código (inalterado)
-    // =============================
     function normalizeHeader(h){ return String(h || "").trim().toLowerCase(); }
 
     function getColumn(row, headerMap, desired){
@@ -649,7 +626,6 @@
         else if (r.newPos === 2) nameClass = "name-top2";
         else if (r.newPos === 3) nameClass = "name-top3";
         else if (r.newPos >= 4 && r.newPos <= 10) nameClass = "name-top4to10";
-        else nameClass = "";
 
         const teamHtml = nameClass
           ? `<span class="teamName ${nameClass}">${escapeHtml(r.team)}</span>`
@@ -752,7 +728,6 @@
         };
       });
 
-      // contagem de badges (posição)
       let up=0, down=0, flat=0, newly=0;
       for (const r of combined){
         if (r.deltaText === "NEW") newly++;
@@ -777,7 +752,6 @@
       $("#status").textContent = "Ranking generated.";
     }
 
-    // ✅ botões
     $("#btnCompare").addEventListener("click", () => {
       recomputeAndRender();
     });
@@ -826,7 +800,6 @@
 
     enableFilters(false);
 
-    // ✅ AUTO-LOAD ao abrir a página
     (async () => {
       try{
         $("#status").textContent = "Carregando Old e New automaticamente…";
@@ -839,6 +812,24 @@
           "Não foi possível carregar automaticamente. Verifique se está rodando via servidor e se a pasta /file contém os .xlsx.";
       }
     })();
+
+    // ✅ NOVO: Atalho "Delete" (tecla apagar) para voltar ao menu
+    // Não dispara enquanto estiver digitando em inputs/selects/textarea ou contenteditable.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Delete") return;
+
+      const el = document.activeElement;
+      const tag = (el && el.tagName) ? el.tagName.toLowerCase() : "";
+      const typing =
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        (el && el.isContentEditable);
+
+      if (typing) return;
+
+      window.location.href = "index.html";
+    });
   </script>
 </body>
 </html>

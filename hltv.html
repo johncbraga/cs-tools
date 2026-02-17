@@ -368,12 +368,10 @@
       min-height: 320px;
     }
 
-    /* Espaçamento extra abaixo do Top 10 para o bloco da pizza */
     .top10-bottom{
       margin-top: 14px;
     }
 
-    /* Comparativo Team vs Team */
     #teamCompareChart{
       height: 360px !important;
     }
@@ -381,9 +379,6 @@
       min-height: 360px;
     }
 
-    /* =========================================
-       NOVO: Botão Update (mesmo lugar do input)
-    ============================================ */
     .btn-update{
       background: rgba(2,6,23,0.66);
       color: var(--text);
@@ -407,10 +402,6 @@
       background: rgba(2,6,23,0.78);
     }
 
-    /* =========================================
-       ✅ NOVO: Botão Back to Menu ao lado do Update
-       (visual igual ao botão Update)
-    ============================================ */
     .btn-menu{
       background: rgba(2,6,23,0.66);
       color: var(--text);
@@ -441,9 +432,6 @@
 
 <body>
 
-  <!-- =========================================
-       Header
-  ============================================ -->
   <div class="header">
     <div class="title">
       <div class="logo"></div>
@@ -454,17 +442,11 @@
     </div>
 
     <div class="hstack">
-      <!-- Onde antes ficava o input file -->
       <button id="updateBtn" class="btn-update" type="button">Update</button>
-
-      <!-- ✅ NOVO: Back to Menu -->
       <a class="btn-menu" href="index.html">Back to Menu</a>
     </div>
   </div>
 
-  <!-- =========================================
-       Controles / Filtros
-  ============================================ -->
   <div class="controls">
     <select id="regionFilter" title="Região">
       <option value="Global">Global</option>
@@ -492,14 +474,7 @@
     </select>
   </div>
 
-  <!-- =========================================
-       Grid Principal
-  ============================================ -->
   <div class="grid">
-
-    <!-- =======================
-         Comparação + Tabela
-    ======================== -->
     <div class="card">
       <div class="card-header">
         <h3>Regions</h3>
@@ -520,22 +495,17 @@
       </div>
     </div>
 
-    <!-- =======================
-         Top 10 (normal) com Pizza embaixo (mesmo card)
-    ======================== -->
     <div class="card">
       <div class="card-header">
         <h3>Top Teams</h3>
         <div style="color:var(--muted);font-size:12px">based on selected metric</div>
       </div>
 
-      <!-- Top 10 normal -->
       <div id="topChartWrap">
         <div class="state" id="topChartState"><span class="spinner"></span>Loading…</div>
         <canvas id="topChart" style="display:none"></canvas>
       </div>
 
-      <!-- Pizza abaixo do Top 10 (usa o espaço vazio do card) -->
       <div class="top10-bottom">
         <div class="mini-card" id="teamPieCard" style="height:100%">
           <div class="card-header" style="margin-bottom:8px; padding-bottom:6px">
@@ -554,9 +524,6 @@
       </div>
     </div>
 
-    <!-- =======================
-         Team vs Team (Comparativo)
-    ======================== -->
     <div class="card" style="grid-column:1 / -1">
       <div class="card-header">
         <h3>Team vs Team — Comparison</h3>
@@ -579,9 +546,6 @@
       </div>
     </div>
 
-    <!-- =========================================
-         Gráficos fixos por região
-    ============================================ -->
     <div class="card" style="grid-column:1 / -1">
       <div class="card-header">
         <h3>Graph per Region</h3>
@@ -589,7 +553,6 @@
       </div>
 
       <div class="mini-grid">
-        <!-- Streak -->
         <div class="mini-card">
           <h4>Streak — Top 10 (per region)</h4>
           <div id="streakChartWrap">
@@ -598,7 +561,6 @@
           </div>
         </div>
 
-        <!-- Victories -->
         <div class="mini-card">
           <h4>Victories — Top 10 (per region)</h4>
           <div id="victoriesChartWrap">
@@ -607,7 +569,6 @@
           </div>
         </div>
 
-        <!-- Prestige (antes Points) -->
         <div class="mini-card">
           <h4>Prestige — Top 10 (per region)</h4>
           <div id="pointsChartWrap">
@@ -616,7 +577,6 @@
           </div>
         </div>
 
-        <!-- Majors AGORA no lugar onde ficava o Points -->
         <div class="mini-card">
           <h4>Comparison — Majors by Team (per region)</h4>
           <div id="majorsChartWrap">
@@ -625,7 +585,6 @@
           </div>
         </div>
 
-        <!-- Points AGORA ocupa a linha inteira -->
         <div class="mini-card" style="grid-column:1 / -1">
           <h4>Comparison — Points by Team (per region)</h4>
           <div id="comparisonChartWrap">
@@ -636,9 +595,6 @@
       </div>
     </div>
 
-    <!-- =======================
-         Legends
-    ======================== -->
     <div class="card" style="grid-column:1 / -1">
       <div class="card-header">
         <h3>Legends Elo Ranking (501+ Points)</h3>
@@ -654,21 +610,12 @@
         <table id="legendsTable" class="table-bordered" style="display:none"></table>
       </div>
     </div>
-
   </div>
 
-  <!-- =========================================
-       Footer
-  ============================================ -->
   <div class="footer">
     Made by Kilzys. Tip: use the filter option to help you out.
   </div>
 
-  <!-- =========================================
-       Scripts (JS) — Lógica mantida 100%
-       + total de partidas na pizza
-       + BOTÃO UPDATE
-  ============================================ -->
   <script>
     /* ===========================
        Estado Global
@@ -677,13 +624,9 @@
     let rows = [];
     let regionChart, topChart;
 
-    // Gráficos fixos por região
     let streakChart, victoriesChart, pointsChart, comparisonChart, majorsChart;
 
-    // Pizza por time
     let teamPieChart = null;
-
-    // Comparativo por times
     let teamCompareChart = null;
 
     let searchTimer = null;
@@ -695,7 +638,6 @@
       document.getElementById(id).addEventListener('change', update);
     });
 
-    // Debounce na busca
     document.getElementById('teamSearch').addEventListener('input', () => {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(update, 250);
@@ -703,7 +645,6 @@
 
     document.getElementById("legendsRegionFilter").addEventListener("change", update);
 
-    // Evento do seletor de time (pizza) + comparativo
     document.addEventListener('change', (e) => {
       if(e.target && e.target.id === 'teamPieSelect'){
         renderTeamPie();
@@ -713,18 +654,12 @@
       }
     });
 
-    // NOVO: Botão Update para recarregar o Ranking.xlsx
     document.getElementById('updateBtn').addEventListener('click', () => {
       loadExcelFixed(true);
     });
 
-    // Carrega automaticamente ao abrir a página
     document.addEventListener('DOMContentLoaded', () => loadExcelFixed(false));
 
-    /* ===========================
-       Leitura Excel (FIXO em /file/Ranking.xlsx)
-       + forceReload para evitar cache
-    ============================ */
     async function loadExcelFixed(forceReload = false){
       setLoading(true);
       try{
@@ -750,26 +685,19 @@
       }
     }
 
-    /* ===========================
-       UI Helpers
-    ============================ */
     function setLoading(isLoading){
       const regionState = document.getElementById('regionChartState');
       const topState = document.getElementById('topChartState');
       const dataState = document.getElementById('dataTableState');
       const legendsState = document.getElementById('legendsTableState');
 
-      // Estados dos gráficos fixos
       const streakState = document.getElementById('streakChartState');
       const victoriesState = document.getElementById('victoriesChartState');
       const pointsState = document.getElementById('pointsChartState');
       const comparisonState = document.getElementById('comparisonChartState');
       const majorsState = document.getElementById('majorsChartState');
 
-      // Pizza
       const teamPieState = document.getElementById('teamPieState');
-
-      // Comparativo
       const teamCompareState = document.getElementById('teamCompareState');
 
       [regionState, topState, dataState, legendsState, streakState, victoriesState, pointsState, comparisonState, majorsState, teamPieState, teamCompareState]
@@ -793,9 +721,6 @@
       });
     }
 
-    /* ===========================
-       Update principal
-    ============================ */
     function update(){
       if(!headers.length || !rows.length){
         setLoading(false);
@@ -813,7 +738,6 @@
       const idxMetric = headers.indexOf(metric);
       const idxPoints = headers.indexOf("Points");
 
-      // guarda dados por região para a média
       const regions = { "AM": [], "EU": [], "AS/SIS/ESEA": [] };
 
       rows.forEach(r => {
@@ -826,14 +750,12 @@
         }
       });
 
-      // Chart de regiões
       renderRegionChart(
         ["Americas", "Europa", "Asia"],
         [avg(regions["AM"]), avg(regions["EU"]), avg(regions["AS/SIS/ESEA"])],
         metric
       );
 
-      // Filtragem e ordenação da tabela + Top10
       let filtered = rows.filter(r => {
         const team = (r[idxTeam] || "").toString().toLowerCase();
         const regionOk = (region === "Global" || r[idxRegion] === region);
@@ -847,7 +769,6 @@
           : (num(b[idxMetric]) - num(a[idxMetric]))
       );
 
-      // ⚠️ Mantive seu sort original corretamente:
       filtered.sort((a,b) =>
         order === "asc"
           ? (num(a[idxMetric]) - num(b[idxMetric]))
@@ -857,7 +778,6 @@
       renderTable(filtered, idxRegion);
       renderTopChart(filtered.slice(0,10), idxTeam, idxMetric, metric);
 
-      // Legends
       const legendsRegion = document.getElementById("legendsRegionFilter").value;
       const legends = rows
         .filter(r => {
@@ -869,18 +789,14 @@
 
       renderLegendsTable(legends, idxTeam, idxPoints);
 
-      // Gráficos fixos por Região
       renderRegionFixedCharts();
 
-      // Preenche seletor de time (pizza) e renderiza
       populateTeamPieSelect();
       renderTeamPie();
 
-      // Preenche seletor e renderiza comparativo
       populateTeamCompareSelects();
       renderTeamCompare();
 
-      // Mostrar UI
       document.getElementById('regionChartState').style.display = 'none';
       document.getElementById('topChartState').style.display = 'none';
       document.getElementById('dataTableState').style.display = filtered.length ? 'none' : 'flex';
@@ -892,15 +808,9 @@
       document.getElementById('legendsTable').style.display = legends.length ? 'table' : 'none';
     }
 
-    /* ===========================
-       Utils
-    ============================ */
     function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
     function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
 
-    /* ===========================
-       Charts (config base)
-    ============================ */
     function baseChartOptions(title){
       return {
         responsive:true,
@@ -992,9 +902,6 @@
       return gradient;
     }
 
-    /* ===========================
-       Tabela
-    ============================ */
     function renderTable(data, idxRegion){
       const metric = document.getElementById("metric").value;
       const idxMetric = headers.indexOf(metric);
@@ -1070,9 +977,6 @@
       document.getElementById('legendsTable').innerHTML = html;
     }
 
-    /* ===========================
-       Segurança HTML
-    ============================ */
     function escapeHtml(v){
       return (v ?? "").toString()
         .replaceAll("&","&amp;")
@@ -1082,9 +986,6 @@
         .replaceAll("'","&#039;");
     }
 
-    /* ===========================
-       Gráficos fixos por região
-    ============================ */
     function renderRegionFixedCharts(){
       if(!headers.length || !rows.length) return;
 
@@ -1105,7 +1006,6 @@
 
       const regionOnly = rows.filter(r => region === "Global" || r[idxRegion] === region);
 
-      // Streak — Top 10
       if(idxStreak >= 0){
         const topStreak = [...regionOnly].sort((a,b) => num(b[idxStreak]) - num(a[idxStreak])).slice(0,10);
         renderMetricBarChart('streakChart', topStreak.map(r => r[idxTeam]), topStreak.map(r => num(r[idxStreak])),
@@ -1115,7 +1015,6 @@
         showStateMsg('streakChart', "Coluna 'Streak' não encontrada.");
       }
 
-      // Victories — Top 10
       if(idxVict >= 0){
         const topVict = [...regionOnly].sort((a,b) => num(b[idxVict]) - num(a[idxVict])).slice(0,10);
         renderMetricBarChart('victoriesChart', topVict.map(r => r[idxTeam]), topVict.map(r => num(r[idxVict])),
@@ -1125,7 +1024,6 @@
         showStateMsg('victoriesChart', "Coluna 'Victories' não encontrada.");
       }
 
-      // Prestige — Top 10 (canvas mantém id "pointsChart")
       if(idxPrestige >= 0){
         const topPrestige = [...regionOnly].sort((a,b) => num(b[idxPrestige]) - num(a[idxPrestige])).slice(0,10);
         renderMetricBarChart('pointsChart', topPrestige.map(r => r[idxTeam]), topPrestige.map(r => num(r[idxPrestige])),
@@ -1135,7 +1033,6 @@
         showStateMsg('pointsChart', "Coluna 'Prestige' não encontrada.");
       }
 
-      // Linha — Points (Top 20)
       if(idxPoints >= 0){
         const top20 = [...regionOnly].sort((a,b) => num(b[idxPoints]) - num(a[idxPoints])).slice(0, Math.min(20, regionOnly.length));
         renderLineComparison('comparisonChart', top20.map(r => r[idxTeam]), top20.map(r => num(r[idxPoints])),
@@ -1145,7 +1042,6 @@
         showStateMsg('comparisonChart', "Coluna 'Points' não encontrada.");
       }
 
-      // Linha — Majors (Top 20)
       if(idxMajors >= 0){
         const top20Majors = [...regionOnly].sort((a,b) => num(b[idxMajors]) - num(a[idxMajors])).slice(0, Math.min(20, regionOnly.length));
         renderLineComparison('majorsChart', top20Majors.map(r => r[idxTeam]), top20Majors.map(r => num(r[idxMajors])),
@@ -1243,9 +1139,6 @@
       if(canvasId === 'majorsChart') majorsChart = chart;
     }
 
-    /* ===========================
-       Pizza por time
-    ============================ */
     function populateTeamPieSelect(){
       const select = document.getElementById('teamPieSelect');
       if(!select) return;
@@ -1402,9 +1295,6 @@
       canvas.style.display='block';
     }
 
-    /* ===========================
-       Team vs Team
-    ============================ */
     function populateTeamCompareSelects(){
       const selA = document.getElementById('teamCompareA');
       const selB = document.getElementById('teamCompareB');
@@ -1586,6 +1476,24 @@
       state.style.display='none';
       canvas.style.display='block';
     }
+
+    // ✅ NOVO: Atalho "Delete" para voltar ao menu
+    // (não funciona quando o foco está em input/textarea/select ou contenteditable)
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Delete') return;
+
+      const el = document.activeElement;
+      const tag = (el && el.tagName) ? el.tagName.toLowerCase() : '';
+      const typing =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        (el && el.isContentEditable);
+
+      if (typing) return;
+
+      window.location.href = 'index.html';
+    });
   </script>
 </body>
 </html>
