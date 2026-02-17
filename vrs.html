@@ -547,11 +547,11 @@
 
     function escapeHtml(s){
       return String(s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+        .replaceAll("&amp;","&amp;amp;")
+        .replaceAll("&lt;","&amp;lt;")
+        .replaceAll("&gt;","&amp;gt;")
+        .replaceAll('"',"&amp;quot;")
+        .replaceAll("'","&amp;#039;");
     }
 
     function regionLabel(regionValue){
@@ -813,10 +813,10 @@
       }
     })();
 
-    // ✅ NOVO: Atalho "Delete" (tecla apagar) para voltar ao menu
+    // ✅ ALTERADO: Atalho agora é tecla "0" para voltar ao menu (em vez de Delete/Backspace)
     // Não dispara enquanto estiver digitando em inputs/selects/textarea ou contenteditable.
     document.addEventListener("keydown", (e) => {
-      if (e.key !== "Delete") return;
+      if (e.key !== "0" && e.code !== "Numpad0") return;
 
       const el = document.activeElement;
       const tag = (el && el.tagName) ? el.tagName.toLowerCase() : "";
@@ -833,3 +833,4 @@
   </script>
 </body>
 </html>
+``
