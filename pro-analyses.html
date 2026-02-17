@@ -14,6 +14,7 @@
   <style>
     :root{
       --bg: #0b1020;
+      --bg2:#070b16;
       --card: rgba(255,255,255,.06);
       --card2: rgba(255,255,255,.08);
       --stroke: rgba(255,255,255,.10);
@@ -37,11 +38,13 @@
       margin:0;
       font-family: var(--sans);
       color: var(--text);
+
+      /* smoother, less “banding” background */
       background:
-        radial-gradient(1200px 600px at 10% 10%, rgba(124,92,255,.35), transparent 50%),
-        radial-gradient(900px 500px at 80% 20%, rgba(35,213,171,.25), transparent 45%),
-        radial-gradient(900px 700px at 40% 100%, rgba(255,77,109,.16), transparent 55%),
-        var(--bg);
+        radial-gradient(900px 600px at 15% 10%, rgba(124,92,255,.24), transparent 62%),
+        radial-gradient(800px 520px at 85% 25%, rgba(35,213,171,.18), transparent 58%),
+        linear-gradient(180deg, var(--bg2) 0%, var(--bg) 45%, var(--bg2) 100%);
+      background-attachment: fixed;
     }
 
     .topbar{
@@ -329,7 +332,6 @@
     .canvasWrap.tall{
       height: 320px;
     }
-
     .canvasWrap canvas{
       width: 100% !important;
       height: 100% !important;
@@ -410,17 +412,13 @@
     </div>
 
     <div class="top-actions">
-      <button id="updateBtn" class="btn btn-primary" type="button" title="Force reload the Excel file">
-        Update
-      </button>
-
-      <a class="btn" href="index.html">Back to Menu</a>
+      <button id="updateBtn" class="btn btn-primary" type="button" title="Force reload the Excel file">Update</button>
+      <a href="index.html" class="btn" title="Back to the main menu">Back to Menu</a>
     </div>
   </header>
 
   <main class="container">
 
-    <!-- Dashboard -->
     <section class="panel">
       <div class="panel-head">
         <h2>Dashboard</h2>
@@ -449,7 +447,6 @@
       <div id="errorBox" class="errorBox"></div>
     </section>
 
-    <!-- Team charts -->
     <section class="panel">
       <div class="panel-head">
         <h2>Team Performance</h2>
@@ -471,7 +468,6 @@
         </div>
       </div>
 
-      <!-- Chart 1 + Last 5 -->
       <div class="grid-2">
         <div class="chartCard">
           <div class="chartTop">
@@ -497,7 +493,7 @@
           <div class="chartTop">
             <h3 class="chartTitle">Last 5 Matches</h3>
             <div class="chartMeta">
-              <div class="metaBox">Based on the latest rows in the Excel file</div>
+              <div class="metaBox" id="last5Scope">Scope: General</div>
             </div>
           </div>
 
@@ -525,7 +521,6 @@
         </div>
       </div>
 
-      <!-- Chart 2: General overview -->
       <div class="grid-1">
         <div class="chartCard" style="min-height: 380px;">
           <div class="chartTop">
@@ -547,7 +542,6 @@
       </div>
     </section>
 
-    <!-- Match list -->
     <section class="panel">
       <div class="panel-head">
         <h2>Matches</h2>
@@ -608,18 +602,8 @@
   </main>
 
   <script>
-    /*
-      Pro Analyses (single-file)
-      Excel file: file/history.xlsx
-      Winner logic: Result = "Team 1 score x Team 2 score" (position matters)
-      Features:
-        - Update button forces Excel reload (cache bust)
-        - Team W/L chart with map selector (General = all maps)
-        - Last 5 matches for selected team
-        - General overview: best/worst map + maps played (ascending by matches)
-        - Filters + table
-        - Shortcut key "0" to go back (not when typing)
-    */
+    // Uses file/history.xlsx (exists as history.xlsx in your files). 
+    // Last 5 matches section aligns with your requirements list. 
 
     const EXCEL_PATH = "file/history.xlsx";
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
@@ -640,17 +624,18 @@
       errorBox: document.getElementById("errorBox"),
       updateBtn: document.getElementById("updateBtn"),
 
-      // chart UI
       teamSelect: document.getElementById("teamSelect"),
       teamMapSelect: document.getElementById("teamMapSelect"),
+
       totalBox: document.getElementById("totalBox"),
       winsBox: document.getElementById("winsBox"),
       lossesBox: document.getElementById("lossesBox"),
       rateBox: document.getElementById("rateBox"),
-      wlCanvas: document.getElementById("wlChart"),
 
+      last5Scope: document.getElementById("last5Scope"),
       last5List: document.getElementById("last5List"),
 
+      wlCanvas: document.getElementById("wlChart"),
       bestMapBox: document.getElementById("bestMapBox"),
       worstMapBox: document.getElementById("worstMapBox"),
       bestMapMeta: document.getElementById("bestMapMeta"),
@@ -671,14 +656,11 @@
       setupUpdateButton();
       setupTeamControls();
       buildCharts();
-
       await reloadExcel(true);
     }
 
     function setupUpdateButton(){
-      els.updateBtn.addEventListener("click", async () => {
-        await reloadExcel(true);
-      });
+      els.updateBtn.addEventListener("click", async () => reloadExcel(true));
     }
 
     async function reloadExcel(force){
@@ -686,19 +668,14 @@
         setStatus(force ? "Updating… (forcing reload)" : "Loading Excel…", force ? "warn" : "neutral");
         disableUpdate(true);
 
-        const matches = await loadExcelMatches(EXCEL_PATH, force);
-        allMatches = matches;
+        allMatches = await loadExcelMatches(EXCEL_PATH, force);
 
         populateMapOptions(allMatches);
         populateTeamOptions(allMatches);
 
-        // apply filters on match table
         applyMatchFilters();
-
-        // update dashboard based on current filters
         renderStats(getFilteredMatchesFromControls());
 
-        // keep selections and update team sections
         reconcileTeamSelectionsAfterReload();
         updateTeamSections();
 
@@ -709,18 +686,11 @@
         setStatus("Failed to load Excel", "bad");
         showError(
           `Could not load <b>${EXCEL_PATH}</b>.<br><span class="small">
-           Make sure the file exists in <code>file/</code> and run this page using a local web server
-           (e.g., VS Code Live Server). Browsers often block <code>fetch</code> from local files when opened by double-click.
+           Make sure the file exists in <code>file/</code> and run this page using a local web server (e.g., VS Code Live Server).
            </span>`
         );
-
         els.tbody.innerHTML = `
-          <tr>
-            <td colspan="6">
-              <span class="badge danger">Error</span>
-              Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.
-            </td>
-          </tr>
+          <tr><td colspan="6"><span class="badge danger">Error</span> Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.</td></tr>
         `;
       } finally{
         disableUpdate(false);
@@ -743,7 +713,6 @@
       els.errorBox.style.display = "block";
       els.errorBox.innerHTML = html;
     }
-
     function hideError(){
       els.errorBox.style.display = "none";
       els.errorBox.innerHTML = "";
@@ -755,12 +724,7 @@
 
         const a = document.activeElement;
         const isTypingContext =
-          a && (
-            a.tagName === "INPUT" ||
-            a.tagName === "TEXTAREA" ||
-            a.tagName === "SELECT" ||
-            a.isContentEditable
-          );
+          a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable);
 
         if (isTypingContext) return;
 
@@ -769,22 +733,15 @@
       });
     }
 
-    /* -----------------------------
-       Match table filters
-    ------------------------------*/
+    /* ----------- Match table filters ----------- */
     function setupFilters(){
-      els.search.addEventListener("input", () => {
+      const onChange = () => {
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
-      });
-      els.mapSelect.addEventListener("change", () => {
-        applyMatchFilters();
-        renderStats(getFilteredMatchesFromControls());
-      });
-      els.winnerSelect.addEventListener("change", () => {
-        applyMatchFilters();
-        renderStats(getFilteredMatchesFromControls());
-      });
+      };
+      els.search.addEventListener("input", onChange);
+      els.mapSelect.addEventListener("change", onChange);
+      els.winnerSelect.addEventListener("change", onChange);
 
       els.clearBtn.addEventListener("click", () => {
         els.search.value = "";
@@ -801,52 +758,38 @@
       const winnerSide = els.winnerSelect.value;
 
       return allMatches.filter(m => {
-        const matchesQuery =
-          !q ||
-          m.team1.toLowerCase().includes(q) ||
-          m.team2.toLowerCase().includes(q);
-
+        const matchesQuery = !q || m.team1.toLowerCase().includes(q) || m.team2.toLowerCase().includes(q);
         const matchesMap = !map || m.map === map;
         const matchesWinner = !winnerSide || m.winnerSide === winnerSide;
-
         return matchesQuery && matchesMap && matchesWinner;
       });
     }
 
     function applyMatchFilters(){
-      const filtered = getFilteredMatchesFromControls();
-      render(filtered);
+      render(getFilteredMatchesFromControls());
     }
 
     function populateMapOptions(matches){
       while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
       const maps = [...new Set(matches.map(m => m.map))].sort((a,b) => a.localeCompare(b));
-      for (const m of maps){
+      for (const mp of maps){
         const opt = document.createElement("option");
-        opt.value = m;
-        opt.textContent = m;
+        opt.value = mp;
+        opt.textContent = mp;
         els.mapSelect.appendChild(opt);
       }
     }
 
     function render(matches){
       els.tbody.innerHTML = "";
-
       if (!matches.length){
         els.tbody.innerHTML = `
-          <tr>
-            <td colspan="6">
-              <span class="badge neutral">No results</span>
-              Try clearing filters.
-            </td>
-          </tr>`;
+          <tr><td colspan="6"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
         return;
       }
-
       matches.forEach((m, idx) => {
         const winnerBadgeClass = m.winnerSide === "Team 1" ? "ok" : "danger";
         const winnerText = `${m.winner} (${m.winnerSide})`;
-
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${idx + 1}</td>
@@ -862,65 +805,45 @@
 
     function renderStats(matches){
       els.totalMatches.textContent = matches.length.toString();
-
-      const t1 = matches.filter(m => m.winnerSide === "Team 1").length;
-      const t2 = matches.filter(m => m.winnerSide === "Team 2").length;
-
-      els.team1Wins.textContent = t1.toString();
-      els.team2Wins.textContent = t2.toString();
+      els.team1Wins.textContent = matches.filter(m => m.winnerSide === "Team 1").length.toString();
+      els.team2Wins.textContent = matches.filter(m => m.winnerSide === "Team 2").length.toString();
 
       const mapCounts = new Map();
-      for (const m of matches){
-        mapCounts.set(m.map, (mapCounts.get(m.map) || 0) + 1);
-      }
-      let topMap = "—";
-      let topCount = 0;
+      for (const m of matches) mapCounts.set(m.map, (mapCounts.get(m.map) || 0) + 1);
+      let topMap = "—", topCount = 0;
       for (const [map, count] of mapCounts.entries()){
-        if (count > topCount){
-          topCount = count;
-          topMap = map;
-        }
+        if (count > topCount){ topCount = count; topMap = map; }
       }
       els.topMap.textContent = topMap;
     }
 
-    /* -----------------------------
-       Team charts + last 5
-    ------------------------------*/
+    /* ----------- Team controls + charts ----------- */
     function setupTeamControls(){
       els.teamSelect.addEventListener("change", () => {
         rebuildTeamMapOptions();
         updateTeamSections();
       });
-
-      els.teamMapSelect.addEventListener("change", () => {
-        updateTeamSections();
-      });
+      els.teamMapSelect.addEventListener("change", () => updateTeamSections());
     }
 
     function populateTeamOptions(matches){
       const teams = new Set();
-      for (const m of matches){
-        teams.add(m.team1);
-        teams.add(m.team2);
-      }
-      const sorted = [...teams].sort((a,b) => a.localeCompare(b));
+      for (const m of matches){ teams.add(m.team1); teams.add(m.team2); }
+      const sorted = [...teams].sort((a,b)=>a.localeCompare(b));
 
       const prev = els.teamSelect.value;
       els.teamSelect.innerHTML = `<option value="">Select a team</option>`;
       for (const t of sorted){
         const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
+        opt.value = t; opt.textContent = t;
         els.teamSelect.appendChild(opt);
       }
       if (prev && sorted.includes(prev)) els.teamSelect.value = prev;
     }
 
     function reconcileTeamSelectionsAfterReload(){
-      if (els.teamSelect.value){
-        rebuildTeamMapOptions();
-      } else {
+      if (els.teamSelect.value) rebuildTeamMapOptions();
+      else{
         els.teamMapSelect.disabled = true;
         els.teamMapSelect.innerHTML = `<option value="${GENERAL_MAP_VALUE}">General (all maps)</option>`;
       }
@@ -929,7 +852,6 @@
     function rebuildTeamMapOptions(){
       const team = els.teamSelect.value;
       els.teamMapSelect.innerHTML = "";
-
       const general = document.createElement("option");
       general.value = GENERAL_MAP_VALUE;
       general.textContent = "General (all maps)";
@@ -942,35 +864,29 @@
       }
 
       const maps = new Set();
-      for (const m of allMatches){
-        if (m.team1 === team || m.team2 === team) maps.add(m.map);
-      }
+      for (const m of allMatches) if (m.team1 === team || m.team2 === team) maps.add(m.map);
       const sortedMaps = [...maps].sort((a,b)=>a.localeCompare(b));
-
       for (const mp of sortedMaps){
         const opt = document.createElement("option");
-        opt.value = mp;
-        opt.textContent = mp;
+        opt.value = mp; opt.textContent = mp;
         els.teamMapSelect.appendChild(opt);
       }
-
       els.teamMapSelect.disabled = false;
-      if (![...els.teamMapSelect.options].some(o => o.value === els.teamMapSelect.value)){
-        els.teamMapSelect.value = GENERAL_MAP_VALUE;
-      }
+
+      // keep current selection if possible
+      const current = els.teamMapSelect.value;
+      if (![...els.teamMapSelect.options].some(o => o.value === current)) els.teamMapSelect.value = GENERAL_MAP_VALUE;
     }
 
     function updateTeamSections(){
       updateWLChartAndBoxes();
-      updateLast5();
+      updateLast5();         // ✅ now follows map filter
       updateGeneralOverview();
     }
 
     function computeTeamStats(team, mapValue){
       const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
-
-      let wins = 0;
-      let losses = 0;
+      let wins = 0, losses = 0;
 
       for (const m of allMatches){
         if (mapFilter && m.map !== mapFilter) continue;
@@ -979,13 +895,8 @@
         const as2 = (m.team2 === team);
         if (!as1 && !as2) continue;
 
-        if (as1){
-          if (m.winnerSide === "Team 1") wins++;
-          else if (m.winnerSide === "Team 2") losses++;
-        } else {
-          if (m.winnerSide === "Team 2") wins++;
-          else if (m.winnerSide === "Team 1") losses++;
-        }
+        const win = (as1 && m.winnerSide === "Team 1") || (as2 && m.winnerSide === "Team 2");
+        if (win) wins++; else losses++;
       }
 
       const total = wins + losses;
@@ -994,7 +905,6 @@
     }
 
     function buildCharts(){
-      // Chart 1: Wins vs Losses
       const ctx1 = els.wlCanvas.getContext("2d");
       wlChart = new Chart(ctx1, {
         type: "bar",
@@ -1003,14 +913,8 @@
           datasets: [{
             label: "Matches",
             data: [0, 0],
-            backgroundColor: [
-              "rgba(46, 229, 157, 0.45)",
-              "rgba(255, 77, 109, 0.45)"
-            ],
-            borderColor: [
-              "rgba(46, 229, 157, 0.85)",
-              "rgba(255, 77, 109, 0.85)"
-            ],
+            backgroundColor: ["rgba(46, 229, 157, 0.45)","rgba(255, 77, 109, 0.45)"],
+            borderColor: ["rgba(46, 229, 157, 0.85)","rgba(255, 77, 109, 0.85)"],
             borderWidth: 1.2,
             borderRadius: 10,
             maxBarThickness: 70
@@ -1019,10 +923,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: (c) => ` ${c.raw} matches` } }
-          },
+          plugins: { legend: { display: false } },
           scales: {
             x: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
             y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } }
@@ -1030,44 +931,28 @@
         }
       });
 
-      // Chart 2: Maps played (ascending by matches)
       const ctx2 = els.mapPlayCanvas.getContext("2d");
       mapPlayChart = new Chart(ctx2, {
         type: "bar",
-        data: {
-          labels: [],
-          datasets: [{
-            label: "Matches played",
-            data: [],
-            backgroundColor: "rgba(124, 92, 255, 0.35)",
-            borderColor: "rgba(124, 92, 255, 0.85)",
-            borderWidth: 1.1,
-            borderRadius: 10
-          }]
-        },
+        data: { labels: [], datasets: [{
+          label: "Matches played",
+          data: [],
+          backgroundColor: "rgba(124, 92, 255, 0.35)",
+          borderColor: "rgba(124, 92, 255, 0.85)",
+          borderWidth: 1.1,
+          borderRadius: 10
+        }]},
         options: {
           indexAxis: "y",
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => ` ${ctx.raw} matches`
-              }
-            }
-          },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx)=>` ${ctx.raw} matches` } } },
           scales: {
             x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
             y: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.00)" } }
           }
         }
       });
-    }
-
-    function setWLChartData(wins, losses){
-      wlChart.data.datasets[0].data = [wins, losses];
-      wlChart.update();
     }
 
     function updateWLChartAndBoxes(){
@@ -1079,23 +964,30 @@
         els.winsBox.textContent = "—";
         els.lossesBox.textContent = "—";
         els.rateBox.textContent = "—";
-        setWLChartData(0,0);
+        wlChart.data.datasets[0].data = [0,0]; wlChart.update();
         return;
       }
 
       const s = computeTeamStats(team, mapValue);
-
       els.totalBox.textContent = s.total.toString();
       els.winsBox.textContent = s.wins.toString();
       els.lossesBox.textContent = s.losses.toString();
       els.rateBox.textContent = (s.total > 0 ? `${s.rate.toFixed(1)}%` : "0%");
 
-      setWLChartData(s.wins, s.losses);
+      wlChart.data.datasets[0].data = [s.wins, s.losses];
+      wlChart.update();
     }
 
+    // ✅ UPDATED: last 5 now respects map filter from teamMapSelect
     function updateLast5(){
       const team = els.teamSelect.value;
+      const mapValue = els.teamMapSelect.value || GENERAL_MAP_VALUE;
+
       els.last5List.innerHTML = "";
+
+      // scope label
+      els.last5Scope.textContent =
+        (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `Scope: ${mapValue}` : "Scope: General";
 
       if (!team){
         els.last5List.innerHTML = `
@@ -1105,32 +997,24 @@
                 <span class="badge neutral">Select a team</span>
                 <span class="matchVs">to display matches</span>
               </div>
-              <div class="matchLine2">
-                <span class="badge neutral">—</span>
-                <span class="badge neutral">—</span>
-              </div>
             </div>
-            <div class="matchRight">
-              <span class="badge neutral">—</span>
-            </div>
-          </div>
-        `;
+          </div>`;
         return;
       }
 
-      const last = getLastMatches(team, 5);
+      const last = getLastMatches(team, 5, mapValue); // ✅ filter applied here
 
       if (!last.length){
+        const label = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `No matches found on ${escapeHtml(mapValue)}.` : "No matches found for this team.";
         els.last5List.innerHTML = `
           <div class="matchItem">
             <div class="matchLeft">
               <div class="matchLine1">
                 <span class="badge warn">No data</span>
-                <span class="matchVs">No matches found for this team.</span>
+                <span class="matchVs">${label}</span>
               </div>
             </div>
-          </div>
-        `;
+          </div>`;
         return;
       }
 
@@ -1160,10 +1044,15 @@
       }
     }
 
-    function getLastMatches(team, n){
+    // ✅ UPDATED: accepts map filter
+    function getLastMatches(team, n, mapValue){
+      const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
+
       const out = [];
       for (let i = allMatches.length - 1; i >= 0 && out.length < n; i--){
         const m = allMatches[i];
+        if (mapFilter && m.map !== mapFilter) continue;
+
         const as1 = m.team1 === team;
         const as2 = m.team2 === team;
         if (!as1 && !as2) continue;
@@ -1196,66 +1085,45 @@
         els.worstMapBox.textContent = "—";
         els.bestMapMeta.textContent = "";
         els.worstMapMeta.textContent = "";
-
         mapPlayChart.data.labels = [];
         mapPlayChart.data.datasets[0].data = [];
         mapPlayChart.update();
         return;
       }
 
-      // Build per-map stats
-      const byMap = new Map(); // map -> {wins, losses, total, rate}
+      const byMap = new Map();
       for (const m of allMatches){
         const as1 = m.team1 === team;
         const as2 = m.team2 === team;
         if (!as1 && !as2) continue;
 
-        const key = m.map;
-        if (!byMap.has(key)) byMap.set(key, { wins:0, losses:0, total:0, rate:0 });
-
-        const s = byMap.get(key);
+        if (!byMap.has(m.map)) byMap.set(m.map, { wins:0, losses:0, total:0, rate:0 });
+        const s = byMap.get(m.map);
         const win = (as1 && m.winnerSide === "Team 1") || (as2 && m.winnerSide === "Team 2");
         if (win) s.wins++; else s.losses++;
         s.total++;
       }
 
-      // compute rates
       for (const s of byMap.values()){
         s.rate = s.total > 0 ? (s.wins / s.total) * 100 : 0;
       }
 
-      const entries = [...byMap.entries()]; // [map, stats]
-      if (!entries.length){
-        els.bestMapBox.textContent = "—";
-        els.worstMapBox.textContent = "—";
-        els.bestMapMeta.textContent = "";
-        els.worstMapMeta.textContent = "";
-        mapPlayChart.data.labels = [];
-        mapPlayChart.data.datasets[0].data = [];
-        mapPlayChart.update();
-        return;
-      }
+      const entries = [...byMap.entries()];
+      if (!entries.length) return;
 
-      // best = highest win rate; tie-breaker: higher total
       const best = entries.slice().sort((a,b) => (b[1].rate - a[1].rate) || (b[1].total - a[1].total))[0];
-      // worst = lowest win rate; tie-breaker: higher total
       const worst = entries.slice().sort((a,b) => (a[1].rate - b[1].rate) || (b[1].total - a[1].total))[0];
 
       els.bestMapBox.textContent = best[0];
       els.worstMapBox.textContent = worst[0];
-
       els.bestMapMeta.textContent = ` (${best[1].rate.toFixed(1)}% • ${best[1].wins}W-${best[1].losses}L • ${best[1].total})`;
       els.worstMapMeta.textContent = ` (${worst[1].rate.toFixed(1)}% • ${worst[1].wins}W-${worst[1].losses}L • ${worst[1].total})`;
 
-      // maps played ascending by matches (as requested)
+      // ascending by matches played
       const asc = entries.slice().sort((a,b) => (a[1].total - b[1].total) || a[0].localeCompare(b[0]));
-      const labels = asc.map(e => e[0]);
-      const data = asc.map(e => e[1].total);
+      mapPlayChart.data.labels = asc.map(e => e[0]);
+      mapPlayChart.data.datasets[0].data = asc.map(e => e[1].total);
 
-      mapPlayChart.data.labels = labels;
-      mapPlayChart.data.datasets[0].data = data;
-
-      // enrich tooltip with W/L and rate
       mapPlayChart.options.plugins.tooltip.callbacks.label = (ctx) => {
         const map = ctx.label;
         const s = byMap.get(map);
@@ -1265,9 +1133,7 @@
       mapPlayChart.update();
     }
 
-    /* -----------------------------
-       Excel loading
-    ------------------------------*/
+    /* ----------- Excel loading ----------- */
     async function loadExcelMatches(path, forceReload){
       const url = forceReload ? `${path}?v=${Date.now()}` : path;
       const res = await fetch(url, { cache: "no-store" });
@@ -1282,17 +1148,14 @@
       const ws = wb.Sheets[firstSheetName];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-      // Soft validation (non-blocking)
       const keys = rows.length ? Object.keys(rows[0]) : [];
       const hasExpected = EXPECTED_HEADERS.every(h => keys.includes(h));
       if (!hasExpected) console.warn("Unexpected headers detected:", keys);
 
-      const matches = rows
+      return rows
         .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"]))
         .map(normalizeRow)
         .filter(Boolean);
-
-      return matches;
     }
 
     function normalizeRow(r){
@@ -1306,25 +1169,10 @@
 
       let winnerSide = "Team 1";
       let winner = team1;
+      if (s2 > s1){ winnerSide = "Team 2"; winner = team2; }
+      else if (s1 === s2){ winnerSide = "Tie"; winner = "Tie"; }
 
-      if (s2 > s1){
-        winnerSide = "Team 2";
-        winner = team2;
-      } else if (s1 === s2){
-        winnerSide = "Tie";
-        winner = "Tie";
-      }
-
-      return {
-        team1,
-        team2,
-        map,
-        score1: s1,
-        score2: s2,
-        winnerSide,
-        winner,
-        resultRaw
-      };
+      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw };
     }
 
     function parseResult(text){
@@ -1336,11 +1184,11 @@
 
     function escapeHtml(str){
       return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
     }
   </script>
 </body>
