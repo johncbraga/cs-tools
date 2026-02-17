@@ -8,6 +8,9 @@
   <!-- SheetJS (XLSX reader) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
     :root{
       --bg: #0b1020;
@@ -20,6 +23,7 @@
       --accent2:#23d5ab;
       --danger:#ff4d6d;
       --ok:#2ee59d;
+      --warn:#ffcc66;
 
       --radius: 16px;
       --shadow: 0 14px 45px rgba(0,0,0,.35);
@@ -47,6 +51,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
+      gap: 12px;
       padding: 18px 22px;
       backdrop-filter: blur(12px);
       background: rgba(11,16,32,.65);
@@ -67,8 +72,16 @@
     .title{ margin:0; font-size: 18px; line-height: 1.1; }
     .subtitle{ margin:3px 0 0; color: var(--muted); font-size: 12.5px; }
 
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
     .container{
-      max-width: 1150px;
+      max-width: 1180px;
       margin: 0 auto;
       padding: 18px 18px 36px;
     }
@@ -114,6 +127,13 @@
     .stat-label{ color: var(--muted); font-size: 12px; }
     .stat-value{ font-size: 20px; margin-top: 6px; font-weight: 750; }
 
+    .grid-2{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 12px;
+      padding: 14px 16px 18px;
+    }
+
     .filters{
       display:flex;
       flex-wrap:wrap;
@@ -121,6 +141,7 @@
       align-items:end;
       justify-content:flex-end;
     }
+
     .field{ display:flex; flex-direction:column; gap:6px; }
     label{ font-size: 11.5px; color: var(--muted); }
     input, select{
@@ -150,23 +171,26 @@
       align-items:center;
       gap: 8px;
       user-select:none;
+      background: rgba(255,255,255,.05);
     }
+    .btn:hover{ background: rgba(255,255,255,.08); }
+
     .btn-primary{
       background: linear-gradient(135deg, rgba(124,92,255,.95), rgba(35,213,171,.85));
       border-color: rgba(255,255,255,.0);
     }
     .btn-primary:hover{ filter: brightness(1.06); }
+
     .btn-ghost{
       background: rgba(255,255,255,.05);
     }
-    .btn-ghost:hover{ background: rgba(255,255,255,.08); }
 
     .table-wrap{ overflow:auto; }
     .table{
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      min-width: 900px;
+      min-width: 920px;
     }
     thead th{
       text-align:left;
@@ -202,6 +226,7 @@
     .badge.ok{ border-color: rgba(46,229,157,.25); background: rgba(46,229,157,.12); }
     .badge.danger{ border-color: rgba(255,77,109,.25); background: rgba(255,77,109,.12); }
     .badge.neutral{ border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+    .badge.warn{ border-color: rgba(255,204,102,.25); background: rgba(255,204,102,.12); }
 
     .pill{
       font-size: 12px;
@@ -215,12 +240,14 @@
     .pill-good{ border-color: rgba(46,229,157,.25); background: rgba(46,229,157,.12); }
     .pill-bad{ border-color: rgba(255,77,109,.25); background: rgba(255,77,109,.12); }
     .pill-neutral{ border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+    .pill-warn{ border-color: rgba(255,204,102,.25); background: rgba(255,204,102,.12); }
 
     .hint{
       padding: 12px 16px 16px;
       color: var(--muted);
       font-size: 12px;
     }
+
     kbd{
       font-family: var(--mono);
       font-size: 11px;
@@ -230,6 +257,7 @@
       background: rgba(0,0,0,.25);
       color: rgba(255,255,255,.85);
     }
+
     .footer{
       color: var(--muted);
       font-size: 12px;
@@ -247,14 +275,68 @@
       line-height: 1.35;
       display:none;
     }
+
     .small{
       font-size: 12px;
       color: rgba(255,255,255,.80);
     }
 
-    @media (max-width: 980px){
+    .chartCard{
+      background: var(--card2);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 320px;
+    }
+
+    .chartTop{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .chartTitle{
+      margin:0;
+      font-size: 13px;
+      color: rgba(255,255,255,.88);
+      letter-spacing:.2px;
+    }
+
+    .chartMeta{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .metaBox{
+      padding: 7px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.20);
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+      white-space: nowrap;
+    }
+
+    .canvasWrap{
+      width: 100%;
+      height: 240px;
+    }
+
+    .canvasWrap canvas{
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    @media (max-width: 1020px){
       .stats{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-      input, select{ width: 180px; }
+      .grid-2{ grid-template-columns: 1fr; }
+      input, select{ width: 190px; }
     }
   </style>
 </head>
@@ -265,16 +347,24 @@
       <div class="logo">PA</div>
       <div>
         <h1 class="title">Pro Analyses</h1>
-        <p class="subtitle">Match results from Excel • auto winner detection</p>
+        <p class="subtitle">Excel-driven match analytics • winner detection + team stats</p>
       </div>
     </div>
 
-    <a class="btn btn-ghost" href="index.html" title="Go back to the main menu">
-      Back to Menu
-    </a>
+    <div class="top-actions">
+      <button id="updateBtn" class="btn btn-primary" type="button" title="Force reload the Excel file">
+        Update
+      </button>
+
+      <a class="btn btn-ghost" href="index.html" title="Go back to the main menu">
+        Back to Menu
+      </a>
+    </div>
   </header>
 
   <main class="container">
+
+    <!-- Dashboard -->
     <section class="panel">
       <div class="panel-head">
         <h2>Dashboard</h2>
@@ -303,6 +393,75 @@
       <div id="errorBox" class="errorBox"></div>
     </section>
 
+    <!-- Team chart -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Team Performance (Wins / Losses + Win Rate)</h2>
+
+        <div class="filters">
+          <div class="field">
+            <label for="teamSelect">Team</label>
+            <select id="teamSelect">
+              <option value="">Select a team</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="teamMapSelect">Map</label>
+            <select id="teamMapSelect" disabled>
+              <option value="__general__">General (all maps)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chartCard">
+          <div class="chartTop">
+            <h3 class="chartTitle">Wins vs Losses</h3>
+            <div class="chartMeta">
+              <div class="metaBox">Wins: <b id="winsBox">—</b></div>
+              <div class="metaBox">Losses: <b id="lossesBox">—</b></div>
+              <div class="metaBox">Win rate: <b id="rateBox">—</b></div>
+            </div>
+          </div>
+
+          <div class="canvasWrap">
+            <canvas id="wlChart" aria-label="Wins and losses chart"></canvas>
+          </div>
+
+          <div class="hint">
+            Choose a team, then pick a map (or <b>General</b>) to see stats.
+          </div>
+        </div>
+
+        <div class="chartCard">
+          <div class="chartTop">
+            <h3 class="chartTitle">What this shows</h3>
+          </div>
+          <div class="small" style="line-height:1.5;">
+            <p style="margin-top:0;">
+              The Excel column <b>Result</b> is interpreted as:
+              <b>Team 1 score</b> x <b>Team 2 score</b>.
+            </p>
+            <p>
+              Example:
+              <span class="badge neutral">13x11</span> → Team 1 wins.
+              <span class="badge neutral">11x13</span> → Team 2 wins.
+            </p>
+            <p>
+              The “Update” button forces a fresh reload of the Excel file
+              by busting cache, so the page does not get stuck with old data.
+            </p>
+            <p class="hint" style="padding:0;margin:0;">
+              Tip: Press <kbd>0</kbd> to go back (only when not typing in a field).
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Match list -->
     <section class="panel">
       <div class="panel-head">
         <h2>Matches</h2>
@@ -320,7 +479,7 @@
           </div>
 
           <div class="field">
-            <label for="winnerSelect">Winner</label>
+            <label for="winnerSelect">Winner side</label>
             <select id="winnerSelect">
               <option value="">Any</option>
               <option value="Team 1">Team 1</option>
@@ -363,13 +522,20 @@
   </main>
 
   <script>
-    /* Pro Analyses - Single file HTML (CSS + JS inline)
-       Reads an XLSX from /file and determines winners from "Result" (e.g., 13x11).
-       Result is interpreted as: Team 1 score x Team 2 score (position matters).
+    /*
+      Pro Analyses (single-file)
+      Excel file: file/history.xlsx (see [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5)). [1](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
+      Winner logic: Result = "Team 1 score x Team 2 score" (position matters)
+      Features:
+        - Update button forces Excel reload (cache bust)
+        - Team W/L chart with map selector (General = all maps)
+        - Filters + table
+        - Shortcut key "0" to go back (not when typing)
     */
 
-    const EXCEL_PATH = "file/history.xlsx"; // default found as "history.xlsx" in your files [1](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
+    const EXCEL_PATH = "file/history.xlsx"; // grounded by [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5) [1](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
+    const GENERAL_MAP_VALUE = "__general__";
 
     const els = {
       statusPill: document.getElementById("statusPill"),
@@ -383,10 +549,20 @@
       winnerSelect: document.getElementById("winnerSelect"),
       clearBtn: document.getElementById("clearBtn"),
       sourceInfo: document.getElementById("sourceInfo"),
-      errorBox: document.getElementById("errorBox")
+      errorBox: document.getElementById("errorBox"),
+      updateBtn: document.getElementById("updateBtn"),
+
+      // chart UI
+      teamSelect: document.getElementById("teamSelect"),
+      teamMapSelect: document.getElementById("teamMapSelect"),
+      winsBox: document.getElementById("winsBox"),
+      lossesBox: document.getElementById("lossesBox"),
+      rateBox: document.getElementById("rateBox"),
+      wlCanvas: document.getElementById("wlChart")
     };
 
     let allMatches = [];
+    let wlChart = null;
 
     init();
 
@@ -394,15 +570,39 @@
       els.sourceInfo.textContent = `Source: ${EXCEL_PATH}`;
       setupShortcutBack();
       setupFilters();
+      setupUpdateButton();
+      setupTeamChartControls();
+      buildEmptyChart();
 
+      await reloadExcel(true);
+    }
+
+    function setupUpdateButton(){
+      els.updateBtn.addEventListener("click", async () => {
+        await reloadExcel(true);
+      });
+    }
+
+    async function reloadExcel(force){
       try{
-        setStatus("Loading Excel…", "neutral");
-        const matches = await loadExcelMatches(EXCEL_PATH);
+        setStatus(force ? "Updating… (forcing reload)" : "Loading Excel…", force ? "warn" : "neutral");
+        disableUpdate(true);
+
+        const matches = await loadExcelMatches(EXCEL_PATH, force);
         allMatches = matches;
 
+        // refresh general UI
         populateMapOptions(allMatches);
-        render(allMatches);
-        renderStats(allMatches);
+        populateTeamOptions(allMatches);
+
+        // apply filters from match table section
+        applyMatchFilters();
+
+        // refresh dashboard
+        renderStats(getFilteredMatchesFromControls());
+
+        // refresh chart (keep selections if possible)
+        reconcileTeamSelectionsAfterReload();
 
         setStatus(`Loaded ${allMatches.length} matches`, "good");
         hideError();
@@ -410,7 +610,10 @@
         console.error(err);
         setStatus("Failed to load Excel", "bad");
         showError(
-          `Could not load <b>${EXCEL_PATH}</b>.<br><span class="small">Make sure the file exists in <code>file/</code> and you are running the site via a local server (e.g., VS Code Live Server). Browsers usually block <code>fetch</code> from local files when opened by double-click.</span>`
+          `Could not load <b>${EXCEL_PATH}</b>.<br><span class="small">
+           Make sure the file exists in <code>file/</code> and run this page using a local web server
+           (e.g., VS Code Live Server). Browsers often block <code>fetch</code> from local files when opened by double-click.
+           </span>`
         );
 
         els.tbody.innerHTML = `
@@ -421,12 +624,21 @@
             </td>
           </tr>
         `;
+      } finally{
+        disableUpdate(false);
       }
+    }
+
+    function disableUpdate(disabled){
+      els.updateBtn.disabled = disabled;
+      els.updateBtn.style.opacity = disabled ? "0.75" : "1";
+      els.updateBtn.style.cursor = disabled ? "not-allowed" : "pointer";
     }
 
     function setStatus(text, state){
       els.statusPill.textContent = text;
-      els.statusPill.className = "pill " + (state === "good" ? "pill-good" : state === "bad" ? "pill-bad" : "pill-neutral");
+      els.statusPill.className =
+        "pill " + (state === "good" ? "pill-good" : state === "bad" ? "pill-bad" : state === "warn" ? "pill-warn" : "pill-neutral");
     }
 
     function showError(html){
@@ -441,7 +653,6 @@
 
     function setupShortcutBack(){
       document.addEventListener("keydown", (e) => {
-        // Shortcut: press "0" to go back, but NOT while typing in a field
         if (e.key !== "0") return;
 
         const a = document.activeElement;
@@ -460,31 +671,13 @@
       });
     }
 
+    /* -----------------------------
+       Match table filters
+    ------------------------------*/
     function setupFilters(){
-      const apply = () => {
-        const q = (els.search.value || "").trim().toLowerCase();
-        const map = els.mapSelect.value;
-        const winnerSide = els.winnerSelect.value; // "Team 1" | "Team 2" | ""
-
-        const filtered = allMatches.filter(m => {
-          const matchesQuery =
-            !q ||
-            m.team1.toLowerCase().includes(q) ||
-            m.team2.toLowerCase().includes(q);
-
-          const matchesMap = !map || m.map === map;
-          const matchesWinner = !winnerSide || m.winnerSide === winnerSide;
-
-          return matchesQuery && matchesMap && matchesWinner;
-        });
-
-        render(filtered);
-        renderStats(filtered, true);
-      };
-
-      els.search.addEventListener("input", apply);
-      els.mapSelect.addEventListener("change", apply);
-      els.winnerSelect.addEventListener("change", apply);
+      els.search.addEventListener("input", applyMatchFilters);
+      els.mapSelect.addEventListener("change", applyMatchFilters);
+      els.winnerSelect.addEventListener("change", applyMatchFilters);
 
       els.clearBtn.addEventListener("click", () => {
         els.search.value = "";
@@ -495,10 +688,32 @@
       });
     }
 
-    function populateMapOptions(matches){
-      // clear existing (keep first option)
-      while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
+    function getFilteredMatchesFromControls(){
+      const q = (els.search.value || "").trim().toLowerCase();
+      const map = els.mapSelect.value;
+      const winnerSide = els.winnerSelect.value;
 
+      return allMatches.filter(m => {
+        const matchesQuery =
+          !q ||
+          m.team1.toLowerCase().includes(q) ||
+          m.team2.toLowerCase().includes(q);
+
+        const matchesMap = !map || m.map === map;
+        const matchesWinner = !winnerSide || m.winnerSide === winnerSide;
+
+        return matchesQuery && matchesMap && matchesWinner;
+      });
+    }
+
+    function applyMatchFilters(){
+      const filtered = getFilteredMatchesFromControls();
+      render(filtered);
+      renderStats(filtered);
+    }
+
+    function populateMapOptions(matches){
+      while (els.mapSelect.options.length > 1) els.mapSelect.remove(1);
       const maps = [...new Set(matches.map(m => m.map))].sort((a,b) => a.localeCompare(b));
       for (const m of maps){
         const opt = document.createElement("option");
@@ -548,7 +763,6 @@
       els.team1Wins.textContent = t1.toString();
       els.team2Wins.textContent = t2.toString();
 
-      // Most played map
       const mapCounts = new Map();
       for (const m of matches){
         mapCounts.set(m.map, (mapCounts.get(m.map) || 0) + 1);
@@ -564,9 +778,207 @@
       els.topMap.textContent = topMap;
     }
 
-    async function loadExcelMatches(path){
-      const res = await fetch(path, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${path}`);
+    /* -----------------------------
+       Team chart (W/L + win rate)
+    ------------------------------*/
+    function setupTeamChartControls(){
+      els.teamSelect.addEventListener("change", () => {
+        rebuildTeamMapOptions();
+        updateTeamChart();
+      });
+
+      els.teamMapSelect.addEventListener("change", () => {
+        updateTeamChart();
+      });
+    }
+
+    function populateTeamOptions(matches){
+      const teams = new Set();
+      for (const m of matches){
+        teams.add(m.team1);
+        teams.add(m.team2);
+      }
+      const sorted = [...teams].sort((a,b) => a.localeCompare(b));
+
+      // keep selection if possible
+      const prev = els.teamSelect.value;
+
+      // rebuild
+      els.teamSelect.innerHTML = `<option value="">Select a team</option>`;
+      for (const t of sorted){
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        els.teamSelect.appendChild(opt);
+      }
+
+      if (prev && sorted.includes(prev)){
+        els.teamSelect.value = prev;
+      }
+    }
+
+    function rebuildTeamMapOptions(){
+      const team = els.teamSelect.value;
+      els.teamMapSelect.innerHTML = "";
+      const general = document.createElement("option");
+      general.value = GENERAL_MAP_VALUE;
+      general.textContent = "General (all maps)";
+      els.teamMapSelect.appendChild(general);
+
+      if (!team){
+        els.teamMapSelect.disabled = true;
+        els.winsBox.textContent = "—";
+        els.lossesBox.textContent = "—";
+        els.rateBox.textContent = "—";
+        setChartData(0, 0);
+        return;
+      }
+
+      const maps = new Set();
+      for (const m of allMatches){
+        if (m.team1 === team || m.team2 === team){
+          maps.add(m.map);
+        }
+      }
+      const sortedMaps = [...maps].sort((a,b)=>a.localeCompare(b));
+
+      for (const mp of sortedMaps){
+        const opt = document.createElement("option");
+        opt.value = mp;
+        opt.textContent = mp;
+        els.teamMapSelect.appendChild(opt);
+      }
+
+      els.teamMapSelect.disabled = false;
+      els.teamMapSelect.value = GENERAL_MAP_VALUE;
+    }
+
+    function reconcileTeamSelectionsAfterReload(){
+      // if team selected, rebuild map options from updated matches
+      if (els.teamSelect.value){
+        rebuildTeamMapOptions();
+      } else {
+        // enable clean state
+        els.teamMapSelect.disabled = true;
+        els.teamMapSelect.innerHTML = `<option value="${GENERAL_MAP_VALUE}">General (all maps)</option>`;
+      }
+      updateTeamChart();
+    }
+
+    function computeTeamStats(team, mapValue){
+      const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
+
+      let wins = 0;
+      let losses = 0;
+
+      for (const m of allMatches){
+        if (mapFilter && m.map !== mapFilter) continue;
+
+        const involvedAsTeam1 = (m.team1 === team);
+        const involvedAsTeam2 = (m.team2 === team);
+        if (!involvedAsTeam1 && !involvedAsTeam2) continue;
+
+        // If the team is Team 1, it wins when winnerSide == "Team 1"
+        // If the team is Team 2, it wins when winnerSide == "Team 2"
+        if (involvedAsTeam1){
+          if (m.winnerSide === "Team 1") wins++;
+          else if (m.winnerSide === "Team 2") losses++;
+        } else if (involvedAsTeam2){
+          if (m.winnerSide === "Team 2") wins++;
+          else if (m.winnerSide === "Team 1") losses++;
+        }
+      }
+
+      const total = wins + losses;
+      const rate = total > 0 ? (wins / total) * 100 : 0;
+
+      return { wins, losses, total, rate };
+    }
+
+    function updateTeamChart(){
+      const team = els.teamSelect.value;
+      const mapValue = els.teamMapSelect.value || GENERAL_MAP_VALUE;
+
+      if (!team){
+        els.winsBox.textContent = "—";
+        els.lossesBox.textContent = "—";
+        els.rateBox.textContent = "—";
+        setChartData(0, 0);
+        return;
+      }
+
+      const s = computeTeamStats(team, mapValue);
+
+      els.winsBox.textContent = s.wins.toString();
+      els.lossesBox.textContent = s.losses.toString();
+      els.rateBox.textContent = (s.total > 0 ? `${s.rate.toFixed(1)}%` : "0%");
+
+      setChartData(s.wins, s.losses);
+    }
+
+    function buildEmptyChart(){
+      const ctx = els.wlCanvas.getContext("2d");
+      wlChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Wins", "Losses"],
+          datasets: [{
+            label: "Matches",
+            data: [0, 0],
+            backgroundColor: [
+              "rgba(46, 229, 157, 0.45)",
+              "rgba(255, 77, 109, 0.45)"
+            ],
+            borderColor: [
+              "rgba(46, 229, 157, 0.85)",
+              "rgba(255, 77, 109, 0.85)"
+            ],
+            borderWidth: 1.2,
+            borderRadius: 10,
+            maxBarThickness: 70
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.raw} matches`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: "rgba(255,255,255,0.80)" },
+              grid: { color: "rgba(255,255,255,0.06)" }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: { color: "rgba(255,255,255,0.80)" },
+              grid: { color: "rgba(255,255,255,0.06)" }
+            }
+          }
+        }
+      });
+    }
+
+    function setChartData(wins, losses){
+      if (!wlChart) return;
+      wlChart.data.datasets[0].data = [wins, losses];
+      wlChart.update();
+    }
+
+    /* -----------------------------
+       Excel loading
+    ------------------------------*/
+    async function loadExcelMatches(path, forceReload){
+      // Cache-bust if forceReload: makes browser fetch the latest Excel
+      const url = forceReload ? `${path}?v=${Date.now()}` : path;
+
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} while fetching ${url}`);
 
       const buf = await res.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
@@ -575,21 +987,18 @@
       if (!firstSheetName) throw new Error("No sheets found in workbook");
 
       const ws = wb.Sheets[firstSheetName];
-
-      // Read as JSON using header row
       const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-      // Soft validation of headers
+      // Soft validation of headers (non-blocking)
       const keys = rows.length ? Object.keys(rows[0]) : [];
       const hasExpected = EXPECTED_HEADERS.every(h => keys.includes(h));
       if (!hasExpected){
         console.warn("Unexpected headers detected:", keys);
       }
 
-      // Transform rows into match objects
       const matches = rows
-        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"])) // ignore empty lines
-        .map((r) => normalizeRow(r))
+        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"]))
+        .map(normalizeRow)
         .filter(Boolean);
 
       return matches;
@@ -602,13 +1011,9 @@
       const resultRaw = String(r["Result"] ?? "").trim();
 
       const { s1, s2 } = parseResult(resultRaw);
-      if (team1 === "" || team2 === "" || map === "" || s1 === null || s2 === null){
-        // skip malformed line
-        return null;
-      }
+      if (!team1 || !team2 || !map || s1 === null || s2 === null) return null;
 
-      // winner depends on score and Team position:
-      // Result is "Team 1 score x Team 2 score"
+      // Determine winner side by score
       let winnerSide = "Team 1";
       let winner = team1;
 
@@ -616,7 +1021,7 @@
         winnerSide = "Team 2";
         winner = team2;
       } else if (s1 === s2){
-        // Not expected, but handled gracefully
+        // not expected, but safe
         winnerSide = "Tie";
         winner = "Tie";
       }
@@ -634,9 +1039,9 @@
     }
 
     function parseResult(text){
-      // Accept "13x11", "13X11", "13 x 11"
+      // Accept: "13x11", "13X11", "13 x 11"
       const cleaned = String(text).replace(/\s+/g, "");
-      const m = cleaned.match(/^(\d+)[xX](\d+)$/);
+      const m = cleaned.match(/^(\d+)x(\d+)$/i);
       if (!m) return { s1: null, s2: null };
       return { s1: Number(m[1]), s2: Number(m[2]) };
     }
