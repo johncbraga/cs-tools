@@ -425,6 +425,7 @@
   </header>
 
   <main class="container">
+
     <!-- Dashboard -->
     <section class="panel">
       <div class="panel-head">
@@ -647,7 +648,12 @@
         <div class="filters">
           <div class="field">
             <label for="searchInput">Search team</label>
-            <input id="searchInput" type="text" placeholder="Type a team name…" autocomplete="off" />
+
+            <!-- ✅ CHANGED: datalist autocomplete -->
+            <input id="searchInput" type="text" placeholder="Type a team name…" autocomplete="off" list="teamsDatalist" />
+
+            <!-- ✅ ADDED: native suggestions -->
+            <datalist id="teamsDatalist"></datalist>
           </div>
 
           <div class="field">
@@ -703,7 +709,7 @@
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
     const GENERAL_MAP_VALUE = "__general__";
 
-    // ✅ ADDED: highlight colors for General Overview map labels
+    // highlight colors for General Overview map labels
     const MAP_LABEL_BEST_COLOR = "#ffcc66";  // yellow
     const MAP_LABEL_WORST_COLOR = "#7c5cff"; // lilac
     const MAP_LABEL_DEFAULT_COLOR = "rgba(255,255,255,0.80)";
@@ -743,7 +749,6 @@
       worstMapMeta: document.getElementById("worstMapMeta"),
       mapPlayCanvas: document.getElementById("mapPlayChart"),
 
-      // Comparison UI
       compareTeamA: document.getElementById("compareTeamA"),
       compareTeamB: document.getElementById("compareTeamB"),
       compareMapSelect: document.getElementById("compareMapSelect"),
@@ -783,7 +788,6 @@
     let teamLowerToCanonical = new Map();
     let canonicalTeams = [];
 
-    // ✅ ADDED: sets used by the General Overview axis label color callback
     let bestMapsSet = new Set();
     let worstMapsSet = new Set();
 
@@ -815,6 +819,9 @@
         populateMapOptions(allMatches);
         populateTeamOptions(allMatches);
         populateComparisonTeamOptions(allMatches);
+
+        // ✅ ADDED: fill datalist suggestions for Search team
+        populateSearchDatalist();
 
         refreshOpponentOptions();
         applyMatchFilters();
@@ -883,20 +890,76 @@
       for (const t of canonicalTeams) teamLowerToCanonical.set(t.toLowerCase(), t);
     }
 
+    function populateSearchDatalist(){
+      const dl = document.getElementById("teamsDatalist");
+      if (!dl) return;
+      dl.innerHTML = "";
+      for (const t of canonicalTeams){
+        const opt = document.createElement("option");
+        opt.value = t;
+        dl.appendChild(opt);
+      }
+    }
+
     function resolveCanonicalTeam(userText){
       const key = (userText || "").trim().toLowerCase();
       if (!key) return null;
       return teamLowerToCanonical.get(key) || null;
     }
 
+    /* ✅ UPGRADE: parse search input with an "exact mode"
+       Exact mode supported:
+       - Spirit.     (trailing dot)
+       - =Spirit     (leading equals)
+       - "Spirit"    (quotes)
+    */
+    function parseSearchInput(){
+      const raw = (els.search.value || "").trim();
+      if (!raw) return { raw:"", q:"", qLower:"", exact:false, exactTeam:null };
+
+      let q = raw;
+      let exact = false;
+
+      // 1) trailing dot => exact
+      if (q.endsWith(".")){
+        q = q.slice(0, -1).trim();
+        exact = true;
+      }
+
+      // 2) leading "=" => exact
+      if (q.startsWith("=")){
+        q = q.slice(1).trim();
+        exact = true;
+      }
+
+      // 3) quoted => exact
+      if ((q.startsWith('"') && q.endsWith('"')) || (q.startsWith("'") && q.endsWith("'"))){
+        q = q.slice(1, -1).trim();
+        exact = true;
+      }
+
+      const qLower = q.toLowerCase();
+
+      // Try resolve exact canonical team
+      const exactTeam = resolveCanonicalTeam(qLower);
+
+      return { raw, q, qLower, exact, exactTeam };
+    }
+
     function resolveFocusTeamFromSearch(){
-      const q = (els.search.value || "").trim().toLowerCase();
-      if (!q) return null;
+      const s = parseSearchInput();
+      if (!s.qLower) return null;
 
-      const exact = resolveCanonicalTeam(q);
-      if (exact) return exact;
+      // If exact mode: only accept exact match (no substring fallback)
+      if (s.exact){
+        return s.exactTeam || null;
+      }
 
-      const hits = canonicalTeams.filter(t => t.toLowerCase().includes(q));
+      // Normal mode: exact match first
+      if (s.exactTeam) return s.exactTeam;
+
+      // Otherwise: only if substring uniquely identifies a team
+      const hits = canonicalTeams.filter(t => t.toLowerCase().includes(s.qLower));
       if (hits.length === 1) return hits[0];
 
       return null;
@@ -965,13 +1028,21 @@
     }
 
     function getFilteredMatchesFromControls(){
-      const q = (els.search.value || "").trim().toLowerCase();
+      const s = parseSearchInput();
       const map = els.mapSelect.value;
       const focus = getFocusTeam();
       const opponent = els.opponentSelect.value;
 
       return allMatches.filter(m => {
-        const matchesQuery = !q || m.team1.toLowerCase().includes(q) || m.team2.toLowerCase().includes(q);
+        // ✅ CHANGED: if exact mode AND we resolved exact team => filter by exact team presence
+        let matchesQuery = true;
+        if (s.qLower){
+          if (s.exact && focus){
+            matchesQuery = (m.team1 === focus || m.team2 === focus);
+          } else {
+            matchesQuery = m.team1.toLowerCase().includes(s.qLower) || m.team2.toLowerCase().includes(s.qLower);
+          }
+        }
         if (!matchesQuery) return false;
 
         const matchesMap = !map || m.map === map;
@@ -1057,7 +1128,7 @@
     }
 
     /* ----------------------------
-       TEAM PERFORMANCE
+       TEAM PERFORMANCE + GENERAL OVERVIEW (unchanged except it relies on mapPlayChart config)
     -----------------------------*/
     function setupTeamControls(){
       els.teamSelect.addEventListener("change", () => {
@@ -1260,11 +1331,9 @@
       return out;
     }
 
-    // ✅ CHANGED: highlight 2 best + 2 worst maps by coloring Y-axis labels
     function updateGeneralOverview(){
       const team = els.teamSelect.value;
 
-      // reset sets every update
       bestMapsSet = new Set();
       worstMapsSet = new Set();
 
@@ -1275,8 +1344,6 @@
         els.worstMapMeta.textContent = "";
         mapPlayChart.data.labels = [];
         mapPlayChart.data.datasets[0].data = [];
-
-        // keep default tick colors
         mapPlayChart.update();
         return;
       }
@@ -1301,7 +1368,6 @@
       const entries = [...byMap.entries()];
       if (!entries.length) return;
 
-      // Best/Worst single (existing logic)
       const best = entries.slice().sort((a,b) => (b[1].rate - a[1].rate) || (b[1].total - a[1].total))[0];
       const worst = entries.slice().sort((a,b) => (a[1].rate - b[1].rate) || (b[1].total - a[1].total))[0];
 
@@ -1310,7 +1376,6 @@
       els.bestMapMeta.textContent = ` (${best[1].rate.toFixed(1)}% • ${best[1].wins}W-${best[1].losses}L • ${best[1].total})`;
       els.worstMapMeta.textContent = ` (${worst[1].rate.toFixed(1)}% • ${worst[1].wins}W-${worst[1].losses}L • ${worst[1].total})`;
 
-      // ✅ NEW: top 2 best & top 2 worst sets
       const best2 = entries.slice()
         .sort((a,b) => (b[1].rate - a[1].rate) || (b[1].total - a[1].total))
         .slice(0, 2)
@@ -1324,7 +1389,6 @@
       bestMapsSet = new Set(best2);
       worstMapsSet = new Set(worst2);
 
-      // existing chart data (ascending by total)
       const asc = entries.slice().sort((a,b) => (a[1].total - b[1].total) || a[0].localeCompare(b[0]));
       mapPlayChart.data.labels = asc.map(e => e[0]);
       mapPlayChart.data.datasets[0].data = asc.map(e => e[1].total);
@@ -1335,7 +1399,6 @@
         return ` ${s.total} matches • ${s.wins}W-${s.losses}L • ${s.rate.toFixed(1)}% win rate`;
       };
 
-      // ✅ Force update so the tick color callback uses updated sets
       mapPlayChart.update();
     }
 
@@ -1647,8 +1710,6 @@
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx)=>` ${ctx.raw} matches` } } },
           scales: {
             x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
-
-            // ✅ CHANGED: y-axis tick labels use a color callback to highlight best/worst maps
             y: {
               ticks: {
                 color: (ctx) => {
