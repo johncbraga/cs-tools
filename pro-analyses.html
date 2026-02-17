@@ -701,8 +701,6 @@
   </main>
 
   <script>
-    // Uses [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5) as /file/history.xlsx. [2](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
-
     const EXCEL_PATH = "file/history.xlsx";
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
     const GENERAL_MAP_VALUE = "__general__";
@@ -819,7 +817,7 @@
         reconcileTeamSelectionsAfterReload();
         updateTeamSections();
 
-        rebuildCompareMapOptions();   // now always enables map once two teams exist
+        rebuildCompareMapOptions();
         updateComparison();
 
         setStatus(`Loaded ${allMatches.length} matches`, "good");
@@ -885,6 +883,23 @@
       return teamLowerToCanonical.get(key) || null;
     }
 
+    /* ✅ CHANGED (minimal): resolve a unique team from Search input (exact OR unique substring) */
+    function resolveFocusTeamFromSearch(){
+      const q = (els.search.value || "").trim().toLowerCase();
+      if (!q) return null;
+
+      // 1) exact match wins
+      const exact = resolveCanonicalTeam(q);
+      if (exact) return exact;
+
+      // 2) otherwise: if only ONE canonical team contains the query, use it
+      const hits = canonicalTeams.filter(t => t.toLowerCase().includes(q));
+      if (hits.length === 1) return hits[0];
+
+      // 3) ambiguous (0 or many) -> no single focus team
+      return null;
+    }
+
     /* ----------------------------
        MATCH TABLE CONTROLS
     -----------------------------*/
@@ -913,14 +928,9 @@
       });
     }
 
+    /* ✅ CHANGED (minimal): Matches focus team comes ONLY from Search team (no Team Performance fallback) */
     function getFocusTeam(){
-      const exactFromSearch = resolveCanonicalTeam(els.search.value);
-      if (exactFromSearch) return exactFromSearch;
-
-      const searchEmpty = (els.search.value || "").trim() === "";
-      if (searchEmpty && els.teamSelect.value) return els.teamSelect.value;
-
-      return null;
+      return resolveFocusTeamFromSearch();
     }
 
     function refreshOpponentOptions(){
@@ -1305,6 +1315,7 @@
 
     /* ----------------------------
        COMPARISON
+       (unchanged)
     -----------------------------*/
     function setupComparisonControls(){
       els.compareTeamA.addEventListener("change", () => {
@@ -1351,8 +1362,6 @@
       if (prevB && sorted.includes(prevB)) els.compareTeamB.value = prevB;
     }
 
-    // ✅ Map selector enabled whenever A and B are selected and different.
-    // ✅ Even without head-to-head, we allow map selection to use each team's map history.
     function rebuildCompareMapOptions(){
       const a = els.compareTeamA.value;
       const b = els.compareTeamB.value;
@@ -1365,7 +1374,6 @@
         return;
       }
 
-      // Union of maps played by either team
       const maps = new Set();
       for (const m of allMatches){
         if (m.team1 === a || m.team2 === a || m.team1 === b || m.team2 === b){
@@ -1391,7 +1399,6 @@
       const b = els.compareTeamB.value;
       const mapValue = els.compareMapSelect.value || GENERAL_MAP_VALUE;
 
-      // Update badges (names)
       els.teamANameBadge.textContent = a || "Team A";
       els.teamBNameBadge.textContent = b || "Team B";
       els.probTeamABadge.textContent = a || "Team A";
@@ -1416,14 +1423,12 @@
         return;
       }
 
-      // Always show each team's own win rate on the selected map/general
       const sA = computeTeamStats(a, mapValue);
       const sB = computeTeamStats(b, mapValue);
 
       els.mapRateABox.textContent = (sA.total > 0) ? `${sA.rate.toFixed(1)}% (${sA.wins}W-${sA.losses}L / ${sA.total})` : `0% (0W-0L / 0)`;
       els.mapRateBBox.textContent = (sB.total > 0) ? `${sB.rate.toFixed(1)}% (${sB.wins}W-${sB.losses}L / ${sB.total})` : `0% (0W-0L / 0)`;
 
-      // Head-to-head stats
       const h2h = getHeadToHead(a, b, mapValue);
       els.h2hMatchesBox.textContent = h2h.total.toString();
       els.h2hAWinsBox.textContent = h2h.aWins.toString();
@@ -1431,9 +1436,6 @@
 
       setH2HBarData(h2h.aWins, h2h.bWins, a, b);
 
-      // Probability logic:
-      // If H2H exists: use Laplace smoothing on H2H then normalize.
-      // Else: use Laplace smoothing on each team's map stats then normalize.
       let pA = 0.5, pB = 0.5;
 
       if (h2h.total > 0){
@@ -1462,7 +1464,6 @@
       els.probBBox.textContent = `${(pB*100).toFixed(1)}%`;
       setProbDoughnut(pA*100, pB*100, a, b);
 
-      // H2H history (last 5)
       const history = getH2HHistory(a, b, 5, mapValue);
       renderH2HHistory(history);
 
@@ -1577,7 +1578,6 @@
        CHARTS
     -----------------------------*/
     function buildCharts(){
-      // Chart 1: team W/L
       const ctx1 = els.wlCanvas.getContext("2d");
       wlChart = new Chart(ctx1, {
         type: "bar",
@@ -1604,7 +1604,6 @@
         }
       });
 
-      // Chart 2: maps played
       const ctx2 = els.mapPlayCanvas.getContext("2d");
       mapPlayChart = new Chart(ctx2, {
         type: "bar",
@@ -1628,7 +1627,6 @@
         }
       });
 
-      // Chart 3: H2H bar (Team A yellow, Team B blue)
       const ctx3 = els.h2hBarCanvas.getContext("2d");
       h2hBarChart = new Chart(ctx3, {
         type: "bar",
@@ -1655,7 +1653,6 @@
         }
       });
 
-      // Chart 4: probability doughnut (Team A yellow, Team B blue)
       const ctx4 = els.probCanvas.getContext("2d");
       probDoughnut = new Chart(ctx4, {
         type: "doughnut",
