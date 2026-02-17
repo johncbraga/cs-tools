@@ -648,11 +648,7 @@
         <div class="filters">
           <div class="field">
             <label for="searchInput">Search team</label>
-
-            <!-- ✅ CHANGED: datalist autocomplete -->
             <input id="searchInput" type="text" placeholder="Type a team name…" autocomplete="off" list="teamsDatalist" />
-
-            <!-- ✅ ADDED: native suggestions -->
             <datalist id="teamsDatalist"></datalist>
           </div>
 
@@ -660,6 +656,14 @@
             <label for="mapSelect">Map</label>
             <select id="mapSelect">
               <option value="">All maps</option>
+            </select>
+          </div>
+
+          <!-- ✅ NEW: Event filter (same pattern as Map) -->
+          <div class="field">
+            <label for="eventSelect">Event</label>
+            <select id="eventSelect">
+              <option value="">All events</option>
             </select>
           </div>
 
@@ -684,11 +688,13 @@
               <th>Map</th>
               <th>Score</th>
               <th>Result</th>
+              <!-- ✅ NEW: Event column after Result -->
+              <th>Event</th>
             </tr>
           </thead>
           <tbody id="matchesTbody">
             <tr>
-              <td colspan="6"><span class="badge neutral">Loading</span> Reading Excel…</td>
+              <td colspan="7"><span class="badge neutral">Loading</span> Reading Excel…</td>
             </tr>
           </tbody>
         </table>
@@ -706,7 +712,8 @@
 
   <script>
     const EXCEL_PATH = "file/history.xlsx";
-    const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
+    // ✅ UPDATED: new header "Event"
+    const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result", "Event"];
     const GENERAL_MAP_VALUE = "__general__";
 
     // highlight colors for General Overview map labels
@@ -724,6 +731,8 @@
 
       search: document.getElementById("searchInput"),
       mapSelect: document.getElementById("mapSelect"),
+      // ✅ NEW: eventSelect
+      eventSelect: document.getElementById("eventSelect"),
       opponentSelect: document.getElementById("opponentSelect"),
       clearBtn: document.getElementById("clearBtn"),
 
@@ -817,10 +826,11 @@
 
         rebuildTeamLookup(allMatches);
         populateMapOptions(allMatches);
+        // ✅ NEW: populate event options (same as map)
+        populateEventOptions(allMatches);
         populateTeamOptions(allMatches);
         populateComparisonTeamOptions(allMatches);
 
-        // ✅ ADDED: fill datalist suggestions for Search team
         populateSearchDatalist();
 
         refreshOpponentOptions();
@@ -843,7 +853,7 @@
            Make sure the file exists in <code>file/</code> and run this page using a local web server (e.g., VS Code Live Server).
            </span>`
         );
-        els.tbody.innerHTML = `<tr><td colspan="6"><span class="badge danger">Error</span> Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.</td></tr>`;
+        els.tbody.innerHTML = `<tr><td colspan="7"><span class="badge danger">Error</span> Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.</td></tr>`;
       } finally{
         disableUpdate(false);
       }
@@ -907,8 +917,7 @@
       return teamLowerToCanonical.get(key) || null;
     }
 
-    /* ✅ UPGRADE: parse search input with an "exact mode"
-       Exact mode supported:
+    /* Exact mode supported:
        - Spirit.     (trailing dot)
        - =Spirit     (leading equals)
        - "Spirit"    (quotes)
@@ -920,27 +929,20 @@
       let q = raw;
       let exact = false;
 
-      // 1) trailing dot => exact
       if (q.endsWith(".")){
         q = q.slice(0, -1).trim();
         exact = true;
       }
-
-      // 2) leading "=" => exact
       if (q.startsWith("=")){
         q = q.slice(1).trim();
         exact = true;
       }
-
-      // 3) quoted => exact
       if ((q.startsWith('"') && q.endsWith('"')) || (q.startsWith("'") && q.endsWith("'"))){
         q = q.slice(1, -1).trim();
         exact = true;
       }
 
       const qLower = q.toLowerCase();
-
-      // Try resolve exact canonical team
       const exactTeam = resolveCanonicalTeam(qLower);
 
       return { raw, q, qLower, exact, exactTeam };
@@ -950,15 +952,12 @@
       const s = parseSearchInput();
       if (!s.qLower) return null;
 
-      // If exact mode: only accept exact match (no substring fallback)
       if (s.exact){
         return s.exactTeam || null;
       }
 
-      // Normal mode: exact match first
       if (s.exactTeam) return s.exactTeam;
 
-      // Otherwise: only if substring uniquely identifies a team
       const hits = canonicalTeams.filter(t => t.toLowerCase().includes(s.qLower));
       if (hits.length === 1) return hits[0];
 
@@ -977,6 +976,9 @@
 
       els.search.addEventListener("input", onAnyChange);
       els.mapSelect.addEventListener("change", onAnyChange);
+      // ✅ NEW: event filter change handler
+      els.eventSelect.addEventListener("change", onAnyChange);
+
       els.opponentSelect.addEventListener("change", () => {
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
@@ -985,6 +987,8 @@
       els.clearBtn.addEventListener("click", () => {
         els.search.value = "";
         els.mapSelect.value = "";
+        // ✅ NEW: clear event filter
+        els.eventSelect.value = "";
         els.opponentSelect.value = "";
         els.opponentSelect.disabled = true;
         els.opponentSelect.innerHTML = `<option value="">All opponents</option>`;
@@ -1030,11 +1034,12 @@
     function getFilteredMatchesFromControls(){
       const s = parseSearchInput();
       const map = els.mapSelect.value;
+      const event = els.eventSelect.value; // ✅ NEW
       const focus = getFocusTeam();
       const opponent = els.opponentSelect.value;
 
       return allMatches.filter(m => {
-        // ✅ CHANGED: if exact mode AND we resolved exact team => filter by exact team presence
+        // Search filter
         let matchesQuery = true;
         if (s.qLower){
           if (s.exact && focus){
@@ -1045,9 +1050,15 @@
         }
         if (!matchesQuery) return false;
 
+        // Map filter
         const matchesMap = !map || m.map === map;
         if (!matchesMap) return false;
 
+        // ✅ NEW: Event filter
+        const matchesEvent = !event || (m.event || "") === event;
+        if (!matchesEvent) return false;
+
+        // Opponent filter
         if (opponent && focus){
           const isPair = (m.team1 === focus && m.team2 === opponent) || (m.team2 === focus && m.team1 === opponent);
           if (!isPair) return false;
@@ -1065,7 +1076,7 @@
       els.tbody.innerHTML = "";
 
       if (!matches.length){
-        els.tbody.innerHTML = `<tr><td colspan="6"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
+        els.tbody.innerHTML = `<tr><td colspan="7"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
         return;
       }
 
@@ -1081,6 +1092,8 @@
           <td>${escapeHtml(m.map)}</td>
           <td><span class="badge neutral">${m.score1}x${m.score2}</span></td>
           <td>${resultCell}</td>
+          <!-- ✅ NEW: Event cell -->
+          <td>${escapeHtml(m.event || "")}</td>
         `;
         els.tbody.appendChild(tr);
       });
@@ -1111,8 +1124,8 @@
       const mapCounts = new Map();
       for (const m of matches) mapCounts.set(m.map, (mapCounts.get(m.map) || 0) + 1);
       let topMap = "—", topCount = 0;
-      for (const [map, count] of mapCounts.entries()){
-        if (count > topCount){ topCount = count; topMap = map; }
+      for (const [mp, count] of mapCounts.entries()){
+        if (count > topCount){ topCount = count; topMap = mp; }
       }
       els.topMap.textContent = topMap;
     }
@@ -1127,8 +1140,20 @@
       }
     }
 
+    // ✅ NEW: populate event options (same pattern as Map)
+    function populateEventOptions(matches){
+      while (els.eventSelect.options.length > 1) els.eventSelect.remove(1);
+      const events = [...new Set(matches.map(m => (m.event || "").trim()).filter(Boolean))]
+        .sort((a,b)=>a.localeCompare(b));
+      for (const ev of events){
+        const opt = document.createElement("option");
+        opt.value = ev; opt.textContent = ev;
+        els.eventSelect.appendChild(opt);
+      }
+    }
+
     /* ----------------------------
-       TEAM PERFORMANCE + GENERAL OVERVIEW (unchanged except it relies on mapPlayChart config)
+       TEAM PERFORMANCE (unchanged)
     -----------------------------*/
     function setupTeamControls(){
       els.teamSelect.addEventListener("change", () => {
@@ -1796,7 +1821,7 @@
       if (!hasExpected) console.warn("Unexpected headers detected:", keys);
 
       return rows
-        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"]))
+        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"] || r["Event"]))
         .map(normalizeRow)
         .filter(Boolean);
     }
@@ -1806,6 +1831,8 @@
       const team2 = String(r["Team 2"] ?? "").trim();
       const map   = String(r["Map"] ?? "").trim();
       const resultRaw = String(r["Result"] ?? "").trim();
+      // ✅ NEW: Event column
+      const event = String(r["Event"] ?? "").trim();
 
       const { s1, s2 } = parseResult(resultRaw);
       if (!team1 || !team2 || !map || s1 === null || s2 === null) return null;
@@ -1815,7 +1842,7 @@
       if (s2 > s1){ winnerSide = "Team 2"; winner = team2; }
       else if (s1 === s2){ winnerSide = "Tie"; winner = "Tie"; }
 
-      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw };
+      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw, event };
     }
 
     function parseResult(text){
