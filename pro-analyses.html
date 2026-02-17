@@ -319,17 +319,9 @@
       white-space: nowrap;
     }
 
-    .canvasWrap{
-      width: 100%;
-      height: 240px;
-    }
-    .canvasWrap.tall{
-      height: 320px;
-    }
-    .canvasWrap canvas{
-      width: 100% !important;
-      height: 100% !important;
-    }
+    .canvasWrap{ width: 100%; height: 240px; }
+    .canvasWrap.tall{ height: 320px; }
+    .canvasWrap canvas{ width: 100% !important; height: 100% !important; }
 
     .last5{
       display:flex;
@@ -385,9 +377,20 @@
       white-space: nowrap;
     }
 
+    .compareGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 14px 16px 18px;
+    }
+    .compareHistory{
+      padding: 0 16px 18px;
+    }
+
     @media (max-width: 1020px){
       .stats{ grid-template-columns: repeat(2, minmax(0,1fr)); }
       .grid-2{ grid-template-columns: 1fr; }
+      .compareGrid{ grid-template-columns: 1fr; }
       input, select{ width: 190px; }
       .matchVs{ max-width: 220px; }
     }
@@ -406,12 +409,13 @@
 
     <div class="top-actions">
       <button id="updateBtn" class="btn btn-primary" type="button" title="Force reload the Excel file">Update</button>
-      <a class="btn" href="index.html" title="Go back to the main menu">Back to Menu</a>
+      <a class="btn" href="index.html" title="Back to Menu">Back to Menu</a>
     </div>
   </header>
 
   <main class="container">
 
+    <!-- Dashboard -->
     <section class="panel">
       <div class="panel-head">
         <h2>Dashboard</h2>
@@ -440,6 +444,7 @@
       <div id="errorBox" class="errorBox"></div>
     </section>
 
+    <!-- Team Performance (existing two charts) -->
     <section class="panel">
       <div class="panel-head">
         <h2>Team Performance</h2>
@@ -528,7 +533,105 @@
       </div>
     </section>
 
-    <!-- MATCH TABLE (UPDATED: Opponent filter + Result Win/Lose relative to searched team) -->
+    <!-- NEW: Team vs Team Comparison -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Team vs Team Comparison</h2>
+
+        <div class="filters">
+          <div class="field">
+            <label for="compareTeamA">Team A</label>
+            <select id="compareTeamA">
+              <option value="">Select Team A</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="compareTeamB">Team B</label>
+            <select id="compareTeamB">
+              <option value="">Select Team B</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="compareMapSelect">Map</label>
+            <select id="compareMapSelect" disabled>
+              <option value="__general__">General (all maps)</option>
+            </select>
+          </div>
+
+          <button id="swapBtn" class="btn" type="button" title="Swap teams">Swap</button>
+        </div>
+      </div>
+
+      <div class="compareGrid">
+        <div class="chartCard">
+          <div class="chartTop">
+            <h3 class="chartTitle">Head-to-Head (Wins)</h3>
+            <div class="chartMeta">
+              <div class="metaBox">Matches: <b id="h2hMatchesBox">—</b></div>
+              <div class="metaBox"><span id="teamANameBox">Team A</span> wins: <b id="h2hAWinsBox">—</b></div>
+              <div class="metaBox"><span id="teamBNameBox">Team B</span> wins: <b id="h2hBWinsBox">—</b></div>
+            </div>
+          </div>
+
+          <div class="canvasWrap">
+            <canvas id="h2hBarChart" aria-label="Head-to-head wins chart"></canvas>
+          </div>
+
+          <div class="hint" id="h2hHint">
+            Select two teams to see their head-to-head record.
+          </div>
+        </div>
+
+        <div class="chartCard">
+          <div class="chartTop">
+            <h3 class="chartTitle">Win Probability (Selected map)</h3>
+            <div class="chartMeta">
+              <div class="metaBox" id="probSourceBox">Source: —</div>
+              <div class="metaBox"><span id="probTeamA">Team A</span>: <b id="probABox">—</b></div>
+              <div class="metaBox"><span id="probTeamB">Team B</span>: <b id="probBBox">—</b></div>
+            </div>
+          </div>
+
+          <div class="canvasWrap">
+            <canvas id="probDoughnut" aria-label="Win probability chart"></canvas>
+          </div>
+
+          <div class="hint" id="probDataHint">
+            Probability uses head-to-head data on the chosen map when available; otherwise, it falls back to each team's win rate on that map.
+          </div>
+        </div>
+      </div>
+
+      <div class="compareHistory">
+        <div class="chartCard" style="min-height:auto;">
+          <div class="chartTop">
+            <h3 class="chartTitle">Recent Head-to-Head Matches (for curiosity)</h3>
+            <div class="chartMeta">
+              <div class="metaBox" id="h2hHistoryScope">Scope: General</div>
+            </div>
+          </div>
+
+          <div id="h2hHistoryList" class="last5">
+            <div class="matchItem">
+              <div class="matchLeft">
+                <div class="matchLine1">
+                  <span class="badge neutral">Select Team A and Team B</span>
+                  <span class="matchVs">to display history</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hint">
+            “Recent” is based on the latest rows in the Excel file.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Matches table (kept as before with Opponent filter + Result Win/Lose relative to searched team) -->
     <section class="panel">
       <div class="panel-head">
         <h2>Matches</h2>
@@ -545,7 +648,6 @@
             </select>
           </div>
 
-          <!-- NEW FILTER: Opponent -->
           <div class="field">
             <label for="opponentSelect">Opponent</label>
             <select id="opponentSelect" disabled>
@@ -566,7 +668,7 @@
               <th>Team 2</th>
               <th>Map</th>
               <th>Score</th>
-              <th>Result</th> <!-- renamed from Winner -->
+              <th>Result</th>
             </tr>
           </thead>
           <tbody id="matchesTbody">
@@ -588,8 +690,8 @@
   </main>
 
   <script>
-    // Excel file: [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5) (used at file/history.xlsx). [2](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
-    // Opponent filter requirement is explicitly described in [to-do-games.txt](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1&EntityRepresentationId=ef1630bf-291b-4bdd-8538-b6e3c6b4f612). [1](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1)
+    // Source file used: [history.xlsx](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780&EntityRepresentationId=04785243-ca1a-470c-948d-8b7f73ecddb5) in /file/history.xlsx. [1](https://onedrive.live.com/personal/faa3f9bfbb5dc780/_layouts/15/doc.aspx?resid=4fedb83a-b179-49d6-a8ea-05d25646658b&cid=faa3f9bfbb5dc780)
+    // Comparison chart requirement is described in [to-do-games.txt](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1&EntityRepresentationId=ef1630bf-291b-4bdd-8538-b6e3c6b4f612). [2](https://onedrive.live.com/?id=fd403ee0-ec3f-419f-a0e3-88c23ea0cee2&cid=faa3f9bfbb5dc780&web=1)
 
     const EXCEL_PATH = "file/history.xlsx";
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result"];
@@ -628,12 +730,42 @@
       worstMapBox: document.getElementById("worstMapBox"),
       bestMapMeta: document.getElementById("bestMapMeta"),
       worstMapMeta: document.getElementById("worstMapMeta"),
-      mapPlayCanvas: document.getElementById("mapPlayChart")
+      mapPlayCanvas: document.getElementById("mapPlayChart"),
+
+      // Comparison UI
+      compareTeamA: document.getElementById("compareTeamA"),
+      compareTeamB: document.getElementById("compareTeamB"),
+      compareMapSelect: document.getElementById("compareMapSelect"),
+      swapBtn: document.getElementById("swapBtn"),
+
+      h2hMatchesBox: document.getElementById("h2hMatchesBox"),
+      h2hAWinsBox: document.getElementById("h2hAWinsBox"),
+      h2hBWinsBox: document.getElementById("h2hBWinsBox"),
+      teamANameBox: document.getElementById("teamANameBox"),
+      teamBNameBox: document.getElementById("teamBNameBox"),
+      h2hHint: document.getElementById("h2hHint"),
+
+      probSourceBox: document.getElementById("probSourceBox"),
+      probABox: document.getElementById("probABox"),
+      probBBox: document.getElementById("probBBox"),
+      probTeamA: document.getElementById("probTeamA"),
+      probTeamB: document.getElementById("probTeamB"),
+      probDataHint: document.getElementById("probDataHint"),
+
+      h2hHistoryScope: document.getElementById("h2hHistoryScope"),
+      h2hHistoryList: document.getElementById("h2hHistoryList"),
+
+      h2hBarCanvas: document.getElementById("h2hBarChart"),
+      probCanvas: document.getElementById("probDoughnut")
     };
 
     let allMatches = [];
     let wlChart = null;
     let mapPlayChart = null;
+
+    // Comparison charts
+    let h2hBarChart = null;
+    let probDoughnut = null;
 
     // Cached team lookup for exact match
     let teamLowerToCanonical = new Map();
@@ -647,6 +779,7 @@
       setupUpdateButton();
       setupTeamControls();
       setupMatchTableControls();
+      setupComparisonControls();
       buildCharts();
       await reloadExcel(true);
     }
@@ -665,17 +798,17 @@
         rebuildTeamLookup(allMatches);
         populateMapOptions(allMatches);
         populateTeamOptions(allMatches);
+        populateComparisonTeamOptions(allMatches);
 
-        // Update opponent list based on current "focus team"
         refreshOpponentOptions();
-
-        // Render table + dashboard
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
 
-        // Update team areas (charts/last5/overview)
         reconcileTeamSelectionsAfterReload();
         updateTeamSections();
+
+        rebuildCompareMapOptions();
+        updateComparison();
 
         setStatus(`Loaded ${allMatches.length} matches`, "good");
         hideError();
@@ -719,13 +852,9 @@
     function setupShortcutBack(){
       document.addEventListener("keydown", (e) => {
         if (e.key !== "0") return;
-
         const a = document.activeElement;
-        const isTypingContext =
-          a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable);
-
+        const isTypingContext = a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable);
         if (isTypingContext) return;
-
         e.preventDefault();
         window.history.back();
       });
@@ -749,11 +878,11 @@
     }
 
     /* ----------------------------
-       MATCH TABLE CONTROLS (UPDATED)
+       MATCH TABLE CONTROLS
     -----------------------------*/
     function setupMatchTableControls(){
       const onAnyChange = () => {
-        refreshOpponentOptions();          // keep opponent list aligned to focus team
+        refreshOpponentOptions();
         applyMatchFilters();
         renderStats(getFilteredMatchesFromControls());
       };
@@ -776,9 +905,6 @@
       });
     }
 
-    // Focus team for "Result Win/Lose" and opponent list:
-    // - If search matches exactly a team name, use it.
-    // - Else if Team Performance dropdown is selected AND search is empty, use that.
     function getFocusTeam(){
       const exactFromSearch = resolveCanonicalTeam(els.search.value);
       if (exactFromSearch) return exactFromSearch;
@@ -815,7 +941,6 @@
         els.opponentSelect.appendChild(opt);
       }
 
-      // keep previous selection if still valid
       if (prev && sortedOpp.includes(prev)) els.opponentSelect.value = prev;
       else els.opponentSelect.value = "";
     }
@@ -827,26 +952,16 @@
       const opponent = els.opponentSelect.value;
 
       return allMatches.filter(m => {
-        // search filter (substring)
-        const matchesQuery =
-          !q ||
-          m.team1.toLowerCase().includes(q) ||
-          m.team2.toLowerCase().includes(q);
-
+        const matchesQuery = !q || m.team1.toLowerCase().includes(q) || m.team2.toLowerCase().includes(q);
         if (!matchesQuery) return false;
 
-        // map filter
         const matchesMap = !map || m.map === map;
         if (!matchesMap) return false;
 
-        // opponent filter depends on focus team
         if (opponent && focus){
-          const isPair =
-            (m.team1 === focus && m.team2 === opponent) ||
-            (m.team2 === focus && m.team1 === opponent);
+          const isPair = (m.team1 === focus && m.team2 === opponent) || (m.team2 === focus && m.team1 === opponent);
           if (!isPair) return false;
         }
-
         return true;
       });
     }
@@ -860,13 +975,11 @@
       els.tbody.innerHTML = "";
 
       if (!matches.length){
-        els.tbody.innerHTML = `
-          <tr><td colspan="6"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
+        els.tbody.innerHTML = `<tr><td colspan="6"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
         return;
       }
 
       matches.forEach((m, idx) => {
-        // NEW: Result is Win/Lose from perspective of focus team (when available)
         const rel = computeRelativeResult(m, focus);
         const resultCell = formatRelativeResultBadge(rel);
 
@@ -885,14 +998,10 @@
 
     function computeRelativeResult(match, focusTeam){
       if (!focusTeam) return { status: "none" };
-
       const as1 = match.team1 === focusTeam;
       const as2 = match.team2 === focusTeam;
       if (!as1 && !as2) return { status: "none" };
-
-      // Tie safety
       if (match.winnerSide === "Tie") return { status: "tie" };
-
       const win = (as1 && match.winnerSide === "Team 1") || (as2 && match.winnerSide === "Team 2");
       return { status: win ? "win" : "lose" };
     }
@@ -929,16 +1038,14 @@
     }
 
     /* ----------------------------
-       TEAM PERFORMANCE (unchanged)
+       TEAM PERFORMANCE (existing)
     -----------------------------*/
     function setupTeamControls(){
       els.teamSelect.addEventListener("change", () => {
         rebuildTeamMapOptions();
-        // if search is empty, this team becomes focus -> refresh opponents too
         refreshOpponentOptions();
         updateTeamSections();
       });
-
       els.teamMapSelect.addEventListener("change", () => updateTeamSections());
     }
 
@@ -968,6 +1075,7 @@
     function rebuildTeamMapOptions(){
       const team = els.teamSelect.value;
       els.teamMapSelect.innerHTML = "";
+
       const general = document.createElement("option");
       general.value = GENERAL_MAP_VALUE;
       general.textContent = "General (all maps)";
@@ -1013,57 +1121,6 @@
       return { wins, losses, total, rate };
     }
 
-    function buildCharts(){
-      const ctx1 = els.wlCanvas.getContext("2d");
-      wlChart = new Chart(ctx1, {
-        type: "bar",
-        data: {
-          labels: ["Wins", "Losses"],
-          datasets: [{
-            label: "Matches",
-            data: [0, 0],
-            backgroundColor: ["rgba(46, 229, 157, 0.45)","rgba(255, 77, 109, 0.45)"],
-            borderColor: ["rgba(46, 229, 157, 0.85)","rgba(255, 77, 109, 0.85)"],
-            borderWidth: 1.2,
-            borderRadius: 10,
-            maxBarThickness: 70
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
-            y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } }
-          }
-        }
-      });
-
-      const ctx2 = els.mapPlayCanvas.getContext("2d");
-      mapPlayChart = new Chart(ctx2, {
-        type: "bar",
-        data: { labels: [], datasets: [{
-          label: "Matches played",
-          data: [],
-          backgroundColor: "rgba(124, 92, 255, 0.35)",
-          borderColor: "rgba(124, 92, 255, 0.85)",
-          borderWidth: 1.1,
-          borderRadius: 10
-        }]},
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx)=>` ${ctx.raw} matches` } } },
-          scales: {
-            x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
-            y: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.00)" } }
-          }
-        }
-      });
-    }
-
     function updateTeamSections(){
       updateWLChartAndBoxes();
       updateLast5();
@@ -1097,8 +1154,7 @@
       const mapValue = els.teamMapSelect.value || GENERAL_MAP_VALUE;
 
       els.last5List.innerHTML = "";
-      els.last5Scope.textContent =
-        (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `Scope: ${mapValue}` : "Scope: General";
+      els.last5Scope.textContent = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `Scope: ${mapValue}` : "Scope: General";
 
       if (!team){
         els.last5List.innerHTML = `
@@ -1114,7 +1170,6 @@
       }
 
       const last = getLastMatches(team, 5, mapValue);
-
       if (!last.length){
         const label = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `No matches found on ${escapeHtml(mapValue)}.` : "No matches found for this team.";
         els.last5List.innerHTML = `
@@ -1149,8 +1204,7 @@
           </div>
           <div class="matchRight">
             <span class="badge neutral">${escapeHtml(item.rawResult)}</span>
-          </div>
-        `;
+          </div>`;
         els.last5List.appendChild(row);
       }
     }
@@ -1239,6 +1293,403 @@
         return ` ${s.total} matches • ${s.wins}W-${s.losses}L • ${s.rate.toFixed(1)}% win rate`;
       };
       mapPlayChart.update();
+    }
+
+    /* ----------------------------
+       NEW: COMPARISON
+    -----------------------------*/
+    function setupComparisonControls(){
+      els.compareTeamA.addEventListener("change", () => {
+        rebuildCompareMapOptions();
+        updateComparison();
+      });
+      els.compareTeamB.addEventListener("change", () => {
+        rebuildCompareMapOptions();
+        updateComparison();
+      });
+      els.compareMapSelect.addEventListener("change", () => updateComparison());
+      els.swapBtn.addEventListener("click", () => {
+        const a = els.compareTeamA.value;
+        const b = els.compareTeamB.value;
+        els.compareTeamA.value = b;
+        els.compareTeamB.value = a;
+        rebuildCompareMapOptions();
+        updateComparison();
+      });
+    }
+
+    function populateComparisonTeamOptions(matches){
+      const teams = new Set();
+      for (const m of matches){ teams.add(m.team1); teams.add(m.team2); }
+      const sorted = [...teams].sort((a,b)=>a.localeCompare(b));
+
+      const prevA = els.compareTeamA.value;
+      const prevB = els.compareTeamB.value;
+
+      els.compareTeamA.innerHTML = `<option value="">Select Team A</option>`;
+      els.compareTeamB.innerHTML = `<option value="">Select Team B</option>`;
+
+      for (const t of sorted){
+        const o1 = document.createElement("option");
+        o1.value = t; o1.textContent = t;
+        els.compareTeamA.appendChild(o1);
+
+        const o2 = document.createElement("option");
+        o2.value = t; o2.textContent = t;
+        els.compareTeamB.appendChild(o2);
+      }
+
+      if (prevA && sorted.includes(prevA)) els.compareTeamA.value = prevA;
+      if (prevB && sorted.includes(prevB)) els.compareTeamB.value = prevB;
+    }
+
+    function rebuildCompareMapOptions(){
+      const a = els.compareTeamA.value;
+      const b = els.compareTeamB.value;
+
+      els.compareMapSelect.innerHTML = `<option value="${GENERAL_MAP_VALUE}">General (all maps)</option>`;
+
+      if (!a || !b || a === b){
+        els.compareMapSelect.disabled = true;
+        els.compareMapSelect.value = GENERAL_MAP_VALUE;
+        return;
+      }
+
+      // Union of maps where either team played (so user can still compare fallback)
+      const maps = new Set();
+      for (const m of allMatches){
+        if (m.team1 === a || m.team2 === a || m.team1 === b || m.team2 === b){
+          maps.add(m.map);
+        }
+      }
+      const sortedMaps = [...maps].sort((x,y)=>x.localeCompare(y));
+      for (const mp of sortedMaps){
+        const opt = document.createElement("option");
+        opt.value = mp; opt.textContent = mp;
+        els.compareMapSelect.appendChild(opt);
+      }
+
+      els.compareMapSelect.disabled = false;
+
+      // keep current if valid
+      if (![...els.compareMapSelect.options].some(o => o.value === els.compareMapSelect.value)){
+        els.compareMapSelect.value = GENERAL_MAP_VALUE;
+      }
+    }
+
+    function updateComparison(){
+      const a = els.compareTeamA.value;
+      const b = els.compareTeamB.value;
+      const mapValue = els.compareMapSelect.value || GENERAL_MAP_VALUE;
+
+      els.teamANameBox.textContent = a || "Team A";
+      els.teamBNameBox.textContent = b || "Team B";
+      els.probTeamA.textContent = a || "Team A";
+      els.probTeamB.textContent = b || "Team B";
+
+      els.h2hHistoryScope.textContent = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? `Scope: ${mapValue}` : "Scope: General";
+
+      if (!a || !b || a === b){
+        els.h2hMatchesBox.textContent = "—";
+        els.h2hAWinsBox.textContent = "—";
+        els.h2hBWinsBox.textContent = "—";
+        els.probSourceBox.textContent = "Source: —";
+        els.probABox.textContent = "—";
+        els.probBBox.textContent = "—";
+        els.h2hHint.textContent = "Select two different teams to see their head-to-head record.";
+        setH2HBarData(0,0, a||"Team A", b||"Team B");
+        setProbDoughnut(50,50, a||"Team A", b||"Team B");
+        renderH2HHistory([]);
+        return;
+      }
+
+      const h2h = getHeadToHead(a, b, mapValue);
+      els.h2hMatchesBox.textContent = h2h.total.toString();
+      els.h2hAWinsBox.textContent = h2h.aWins.toString();
+      els.h2hBWinsBox.textContent = h2h.bWins.toString();
+
+      setH2HBarData(h2h.aWins, h2h.bWins, a, b);
+
+      // Probability logic:
+      // 1) If H2H exists on selected map/general -> use Laplace smoothing p=(wins+1)/(total+2)
+      // 2) Else fallback to each team's own win rate on selected map/general with Laplace smoothing then normalize.
+      let pA = 0.5, pB = 0.5;
+      let source = "";
+
+      if (h2h.total > 0){
+        const paRaw = (h2h.aWins + 1) / (h2h.total + 2);
+        const pbRaw = (h2h.bWins + 1) / (h2h.total + 2);
+        const sum = paRaw + pbRaw;
+        pA = sum > 0 ? paRaw / sum : 0.5;
+        pB = 1 - pA;
+        source = `Source: Head-to-head (${mapValue === GENERAL_MAP_VALUE ? "General" : mapValue})`;
+        els.probDataHint.textContent =
+          `Using head-to-head results for the selected scope. Data: ${a} ${h2h.aWins}W, ${b} ${h2h.bWins}W, total ${h2h.total}.`;
+      } else {
+        const sA = computeTeamStats(a, mapValue);
+        const sB = computeTeamStats(b, mapValue);
+
+        const pARaw = (sA.wins + 1) / (sA.total + 2);
+        const pBRaw = (sB.wins + 1) / (sB.total + 2);
+        const sum = pARaw + pBRaw;
+
+        pA = sum > 0 ? pARaw / sum : 0.5;
+        pB = 1 - pA;
+
+        source = `Source: Win rate fallback (${mapValue === GENERAL_MAP_VALUE ? "General" : mapValue})`;
+        els.probDataHint.textContent =
+          `No head-to-head matches found for this scope. Fallback uses each team's win rate: ` +
+          `${a} ${sA.wins}W-${sA.losses}L (${sA.total}), ${b} ${sB.wins}W-${sB.losses}L (${sB.total}).`;
+      }
+
+      els.probSourceBox.textContent = source;
+      els.probABox.textContent = `${(pA*100).toFixed(1)}%`;
+      els.probBBox.textContent = `${(pB*100).toFixed(1)}%`;
+
+      setProbDoughnut(pA*100, pB*100, a, b);
+
+      // History list (last 5 H2H matches)
+      const history = getH2HHistory(a, b, 5, mapValue);
+      renderH2HHistory(history);
+
+      // small hint
+      els.h2hHint.textContent =
+        h2h.total > 0
+          ? `Head-to-head found: ${h2h.aWins}–${h2h.bWins} (${h2h.total} matches).`
+          : `No head-to-head matches found for this scope.`;
+    }
+
+    function getHeadToHead(a, b, mapValue){
+      const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
+      let aWins = 0, bWins = 0, total = 0;
+
+      for (const m of allMatches){
+        if (mapFilter && m.map !== mapFilter) continue;
+
+        const isPair =
+          (m.team1 === a && m.team2 === b) ||
+          (m.team1 === b && m.team2 === a);
+
+        if (!isPair) continue;
+
+        // determine winner among a/b
+        const winner = getWinnerTeamName(m);
+        if (winner === a) aWins++;
+        else if (winner === b) bWins++;
+
+        // count only decisive games (ties are ignored)
+        if (winner === a || winner === b) total++;
+      }
+
+      return { aWins, bWins, total };
+    }
+
+    function getWinnerTeamName(match){
+      if (match.winnerSide === "Tie") return "Tie";
+      if (match.winnerSide === "Team 1") return match.team1;
+      if (match.winnerSide === "Team 2") return match.team2;
+      return "Tie";
+    }
+
+    function getH2HHistory(a, b, n, mapValue){
+      const mapFilter = (mapValue && mapValue !== GENERAL_MAP_VALUE) ? mapValue : null;
+      const out = [];
+
+      for (let i = allMatches.length - 1; i >= 0 && out.length < n; i--){
+        const m = allMatches[i];
+        if (mapFilter && m.map !== mapFilter) continue;
+
+        const isPair =
+          (m.team1 === a && m.team2 === b) ||
+          (m.team1 === b && m.team2 === a);
+
+        if (!isPair) continue;
+
+        const winner = getWinnerTeamName(m);
+        const winBadge = winner === a ? "ok" : (winner === b ? "danger" : "neutral");
+        const winText = winner === a ? `Winner: ${a}` : (winner === b ? `Winner: ${b}` : "Winner: Tie");
+
+        out.push({
+          map: m.map,
+          score: `${m.score1}x${m.score2}`,
+          team1: m.team1,
+          team2: m.team2,
+          winner,
+          winBadge,
+          winText
+        });
+      }
+
+      return out;
+    }
+
+    function renderH2HHistory(items){
+      els.h2hHistoryList.innerHTML = "";
+
+      if (!items.length){
+        els.h2hHistoryList.innerHTML = `
+          <div class="matchItem">
+            <div class="matchLeft">
+              <div class="matchLine1">
+                <span class="badge neutral">No history</span>
+                <span class="matchVs">No head-to-head matches for this scope.</span>
+              </div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      for (const it of items){
+        const row = document.createElement("div");
+        row.className = "matchItem";
+        row.innerHTML = `
+          <div class="matchLeft">
+            <div class="matchLine1">
+              <span class="badge ${it.winBadge}">${escapeHtml(it.winText)}</span>
+              <span class="matchVs">${escapeHtml(it.team1)} vs ${escapeHtml(it.team2)}</span>
+            </div>
+            <div class="matchLine2">
+              <span class="badge neutral">${escapeHtml(it.map)}</span>
+              <span class="badge neutral">${escapeHtml(it.score)}</span>
+            </div>
+          </div>
+          <div class="matchRight">
+            <span class="badge neutral">${escapeHtml(it.score)}</span>
+          </div>`;
+        els.h2hHistoryList.appendChild(row);
+      }
+    }
+
+    function setH2HBarData(aWins, bWins, aName, bName){
+      h2hBarChart.data.labels = [aName, bName];
+      h2hBarChart.data.datasets[0].data = [aWins, bWins];
+      h2hBarChart.update();
+    }
+
+    function setProbDoughnut(aPct, bPct, aName, bName){
+      probDoughnut.data.labels = [aName, bName];
+      probDoughnut.data.datasets[0].data = [aPct, bPct];
+      probDoughnut.update();
+    }
+
+    /* ----------------------------
+       CHARTS BUILD
+    -----------------------------*/
+    function buildCharts(){
+      // Chart 1: team W/L
+      const ctx1 = els.wlCanvas.getContext("2d");
+      wlChart = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: ["Wins", "Losses"],
+          datasets: [{
+            label: "Matches",
+            data: [0, 0],
+            backgroundColor: ["rgba(46, 229, 157, 0.45)","rgba(255, 77, 109, 0.45)"],
+            borderColor: ["rgba(46, 229, 157, 0.85)","rgba(255, 77, 109, 0.85)"],
+            borderWidth: 1.2,
+            borderRadius: 10,
+            maxBarThickness: 70
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+
+      // Chart 2: maps played
+      const ctx2 = els.mapPlayCanvas.getContext("2d");
+      mapPlayChart = new Chart(ctx2, {
+        type: "bar",
+        data: { labels: [], datasets: [{
+          label: "Matches played",
+          data: [],
+          backgroundColor: "rgba(124, 92, 255, 0.35)",
+          borderColor: "rgba(124, 92, 255, 0.85)",
+          borderWidth: 1.1,
+          borderRadius: 10
+        }]},
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx)=>` ${ctx.raw} matches` } } },
+          scales: {
+            x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.00)" } }
+          }
+        }
+      });
+
+      // NEW Chart 3: H2H bar
+      const ctx3 = els.h2hBarCanvas.getContext("2d");
+      h2hBarChart = new Chart(ctx3, {
+        type: "bar",
+        data: {
+          labels: ["Team A", "Team B"],
+          datasets: [{
+            label: "Head-to-head wins",
+            data: [0, 0],
+            backgroundColor: ["rgba(124, 92, 255, 0.40)","rgba(35, 213, 171, 0.30)"],
+            borderColor: ["rgba(124, 92, 255, 0.85)","rgba(35, 213, 171, 0.80)"],
+            borderWidth: 1.1,
+            borderRadius: 10,
+            maxBarThickness: 70
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.80)" }, grid: { color: "rgba(255,255,255,0.06)" } }
+          }
+        }
+      });
+
+      // NEW Chart 4: probability doughnut
+      const ctx4 = els.probCanvas.getContext("2d");
+      probDoughnut = new Chart(ctx4, {
+        type: "doughnut",
+        data: {
+          labels: ["Team A", "Team B"],
+          datasets: [{
+            data: [50, 50],
+            backgroundColor: ["rgba(46, 229, 157, 0.45)", "rgba(255, 77, 109, 0.45)"],
+            borderColor: ["rgba(46, 229, 157, 0.85)", "rgba(255, 77, 109, 0.85)"],
+            borderWidth: 1.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: "rgba(255,255,255,0.80)" }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` ${ctx.label}: ${ctx.raw.toFixed(1)}%`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* ----------------------------
+       COMPARISON MAP OPTIONS (call once when teams exist)
+    -----------------------------*/
+    function rebuildCompareMapOptions(){
+      // this function exists above; keep as alias for ordering safety
+      // (already defined above in this script)
     }
 
     /* ----------------------------
