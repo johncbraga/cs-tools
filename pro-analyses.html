@@ -659,11 +659,19 @@
             </select>
           </div>
 
-          <!-- ✅ NEW: Event filter (same pattern as Map) -->
+          <!-- ✅ Event filter -->
           <div class="field">
             <label for="eventSelect">Event</label>
             <select id="eventSelect">
               <option value="">All events</option>
+            </select>
+          </div>
+
+          <!-- ✅ NEW: Date filter -->
+          <div class="field">
+            <label for="dateSelect">Date</label>
+            <select id="dateSelect">
+              <option value="">All dates</option>
             </select>
           </div>
 
@@ -688,13 +696,14 @@
               <th>Map</th>
               <th>Score</th>
               <th>Result</th>
-              <!-- ✅ NEW: Event column after Result -->
               <th>Event</th>
+              <!-- ✅ NEW: Date column -->
+              <th>Date</th>
             </tr>
           </thead>
           <tbody id="matchesTbody">
             <tr>
-              <td colspan="7"><span class="badge neutral">Loading</span> Reading Excel…</td>
+              <td colspan="8"><span class="badge neutral">Loading</span> Reading Excel…</td>
             </tr>
           </tbody>
         </table>
@@ -712,8 +721,8 @@
 
   <script>
     const EXCEL_PATH = "file/history.xlsx";
-    // ✅ UPDATED: new header "Event"
-    const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result", "Event"];
+    // ✅ UPDATED: new headers "Event" + "Date"
+    const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result", "Event", "Date"];
     const GENERAL_MAP_VALUE = "__general__";
 
     // highlight colors for General Overview map labels
@@ -731,8 +740,9 @@
 
       search: document.getElementById("searchInput"),
       mapSelect: document.getElementById("mapSelect"),
-      // ✅ NEW: eventSelect
       eventSelect: document.getElementById("eventSelect"),
+      // ✅ NEW: dateSelect
+      dateSelect: document.getElementById("dateSelect"),
       opponentSelect: document.getElementById("opponentSelect"),
       clearBtn: document.getElementById("clearBtn"),
 
@@ -826,8 +836,10 @@
 
         rebuildTeamLookup(allMatches);
         populateMapOptions(allMatches);
-        // ✅ NEW: populate event options (same as map)
         populateEventOptions(allMatches);
+        // ✅ NEW: populate date options
+        populateDateOptions(allMatches);
+
         populateTeamOptions(allMatches);
         populateComparisonTeamOptions(allMatches);
 
@@ -853,7 +865,7 @@
            Make sure the file exists in <code>file/</code> and run this page using a local web server (e.g., VS Code Live Server).
            </span>`
         );
-        els.tbody.innerHTML = `<tr><td colspan="7"><span class="badge danger">Error</span> Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.</td></tr>`;
+        els.tbody.innerHTML = `<tr><td colspan="8"><span class="badge danger">Error</span> Could not load <b>${escapeHtml(EXCEL_PATH)}</b>.</td></tr>`;
       } finally{
         disableUpdate(false);
       }
@@ -976,8 +988,9 @@
 
       els.search.addEventListener("input", onAnyChange);
       els.mapSelect.addEventListener("change", onAnyChange);
-      // ✅ NEW: event filter change handler
       els.eventSelect.addEventListener("change", onAnyChange);
+      // ✅ NEW: Date filter change handler
+      els.dateSelect.addEventListener("change", onAnyChange);
 
       els.opponentSelect.addEventListener("change", () => {
         applyMatchFilters();
@@ -987,8 +1000,10 @@
       els.clearBtn.addEventListener("click", () => {
         els.search.value = "";
         els.mapSelect.value = "";
-        // ✅ NEW: clear event filter
         els.eventSelect.value = "";
+        // ✅ NEW: clear date filter
+        els.dateSelect.value = "";
+
         els.opponentSelect.value = "";
         els.opponentSelect.disabled = true;
         els.opponentSelect.innerHTML = `<option value="">All opponents</option>`;
@@ -1034,7 +1049,10 @@
     function getFilteredMatchesFromControls(){
       const s = parseSearchInput();
       const map = els.mapSelect.value;
-      const event = els.eventSelect.value; // ✅ NEW
+      const event = els.eventSelect.value;
+      // ✅ NEW
+      const date = els.dateSelect.value;
+
       const focus = getFocusTeam();
       const opponent = els.opponentSelect.value;
 
@@ -1054,9 +1072,13 @@
         const matchesMap = !map || m.map === map;
         if (!matchesMap) return false;
 
-        // ✅ NEW: Event filter
+        // Event filter
         const matchesEvent = !event || (m.event || "") === event;
         if (!matchesEvent) return false;
+
+        // ✅ NEW: Date filter
+        const matchesDate = !date || (m.date || "") === date;
+        if (!matchesDate) return false;
 
         // Opponent filter
         if (opponent && focus){
@@ -1076,7 +1098,7 @@
       els.tbody.innerHTML = "";
 
       if (!matches.length){
-        els.tbody.innerHTML = `<tr><td colspan="7"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
+        els.tbody.innerHTML = `<tr><td colspan="8"><span class="badge neutral">No results</span> Try clearing filters.</td></tr>`;
         return;
       }
 
@@ -1092,8 +1114,9 @@
           <td>${escapeHtml(m.map)}</td>
           <td><span class="badge neutral">${m.score1}x${m.score2}</span></td>
           <td>${resultCell}</td>
-          <!-- ✅ NEW: Event cell -->
           <td>${escapeHtml(m.event || "")}</td>
+          <!-- ✅ NEW: Date cell -->
+          <td>${escapeHtml(m.date || "")}</td>
         `;
         els.tbody.appendChild(tr);
       });
@@ -1140,7 +1163,6 @@
       }
     }
 
-    // ✅ NEW: populate event options (same pattern as Map)
     function populateEventOptions(matches){
       while (els.eventSelect.options.length > 1) els.eventSelect.remove(1);
       const events = [...new Set(matches.map(m => (m.event || "").trim()).filter(Boolean))]
@@ -1149,6 +1171,18 @@
         const opt = document.createElement("option");
         opt.value = ev; opt.textContent = ev;
         els.eventSelect.appendChild(opt);
+      }
+    }
+
+    // ✅ NEW: populate date options (same pattern as Map/Event)
+    function populateDateOptions(matches){
+      while (els.dateSelect.options.length > 1) els.dateSelect.remove(1);
+      const dates = [...new Set(matches.map(m => (m.date || "").trim()).filter(Boolean))]
+        .sort((a,b)=>a.localeCompare(b));
+      for (const dt of dates){
+        const opt = document.createElement("option");
+        opt.value = dt; opt.textContent = dt;
+        els.dateSelect.appendChild(opt);
       }
     }
 
@@ -1821,9 +1855,51 @@
       if (!hasExpected) console.warn("Unexpected headers detected:", keys);
 
       return rows
-        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"] || r["Event"]))
+        .filter(r => (r["Team 1"] || r["Team 2"] || r["Map"] || r["Result"] || r["Event"] || r["Date"]))
         .map(normalizeRow)
         .filter(Boolean);
+    }
+
+    // ✅ NEW: normalize Date column safely (text / serial / Date)
+    function normalizeDateValue(v){
+      if (v === null || v === undefined) return "";
+      if (v instanceof Date && !isNaN(v)) {
+        const dd = String(v.getDate()).padStart(2,"0");
+        const mm = String(v.getMonth()+1).padStart(2,"0");
+        const yy = String(v.getFullYear());
+        return `${dd}/${mm}/${yy}`;
+      }
+
+      // numbers may be Excel serial dates
+      if (typeof v === "number" && Number.isFinite(v)){
+        if (v > 20000 && v < 60000 && XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === "function"){
+          const d = XLSX.SSF.parse_date_code(v);
+          if (d && d.y && d.m && d.d){
+            const dd = String(d.d).padStart(2,"0");
+            const mm = String(d.m).padStart(2,"0");
+            const yy = String(d.y);
+            return `${dd}/${mm}/${yy}`;
+          }
+        }
+        return String(v).trim();
+      }
+
+      const s = String(v).trim();
+      // numeric-looking string might still be a serial
+      if (/^\d+(\.\d+)?$/.test(s)){
+        const n = Number(s);
+        if (Number.isFinite(n) && n > 20000 && n < 60000 && XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === "function"){
+          const d = XLSX.SSF.parse_date_code(n);
+          if (d && d.y && d.m && d.d){
+            const dd = String(d.d).padStart(2,"0");
+            const mm = String(d.m).padStart(2,"0");
+            const yy = String(d.y);
+            return `${dd}/${mm}/${yy}`;
+          }
+        }
+      }
+
+      return s;
     }
 
     function normalizeRow(r){
@@ -1831,8 +1907,9 @@
       const team2 = String(r["Team 2"] ?? "").trim();
       const map   = String(r["Map"] ?? "").trim();
       const resultRaw = String(r["Result"] ?? "").trim();
-      // ✅ NEW: Event column
       const event = String(r["Event"] ?? "").trim();
+      // ✅ NEW: Date column
+      const date = normalizeDateValue(r["Date"]);
 
       const { s1, s2 } = parseResult(resultRaw);
       if (!team1 || !team2 || !map || s1 === null || s2 === null) return null;
@@ -1842,7 +1919,7 @@
       if (s2 > s1){ winnerSide = "Team 2"; winner = team2; }
       else if (s1 === s2){ winnerSide = "Tie"; winner = "Tie"; }
 
-      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw, event };
+      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw, event, date };
     }
 
     function parseResult(text){
