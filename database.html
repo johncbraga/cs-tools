@@ -438,7 +438,7 @@ function tourneyBonus(type, remaining){
 function kFinal(teamRow){
   const s = Number(teamRow[COL.S]) || 0;
   const bt = String(teamRow[COL.BONUS_TYPE] || "none").toLowerCase();
-  const br = Number(teamRow[COL.BONUS_REM]) || 0;
+  const br = Number(teamRow[COL.BONUS_REM] || 0);
 
   let k = K_BASE * (1 + streakBonus(s)) * (1 + tourneyBonus(bt, br));
   const cap = K_BASE * K_HARD_CAP_MULT;
@@ -468,6 +468,7 @@ function ensureOptionalCols(row){
 function normalizeRow(row){
   const r = { ...row };
 
+  // Required columns defaults
   if (!(COL.TEAM in r)) r[COL.TEAM] = "";
   r[COL.TEAM] = String(r[COL.TEAM]).trim();
 
@@ -485,10 +486,8 @@ function normalizeRow(row){
   r[COL.S]   = parseInt(r[COL.S]   || 0, 10) || 0;
   r[COL.L]   = parseInt(r[COL.L]   || 0, 10) || 0;
   r[COL.MAJ] = parseInt(r[COL.MAJ] || 0, 10) || 0;
-
   r[COL.PRE] = Number(r[COL.PRE] || 0);
   if (!Number.isFinite(r[COL.PRE])) r[COL.PRE] = 0;
-
   r[COL.TRO] = parseInt(r[COL.TRO] || 0, 10) || 0;
 
   r[COL.PTS] = Number(r[COL.PTS]);
@@ -631,6 +630,7 @@ function applyMatch(result){
     B[COL.S] += 1;
     A[COL.S] = 0;
   } else {
+    // Draw
     A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.draw.dA;
     B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.draw.dB;
 
@@ -699,12 +699,15 @@ function applyTourneyWin(){
     return;
   }
 
+  // Update requested columns:
   if (type === "major"){
     T[COL.MAJ] += 1;
   } else {
+    // regional + global count in the same trophies column
     T[COL.TRO] += 1;
   }
 
+  // Activate temporary bonus
   ensureOptionalCols(T);
   T[COL.BONUS_TYPE] = type;
   T[COL.BONUS_REM] = TOURNEY_BONUS[type].dur;
@@ -723,6 +726,7 @@ function previewSeasonReset(){
     return;
   }
 
+  // compute preview stats without mutating
   let sumOld=0, sumNew=0;
   let maxDrop = -Infinity;
   let biggest = null;
@@ -765,24 +769,29 @@ function confirmSeasonReset(){
     showAlert("Please run the preview first.", "warn");
     return;
   }
-
+  // Apply changes
   for (const t of teams){
     const oldP = Number(t[COL.PTS]) || RESET_BASE;
     const newP = RESET_BASE + (oldP - RESET_BASE) * RESET_KEEP;
 
+    // prestige comparable to points: add full old points
     const preAdd = prestigeGainFromPoints(oldP);
     t[COL.PRE] = Number(t[COL.PRE] || 0) + preAdd;
 
+    // reset season stats
     t[COL.PTS] = newP;
     t[COL.V] = 0;
     t[COL.L] = 0;
     t[COL.S] = 0;
 
+    // clear active bonus to start season clean
     ensureOptionalCols(t);
     t[COL.BONUS_TYPE] = "none";
     t[COL.BONUS_REM] = 0;
 
+    // tier from points
     t[COL.TIER] = tierFromPoints(t[COL.PTS]);
+
     t[COL.UPDATED] = new Date().toISOString();
   }
 
@@ -845,8 +854,8 @@ document.getElementById("btnDownload").addEventListener("click", downloadExcel);
 
 /* ===================== AUTO-LOAD FIX ===================== */
 function getExcelUrl(){
-  const base = new URL(".", window.location.href);
-  return new URL("file/ranking.xlsx", base).toString();
+  const base = new URL(".", window.location.href);            // folder of current page
+  return new URL("file/ranking.xlsx", base).toString();       // absolute-safe
 }
 
 async function loadFromUrl(){
@@ -872,6 +881,7 @@ function loadFromArrayBuffer(ab){
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
 
+  // preserve extra columns
   const range = XLSX.utils.decode_range(ws["!ref"]);
   const headers = [];
   for (let C = range.s.c; C <= range.e.c; C++){
@@ -897,38 +907,28 @@ function loadFromArrayBuffer(ab){
 document.getElementById("btnReload").addEventListener("click", loadFromUrl);
 
 document.getElementById("fileInput").addEventListener("change", async (ev)=>{
-  const file = ev.target.files?.[0];
+  const file = ev.target?.files?.[0];
   if (!file) return;
   const ab = await file.arrayBuffer();
   loadFromArrayBuffer(ab);
   showAlert(`Manual load: <span class="mono">${htmlEscape(file.name)}</span>`, "good");
 });
 
-/* ===================== BACK TO MENU (BUTTON + KEY 0) ===================== */
-function backToMenu(){
-  const alerts = document.getElementById("alerts");
-  if (alerts) alerts.innerHTML = "";
-
-  const versusBox = document.getElementById("versusBox");
-  if (versusBox) versusBox.style.display = "none";
-
-  const resetPreview = document.getElementById("resetPreview");
-  if (resetPreview) resetPreview.style.display = "none";
-
-  const confirmReset = document.getElementById("btnConfirmReset");
-  if (confirmReset) confirmReset.disabled = true;
-
-  resetPreviewReady = false;
+/* ===================== BACK TO MENU (NAVIGATE TO index.html + KEY 0) ===================== */
+function goBackToMenu(){
+  const base = new URL(".", window.location.href);
+  const target = new URL("index.html", base).toString();
+  window.location.href = target;
 }
 
-document.getElementById("btnBackToMenu").addEventListener("click", backToMenu);
+document.getElementById("btnBackToMenu").addEventListener("click", goBackToMenu);
 
 document.addEventListener("keydown", (e)=>{
   const tag = e.target && e.target.tagName ? e.target.tagName : "";
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
   if (e.key === "0"){
     e.preventDefault();
-    backToMenu();
+    goBackToMenu();
   }
 });
 
