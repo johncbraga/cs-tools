@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b1220" />
-  <title>Portal • Ferramentas</title>
+  <title>Portal • Tools</title>
 
   <style>
     :root{
@@ -247,17 +247,19 @@
           <div class="badge"><span class="dot"></span> Portal • KZ Studios</div>
           <h1>Tools</h1>
           <p>
-            Main page that show all tools avaliable for use.
-            All tools are <span class="kbd">free</span> to use. Last matches on database: <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal fire] - 02-18-26</span>.
+            Main page that shows all tools available for use.
+            All tools are <span class="kbd">free</span> to use. Last matches on database:
+            <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal fire] - 02-18-26</span>.
           </p>
         </div>
 
-        <div class="badge" title="Dica: atalhos">
+        <div class="badge" title="Tip: shortcuts">
           <span class="kbd">1</span> HLTV &nbsp;
           <span class="kbd">2</span> VRS &nbsp;
           <span class="kbd">3</span> PRO &nbsp;
           <span class="kbd">4</span> Seeding &nbsp;
-          <span class="kbd">5</span> Events
+          <span class="kbd">5</span> Events &nbsp;
+          <span class="kbd">6</span> Database
         </div>
       </header>
 
@@ -267,7 +269,7 @@
             <div class="topline">
               <div>
                 <div class="title">HLTV</div>
-                <div class="desc">Dashboards for every aspect on team's statistics.</div>
+                <div class="desc">Dashboards for every aspect of a team's statistics.</div>
               </div>
               <div class="icon" aria-hidden="true">🎯</div>
             </div>
@@ -303,7 +305,7 @@
             <div class="topline">
               <div>
                 <div class="title">PRO Analyses</div>
-                <div class="desc">Sophisticated tool to detailed comparison between two teams and deep analyses.</div>
+                <div class="desc">Sophisticated tool for detailed comparison between two teams and deep analyses.</div>
               </div>
               <div class="icon" aria-hidden="true">🧠</div>
             </div>
@@ -351,11 +353,30 @@
             </div>
           </div>
         </article>
+
+        <!-- NEW OPTION 6 -->
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">Database</div>
+                <div class="desc">Manage, view, and update match data stored in the database.</div>
+              </div>
+              <div class="icon" aria-hidden="true">🗄️</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="database.html">
+                Open Database <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">6</span></div>
+            </div>
+          </div>
+        </article>
       </section>
 
       <footer>
         <span>
-          Update: laste update <span class="kbd">02-18-26</span> at <span class="kbd">15:46</span>.
+          Update: last update <span class="kbd">02-18-26</span> at <span class="kbd">17:25</span>.
         </span>
         <span>
           <a class="mini" href="file/">Open error 404</a>
@@ -365,10 +386,10 @@
   </div>
 
   <script>
-    // Keyboard shortcuts: 1, 2, 3, 4, 5
-    const pages = ["hltv.html", "vrs.html", "pro-analyses.html", "seeding.html", "events.html"];
+    // Keyboard shortcuts: 1, 2, 3, 4, 5, 6
+    const pages = ["hltv.html", "vrs.html", "pro-analyses.html", "seeding.html", "events.html", "database.html"];
     window.addEventListener("keydown", (e) => {
-      if (["1","2","3","4","5"].includes(e.key)) {
+      if (["1","2","3","4","5","6"].includes(e.key)) {
         const idx = Number(e.key) - 1;
         window.location.href = pages[idx];
       }
