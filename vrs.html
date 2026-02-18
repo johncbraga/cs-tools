@@ -668,11 +668,11 @@
 
     function escapeHtml(s){
       return String(s)
-        .replaceAll("&amp;","&amp;amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+        .replaceAll("&amp;amp;","&amp;amp;amp;")
+        .replaceAll("&lt;","&amp;lt;")
+        .replaceAll("&gt;","&amp;gt;")
+        .replaceAll('"',"&amp;quot;")
+        .replaceAll("'","&amp;#039;");
     }
 
     function regionLabel(regionValue){
@@ -976,7 +976,6 @@
       selA.innerHTML = opts;
       selB.innerHTML = opts;
 
-      // Restore selections if possible
       const names = new Set((teams || []).map(t => t.team));
       selA.value = names.has(curA) ? curA : "";
       selB.value = names.has(curB) ? curB : "";
@@ -985,7 +984,6 @@
     function computeHypotheticalRanking(teams, updatesByLowerName){
       const hypo = (teams || []).map(t => ({...t}));
 
-      // Apply point/streak updates (only points matter for ranking, but we keep streak for display)
       for (const ht of hypo){
         const key = ht.team.toLowerCase();
         const upd = updatesByLowerName.get(key);
@@ -1002,6 +1000,76 @@
 
       hypo.forEach((t, idx) => t.pos = idx + 1);
       return hypo;
+    }
+
+    /* ===== UPDATED MATCH PREDICTOR LOGIC (ELO + STREAK + TOURNAMENT BONUS) ===== */
+    const ELO_K_BASE = 30;
+    const ELO_DIVISOR = 400;
+    const ELO_STREAK_ALPHA = 0.10;  // max +10% K
+    const ELO_STREAK_SCALE = 5;     // tanh(streak/5)
+    const ELO_K_CAP_MULT = 1.35;
+
+    const ELO_TOURNEY = {
+      regional: { bonus: 0.05 },
+      global:   { bonus: 0.10 },
+      major:    { bonus: 0.20 }
+    };
+
+    function eloExpected(ra, rb){
+      return 1 / (1 + Math.pow(10, (rb - ra) / ELO_DIVISOR));
+    }
+    function tanhLocal(x){
+      const e2x = Math.exp(2*x);
+      return (e2x - 1) / (e2x + 1);
+    }
+    function streakKBonus(streak){
+      const s = Number.isFinite(streak) ? streak : 0;
+      return ELO_STREAK_ALPHA * tanhLocal(s / ELO_STREAK_SCALE);
+    }
+
+    function getBonusForTeamLower(lowerName){
+      if (!newRowsCache || !newRowsCache.length) return { type: "none", remaining: 0 };
+
+      // Find matching row by team (case-insensitive) without changing other code paths
+      const headerMap = buildHeaderMap(newRowsCache);
+      for (const r of newRowsCache){
+        const t = String(getColumn(r, headerMap, "team") ?? "").trim();
+        if (!t) continue;
+        if (t.toLowerCase() !== lowerName) continue;
+
+        // Detect optional columns BonusType / BonusRemaining (case-insensitive)
+        let bonusTypeKey = null;
+        let bonusRemKey = null;
+        for (const k of Object.keys(r)){
+          const nk = normalizeHeader(k);
+          if (nk === "bonustype") bonusTypeKey = k;
+          if (nk === "bonusremaining") bonusRemKey = k;
+        }
+        const type = bonusTypeKey ? String(r[bonusTypeKey] ?? "").trim().toLowerCase() : "none";
+        const remaining = bonusRemKey ? toNumber(r[bonusRemKey]) : 0;
+
+        return {
+          type: (type === "regional" || type === "global" || type === "major") ? type : "none",
+          remaining: Number.isFinite(remaining) ? remaining : 0
+        };
+      }
+      return { type: "none", remaining: 0 };
+    }
+
+    function tournamentKBonus(bonusType, bonusRemaining){
+      if (!bonusType || bonusType === "none") return 0;
+      if (!Number.isFinite(bonusRemaining) || bonusRemaining <= 0) return 0;
+      const b = ELO_TOURNEY[bonusType];
+      return b ? b.bonus : 0;
+    }
+
+    function kFinalFor(team){
+      const sBonus = streakKBonus(team.streak || 0);
+      const bInfo = getBonusForTeamLower(team.team.toLowerCase());
+      const tBonus = tournamentKBonus(bInfo.type, bInfo.remaining);
+      const k = ELO_K_BASE * (1 + sBonus) * (1 + tBonus);
+      const cap = ELO_K_BASE * ELO_K_CAP_MULT;
+      return Math.min(k, cap);
     }
 
     function renderMatchPredictor(){
@@ -1037,35 +1105,35 @@
         return;
       }
 
-      // Rules:
-      // Win points = 8 + current streak
-      // Loss points = -5
-      // After win streak = streak + 1
-      // After loss streak = 0
-      const winDeltaA = 8 + (Number.isFinite(a.streak) ? a.streak : 0);
-      const winDeltaB = 8 + (Number.isFinite(b.streak) ? b.streak : 0);
-      const lossDelta = -5;
+      const ra = Number(a.points) || 0;
+      const rb = Number(b.points) || 0;
 
-      const updates = new Map();
+      const ea = eloExpected(ra, rb);
+      const eb = 1 - ea;
 
+      const kA = kFinalFor(a);
+      const kB = kFinalFor(b);
+
+      // Outcome scoring: win=1, loss=0 (predictor currently supports A/B only)
       let aDelta = 0, bDelta = 0;
       let aNewStreak = a.streak, bNewStreak = b.streak;
 
       if (result === "A"){
-        aDelta = winDeltaA;
-        bDelta = lossDelta;
+        aDelta = kA * (1 - ea);
+        bDelta = kB * (0 - eb);
         aNewStreak = (a.streak || 0) + 1;
         bNewStreak = 0;
-      }else{
-        aDelta = lossDelta;
-        bDelta = winDeltaB;
+      } else {
+        aDelta = kA * (0 - ea);
+        bDelta = kB * (1 - eb);
         aNewStreak = 0;
         bNewStreak = (b.streak || 0) + 1;
       }
 
-      const aNewPoints = a.points + aDelta;
-      const bNewPoints = b.points + bDelta;
+      const aNewPoints = ra + aDelta;
+      const bNewPoints = rb + bDelta;
 
+      const updates = new Map();
       updates.set(a.team.toLowerCase(), { newPoints: aNewPoints, newStreak: aNewStreak });
       updates.set(b.team.toLowerCase(), { newPoints: bNewPoints, newStreak: bNewStreak });
 
@@ -1082,8 +1150,8 @@
       const aMove = computeDelta(aOldPos, aNewPos);
       const bMove = computeDelta(bOldPos, bNewPos);
 
-      const aPtsDiff = computePointsDiff(a.points, aNewPoints);
-      const bPtsDiff = computePointsDiff(b.points, bNewPoints);
+      const aPtsDiff = computePointsDiff(ra, aNewPoints);
+      const bPtsDiff = computePointsDiff(rb, bNewPoints);
 
       const aMoveCell = `<span class="delta ${aMove.cls}">${aMove.text}</span>`;
       const bMoveCell = `<span class="delta ${bMove.cls}">${bMove.text}</span>`;
@@ -1095,10 +1163,10 @@
         <tr>
           <td class="right mono">${aOldPos}</td>
           <td>${escapeHtml(a.team)}</td>
-          <td class="right mono">${a.points}</td>
+          <td class="right mono">${ra}</td>
           <td class="right mono">${a.streak}</td>
           <td class="right mono">${aPtsCell}</td>
-          <td class="right mono">${aNewPoints}</td>
+          <td class="right mono">${aNewPoints.toFixed(2)}</td>
           <td class="right">${aMoveCell}</td>
           <td class="right mono small">${aOldPos} → ${aNewPos}</td>
         </tr>
@@ -1108,10 +1176,10 @@
         <tr>
           <td class="right mono">${bOldPos}</td>
           <td>${escapeHtml(b.team)}</td>
-          <td class="right mono">${b.points}</td>
+          <td class="right mono">${rb}</td>
           <td class="right mono">${b.streak}</td>
           <td class="right mono">${bPtsCell}</td>
-          <td class="right mono">${bNewPoints}</td>
+          <td class="right mono">${bNewPoints.toFixed(2)}</td>
           <td class="right">${bMoveCell}</td>
           <td class="right mono small">${bOldPos} → ${bNewPos}</td>
         </tr>
@@ -1121,9 +1189,11 @@
 
       const winner = (result === "A") ? a.team : b.team;
       $("#matchStatus").textContent =
-        `Scenario: ${winner} wins. ${a.team}: ${aPtsDiff.text} pts, ${aOldPos}→${aNewPos} (${aMove.text}). ` +
+        `Scenario: ${winner} wins. ` +
+        `${a.team}: ${aPtsDiff.text} pts, ${aOldPos}→${aNewPos} (${aMove.text}). ` +
         `${b.team}: ${bPtsDiff.text} pts, ${bOldPos}→${bNewPos} (${bMove.text}).`;
     }
+    /* ✅ FIM ATUALIZAÇÃO: Match Predictor logic */
     /* ✅ FIM ADIÇÃO */
 
     function recomputeAndRender(){
