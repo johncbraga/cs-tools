@@ -185,9 +185,9 @@
 
   <div class="row">
     <span class="pill">📄 Auto-load: <span class="mono" id="excelUrlLabel">file/ranking.xlsx</span></span>
-    <button class="btn small" id="btnBackToMenu">Back to menu</button>
-    <button class="btn small" id="btnReload">Reload</button>
-    <button class="btn primary small" id="btnDownload">Download updated Excel</button>
+    <button class="btn small" id="btnBackToMenu" type="button">Back to menu</button>
+    <button class="btn small" id="btnReload" type="button">Reload</button>
+    <button class="btn primary small" id="btnDownload" type="button">Download updated Excel</button>
   </div>
 </header>
 
@@ -255,7 +255,7 @@
           </div>
         </div>
 
-        <button class="btn" style="margin-top:12px;width:100%;" id="btnCalc">Calculate deltas</button>
+        <button class="btn" style="margin-top:12px;width:100%;" id="btnCalc" type="button">Calculate deltas</button>
 
         <div id="versusBox" class="alert" style="display:none;">
           <div><strong>Expected:</strong> A=<span class="mono" id="EA"></span> | B=<span class="mono" id="EB"></span></div>
@@ -276,7 +276,7 @@
                 <option value="D">Draw</option>
               </select>
 
-              <button class="btn good" style="margin-top:10px;width:100%;" id="btnApplyMatch">
+              <button class="btn good" style="margin-top:10px;width:100%;" id="btnApplyMatch" type="button">
                 Apply match
               </button>
             </div>
@@ -305,7 +305,7 @@
           <option value="major">Major (counts as Majors)</option>
         </select>
 
-        <button class="btn primary" style="margin-top:12px;width:100%;" id="btnApplyTourney">
+        <button class="btn primary" style="margin-top:12px;width:100%;" id="btnApplyTourney" type="button">
           Apply tournament win
         </button>
 
@@ -336,7 +336,7 @@
           <small>Streak resets to 0, and seasonal Wins/Losses reset to 0. Majors &amp; Trophies stay.</small>
         </div>
 
-        <button class="btn" style="margin-top:12px;width:100%;" id="btnPreviewReset">
+        <button class="btn" style="margin-top:12px;width:100%;" id="btnPreviewReset" type="button">
           Preview season reset
         </button>
 
@@ -346,7 +346,7 @@
           <small>This is irreversible in the spreadsheet until you replace the file. Confirm only if you’re ready.</small>
         </div>
 
-        <button class="btn danger" style="margin-top:12px;width:100%;" id="btnConfirmReset" disabled>
+        <button class="btn danger" style="margin-top:12px;width:100%;" id="btnConfirmReset" type="button" disabled>
           Confirm season reset
         </button>
 
@@ -914,25 +914,41 @@ document.getElementById("fileInput").addEventListener("change", async (ev)=>{
   showAlert(`Manual load: <span class="mono">${htmlEscape(file.name)}</span>`, "good");
 });
 
-/* ===================== BACK TO MENU (NAVIGATE TO index.html + KEY 0) ===================== */
+/* ===================== BACK TO MENU (FIXED + ROBUST) ===================== */
+/*
+  - Prefer: go back in history (the "previous menu" the user came from).
+  - Fallback: if there is no history (opened directly), go to index.html in the same folder.
+  - Keyboard: key '0' captured in capture phase to avoid being swallowed by other listeners.
+*/
 function goBackToMenu(){
-  const base = new URL(".", window.location.href);
-  const target = new URL("index.html", base).toString();
-  window.location.href = target;
+  // 1) Go back if we have navigation history
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+
+  // 2) Fallback: index.html next to current page
+  const url = new URL("index.html", window.location.href);
+  window.location.assign(url.href);
 }
 
-document.getElementById("btnBackToMenu").addEventListener("click", goBackToMenu);
+document.getElementById("btnBackToMenu").addEventListener("click", (e)=>{
+  e.preventDefault();
+  goBackToMenu();
+});
 
+// Capture phase helps when other code stops propagation in bubble phase
 document.addEventListener("keydown", (e)=>{
-  const tag = e.target && e.target.tagName ? e.target.tagName : "";
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : "";
   if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-  if (e.key === "0"){
+
+  if (e.key === "0") {
     e.preventDefault();
     goBackToMenu();
   }
-});
+}, { capture: true });
 
-// INIT
+/* ===================== INIT ===================== */
 loadFromUrl();
 </script>
 </body>
