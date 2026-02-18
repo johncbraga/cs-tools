@@ -459,6 +459,66 @@
       </div>
     </div>
     <!-- ✅ FIM ADIÇÃO -->
+
+    <!-- ✅ ADIÇÃO: Match Predictor (English) -->
+    <div class="card">
+      <div class="small" style="margin-bottom:10px;">
+        VRS Rating — Match Predictor<br/>
+        02/17/2026
+      </div>
+
+      <div class="row" style="margin-bottom:12px;">
+        <div>
+          <label>Select Team A</label>
+          <select id="matchTeamA" disabled>
+            <option value="">—</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Select Team B</label>
+          <select id="matchTeamB" disabled>
+            <option value="">—</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Result</label>
+          <select id="matchResult" disabled>
+            <option value="A">Team A wins</option>
+            <option value="B">Team B wins</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="matchStatus" class="status">Select two teams to preview point and ranking changes.</div>
+
+      <div style="overflow:auto; max-height: 55vh;">
+        <table>
+          <thead>
+            <tr>
+              <th class="right">Current Pos</th>
+              <th>Team</th>
+              <th class="right">Current Points</th>
+              <th class="right">Streak</th>
+              <th class="right">Δ Points</th>
+              <th class="right">New Points</th>
+              <th class="right">Movement</th>
+              <th class="right small">Old → New</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyMatchPredict">
+            <tr><td colspan="8" class="small">No selection yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        Rules: Win = + (8 + current streak). Loss = -5. After win streak becomes streak+1; after loss streak becomes 0.
+      </div>
+    </div>
+    <!-- ✅ FIM ADIÇÃO -->
+
   </div>
 
   <script>
@@ -476,6 +536,9 @@
 
     let oldRowsCache = null;
     let newRowsCache = null;
+
+    // ✅ ADIÇÃO: keep a copy of the latest NEW ranking objects (with streak, etc.)
+    let currentNewTeams = null;
 
     async function readExcelFromUrl(url){
       const res = await fetch(url, { cache: "no-store" });
@@ -509,10 +572,13 @@
 
     function getColumn(row, headerMap, desired){
       const candidates = {
-        team:   ["team", "time", "equipe"],
-        points: ["points", "pontos"],
-        tier:   ["tier"],
-        region: ["region", "região", "regiao"]
+        team:     ["team", "time", "equipe"],
+        points:   ["points", "pontos"],
+        tier:     ["tier"],
+        region:   ["region", "região", "regiao"],
+        victories:["victories", "vitorias", "vitórias"],
+        streak:   ["streak", "sequencia", "sequência"],
+        loses:    ["loses", "losses", "derrotas", "perdas"]
       }[desired];
 
       for (const c of candidates){
@@ -549,7 +615,20 @@
         const tier = String(getColumn(r, headerMap, "tier") ?? "").trim();
         const region = String(getColumn(r, headerMap, "region") ?? "").trim();
 
-        teams.push({ team, points: Number.isFinite(points) ? points : 0, tier, region });
+        // ✅ ADIÇÃO: optional columns used by Match Predictor
+        const victories = toNumber(getColumn(r, headerMap, "victories"));
+        const streak = toNumber(getColumn(r, headerMap, "streak"));
+        const loses = toNumber(getColumn(r, headerMap, "loses"));
+
+        teams.push({
+          team,
+          points: Number.isFinite(points) ? points : 0,
+          tier,
+          region,
+          victories: Number.isFinite(victories) ? victories : 0,
+          streak: Number.isFinite(streak) ? streak : 0,
+          loses: Number.isFinite(loses) ? loses : 0
+        });
       }
 
       teams.sort((a,b) => {
@@ -590,10 +669,10 @@
     function escapeHtml(s){
       return String(s)
         .replaceAll("&amp;","&amp;amp;")
-        .replaceAll("&lt;","&amp;lt;")
-        .replaceAll("&gt;","&amp;gt;")
-        .replaceAll('"',"&amp;quot;")
-        .replaceAll("'","&amp;#039;");
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
     }
 
     function regionLabel(regionValue){
@@ -760,15 +839,6 @@
     function computeRegionCombined(regionValue){
       if (!oldRowsCache || !newRowsCache) return [];
 
-      const oldRegionRows = oldRowsCache.filter(r => {
-        const keys = Object.keys(r || {});
-        if (!keys.length) return false;
-        // reuse existing parsing by buildingRanking on full; here we need region column quickly:
-        // safest: buildRanking expects sheet-to-json rows; we filter by reading region field using header map
-        return true;
-      });
-
-      // Build header maps once for accurate region filtering with same column aliases
       const oldHeaderMap = buildHeaderMap(oldRowsCache || []);
       const newHeaderMap = buildHeaderMap(newRowsCache || []);
 
@@ -886,6 +956,176 @@
     }
     /* ✅ FIM ADIÇÃO */
 
+    /* ✅ ADIÇÃO: Match Predictor helpers */
+    function enableMatchPredictor(enabled){
+      $("#matchTeamA").disabled = !enabled;
+      $("#matchTeamB").disabled = !enabled;
+      $("#matchResult").disabled = !enabled;
+    }
+
+    function updateMatchTeamOptions(teams){
+      const selA = $("#matchTeamA");
+      const selB = $("#matchTeamB");
+      const curA = selA.value;
+      const curB = selB.value;
+
+      const opts = [`<option value="">—</option>`].concat(
+        (teams || []).map(t => `<option value="${escapeHtml(t.team)}">${escapeHtml(t.team)}</option>`)
+      ).join("");
+
+      selA.innerHTML = opts;
+      selB.innerHTML = opts;
+
+      // Restore selections if possible
+      const names = new Set((teams || []).map(t => t.team));
+      selA.value = names.has(curA) ? curA : "";
+      selB.value = names.has(curB) ? curB : "";
+    }
+
+    function computeHypotheticalRanking(teams, updatesByLowerName){
+      const hypo = (teams || []).map(t => ({...t}));
+
+      // Apply point/streak updates (only points matter for ranking, but we keep streak for display)
+      for (const ht of hypo){
+        const key = ht.team.toLowerCase();
+        const upd = updatesByLowerName.get(key);
+        if (upd){
+          ht.points = upd.newPoints;
+          ht.streak = upd.newStreak;
+        }
+      }
+
+      hypo.sort((a,b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return a.team.localeCompare(b.team, "pt-BR");
+      });
+
+      hypo.forEach((t, idx) => t.pos = idx + 1);
+      return hypo;
+    }
+
+    function renderMatchPredictor(){
+      const tbody = $("#tbodyMatchPredict");
+      if (!currentNewTeams || !currentNewTeams.length){
+        tbody.innerHTML = `<tr><td colspan="8" class="small">No data loaded.</td></tr>`;
+        $("#matchStatus").textContent = "Load ranking data to use the predictor.";
+        return;
+      }
+
+      const aName = $("#matchTeamA").value;
+      const bName = $("#matchTeamB").value;
+      const result = $("#matchResult").value; // "A" or "B"
+
+      if (!aName || !bName){
+        tbody.innerHTML = `<tr><td colspan="8" class="small">No selection yet.</td></tr>`;
+        $("#matchStatus").textContent = "Select two teams to preview point and ranking changes.";
+        return;
+      }
+      if (aName === bName){
+        tbody.innerHTML = `<tr><td colspan="8" class="small">Pick two different teams.</td></tr>`;
+        $("#matchStatus").textContent = "Team A and Team B must be different.";
+        return;
+      }
+
+      const byName = new Map(currentNewTeams.map(t => [t.team.toLowerCase(), t]));
+      const a = byName.get(aName.toLowerCase());
+      const b = byName.get(bName.toLowerCase());
+
+      if (!a || !b){
+        tbody.innerHTML = `<tr><td colspan="8" class="small">Selected team not found in the current ranking.</td></tr>`;
+        $("#matchStatus").textContent = "One or both teams were not found.";
+        return;
+      }
+
+      // Rules:
+      // Win points = 8 + current streak
+      // Loss points = -5
+      // After win streak = streak + 1
+      // After loss streak = 0
+      const winDeltaA = 8 + (Number.isFinite(a.streak) ? a.streak : 0);
+      const winDeltaB = 8 + (Number.isFinite(b.streak) ? b.streak : 0);
+      const lossDelta = -5;
+
+      const updates = new Map();
+
+      let aDelta = 0, bDelta = 0;
+      let aNewStreak = a.streak, bNewStreak = b.streak;
+
+      if (result === "A"){
+        aDelta = winDeltaA;
+        bDelta = lossDelta;
+        aNewStreak = (a.streak || 0) + 1;
+        bNewStreak = 0;
+      }else{
+        aDelta = lossDelta;
+        bDelta = winDeltaB;
+        aNewStreak = 0;
+        bNewStreak = (b.streak || 0) + 1;
+      }
+
+      const aNewPoints = a.points + aDelta;
+      const bNewPoints = b.points + bDelta;
+
+      updates.set(a.team.toLowerCase(), { newPoints: aNewPoints, newStreak: aNewStreak });
+      updates.set(b.team.toLowerCase(), { newPoints: bNewPoints, newStreak: bNewStreak });
+
+      const hypo = computeHypotheticalRanking(currentNewTeams, updates);
+
+      const oldPosMap = mapPositions(currentNewTeams);
+      const newPosMap = mapPositions(hypo);
+
+      const aOldPos = oldPosMap.get(a.team.toLowerCase());
+      const bOldPos = oldPosMap.get(b.team.toLowerCase());
+      const aNewPos = newPosMap.get(a.team.toLowerCase());
+      const bNewPos = newPosMap.get(b.team.toLowerCase());
+
+      const aMove = computeDelta(aOldPos, aNewPos);
+      const bMove = computeDelta(bOldPos, bNewPos);
+
+      const aPtsDiff = computePointsDiff(a.points, aNewPoints);
+      const bPtsDiff = computePointsDiff(b.points, bNewPoints);
+
+      const aMoveCell = `<span class="delta ${aMove.cls}">${aMove.text}</span>`;
+      const bMoveCell = `<span class="delta ${bMove.cls}">${bMove.text}</span>`;
+
+      const aPtsCell = `<span class="delta ${aPtsDiff.cls}">${aPtsDiff.text}</span>`;
+      const bPtsCell = `<span class="delta ${bPtsDiff.cls}">${bPtsDiff.text}</span>`;
+
+      const rowA = `
+        <tr>
+          <td class="right mono">${aOldPos}</td>
+          <td>${escapeHtml(a.team)}</td>
+          <td class="right mono">${a.points}</td>
+          <td class="right mono">${a.streak}</td>
+          <td class="right mono">${aPtsCell}</td>
+          <td class="right mono">${aNewPoints}</td>
+          <td class="right">${aMoveCell}</td>
+          <td class="right mono small">${aOldPos} → ${aNewPos}</td>
+        </tr>
+      `;
+
+      const rowB = `
+        <tr>
+          <td class="right mono">${bOldPos}</td>
+          <td>${escapeHtml(b.team)}</td>
+          <td class="right mono">${b.points}</td>
+          <td class="right mono">${b.streak}</td>
+          <td class="right mono">${bPtsCell}</td>
+          <td class="right mono">${bNewPoints}</td>
+          <td class="right">${bMoveCell}</td>
+          <td class="right mono small">${bOldPos} → ${bNewPos}</td>
+        </tr>
+      `;
+
+      tbody.innerHTML = rowA + rowB;
+
+      const winner = (result === "A") ? a.team : b.team;
+      $("#matchStatus").textContent =
+        `Scenario: ${winner} wins. ${a.team}: ${aPtsDiff.text} pts, ${aOldPos}→${aNewPos} (${aMove.text}). ` +
+        `${b.team}: ${bPtsDiff.text} pts, ${bOldPos}→${bNewPos} (${bMove.text}).`;
+    }
+    /* ✅ FIM ADIÇÃO */
+
     function recomputeAndRender(){
       if (!oldRowsCache || !newRowsCache){
         $("#status").textContent = "Ainda não foi possível carregar os dois arquivos (old e new).";
@@ -954,6 +1194,13 @@
       recomputeRegionRanking();
       /* ✅ FIM ADIÇÃO */
 
+      /* ✅ ADIÇÃO: Match Predictor data source */
+      currentNewTeams = newTeams; // includes points + streak etc.
+      updateMatchTeamOptions(currentNewTeams);
+      enableMatchPredictor(true);
+      renderMatchPredictor();
+      /* ✅ FIM ADIÇÃO */
+
       $("#status").textContent = "Ranking generated.";
     }
 
@@ -1008,6 +1255,13 @@
     /* ✅ ADIÇÃO: region select handler */
     $("#regionRankingSelect").addEventListener("change", () => {
       recomputeRegionRanking();
+    });
+    /* ✅ FIM ADIÇÃO */
+
+    /* ✅ ADIÇÃO: match predictor handlers */
+    enableMatchPredictor(false);
+    ["matchTeamA","matchTeamB","matchResult"].forEach(id => {
+      $("#" + id).addEventListener("change", () => renderMatchPredictor());
     });
     /* ✅ FIM ADIÇÃO */
 
