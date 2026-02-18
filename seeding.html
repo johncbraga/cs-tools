@@ -68,7 +68,7 @@
   .field{display:flex; flex-direction:column; gap:6px; min-width:230px}
   .field.grow{flex:1; min-width:280px}
   label{font-size:12px; color:var(--muted)}
-  input, select, textarea{
+  input, textarea{
     width:100%;
     padding:10px 12px;
     border-radius:12px;
@@ -78,7 +78,7 @@
     outline:none;
   }
   textarea{min-height:86px; resize:vertical; font-family:inherit}
-  input:focus, select:focus, textarea:focus{border-color:rgba(110,168,255,.75)}
+  input:focus, textarea:focus{border-color:rgba(110,168,255,.75)}
   .btn{
     padding:10px 12px;
     border-radius:12px;
@@ -140,7 +140,7 @@
   <header class="topbar">
     <div class="title">
       <h1>Gerador de Confrontos (Seeding)</h1>
-      <p class="subtitle">Melhores vs piores por pontos — com bracket que evita tops se enfrentarem cedo.</p>
+      <p class="subtitle">Marca os times e gere os matches automaticamente: mais fortes vs mais fracos.</p>
     </div>
 
     <button id="backBtn" class="back-btn" title="Voltar para index.html (atalho: tecla 0)">
@@ -177,30 +177,8 @@ Team C;60"></textarea>
 
       <div class="row wrap">
         <div class="field">
-          <label for="filter">Filtro</label>
+          <label for="filter">Pesquisar time</label>
           <input id="filter" type="text" placeholder="Digite para filtrar…" autocomplete="off" />
-        </div>
-
-        <div class="field">
-          <label for="stage">Fase</label>
-          <select id="stage">
-            <option value="auto" selected>Início (auto / chave completa)</option>
-            <option value="32">Top 32</option>
-            <option value="16">Oitavas (16)</option>
-            <option value="8">Quartas (8)</option>
-            <option value="4">Semifinal (4)</option>
-            <option value="2">Final (2)</option>
-          </select>
-          <small class="hint">Se você selecionar uma fase menor que a quantidade marcada, o sistema usa os <strong>melhores</strong> por pontos.</small>
-        </div>
-
-        <div class="field">
-          <label for="reseed">Modo</label>
-          <select id="reseed">
-            <option value="bracket" selected>Bracket padrão (1 vs N, evita tops cedo)</option>
-            <option value="reseed">Re-seeding por rodada (alto vs baixo a cada rodada)</option>
-          </select>
-          <small class="hint">Use “Re-seeding por rodada” se você quer sempre (em cada rodada) o melhor restante contra o pior restante.</small>
         </div>
       </div>
 
@@ -227,9 +205,14 @@ Team C;60"></textarea>
     </section>
 
     <section class="card">
-      <h2>3) Confrontos</h2>
+      <h2>3) Matches (seeding automático)</h2>
+      <p class="hint">
+        O seeding é simples e direto: ordena os selecionados por pontos (desc) e pareia <strong>1º vs último</strong>, <strong>2º vs penúltimo</strong>…
+        Se sobrar 1 time (quantidade ímpar), ele recebe <strong>BYE</strong>.
+      </p>
+
       <div class="row wrap">
-        <button id="generate" class="btn primary">Gerar confrontos</button>
+        <button id="generate" class="btn primary">Gerar matches</button>
         <button id="copy" class="btn" disabled>Copiar</button>
         <button id="download" class="btn" disabled>Baixar .txt</button>
         <span id="genInfo" class="muted"></span>
@@ -241,25 +224,17 @@ Team C;60"></textarea>
           <div id="selectedTable" class="mono"></div>
         </div>
         <div>
-          <h3>Chave / Pairings</h3>
+          <h3>Matches</h3>
           <div id="matchups" class="matchups"></div>
         </div>
       </div>
 
       <details class="card subtle">
-        <summary>Como o seeding funciona?</summary>
+        <summary>Atalhos e detalhes</summary>
         <div class="explain">
-          <p>
-            <strong>Bracket padrão</strong>: monta as posições da chave de forma que o Seed 1 e o Seed 2 fiquem em lados opostos.
-            Assim, se tudo der certo, eles só se encontram no fim (final). O primeiro round sempre é <em>melhor vs pior</em>.
-          </p>
-          <p>
-            <strong>Re-seeding por rodada</strong>: reordena os classificados por pontos/seed e faz novamente
-            <em>melhor restante vs pior restante</em>. Neste arquivo, o modo “re-seeding” gera o <strong>round atual</strong> nessa lógica.
-          </p>
-          <p>
-            Se o número de times não for potência de 2, o sistema cria <em>BYEs</em> para completar a chave.
-          </p>
+          <p>Botão “Voltar” no canto superior direito leva para <code>index.html</code>.</p>
+          <p>Tecla <kbd>0</kbd> faz o mesmo, desde que você não esteja digitando em um campo.</p>
+          <p><strong>Observação:</strong> se você abrir via <code>file://</code>, alguns navegadores bloqueiam o <code>fetch()</code> do Excel. Use um servidor local se necessário.</p>
         </div>
       </details>
     </section>
@@ -275,13 +250,11 @@ Team C;60"></textarea>
 
   <script>
   /* ====== JS (tudo em um arquivo) ======
-     Seeding: lê ranking.xlsx (file/ranking.xlsx), filtra times escolhidos e gera confrontos por seeding.
-     Regras principais:
-     - Usa apenas colunas Team e Points.
-     - Ordena por Points desc, depois nome.
-     - Bracket padrão: usa ordem de seeds que mantém 1 e 2 em lados opostos, evitando encontro antes do final.
-     - Re-seeding por rodada: (opcional) gera pareamentos sempre do melhor restante vs pior restante no round atual.
-     - Voltar: botão no topo e tecla 0 (quando não estiver focado em input/textarea/select).
+     Atualização: removido estágio e modo. Agora é sempre: mais fortes vs mais fracos.
+     - Ordena selecionados por Points desc.
+     - Pareia i com (n-1-i).
+     - Ímpar: BYE.
+     - Voltar: botão e tecla 0 fora de inputs.
   */
 
   const RANKING_PATH = 'file/ranking.xlsx';
@@ -294,8 +267,6 @@ Team C;60"></textarea>
     manualStatus: document.getElementById('manualStatus'),
 
     filter: document.getElementById('filter'),
-    stage: document.getElementById('stage'),
-    reseed: document.getElementById('reseed'),
 
     bulkNames: document.getElementById('bulkNames'),
     applyBulk: document.getElementById('applyBulk'),
@@ -337,33 +308,10 @@ Team C;60"></textarea>
     });
   }
 
-  function nextPow2(n){
-    let p = 1;
-    while (p < n) p *= 2;
-    return p;
-  }
-
-  // Ordem de posições de seeds em um bracket power-of-two.
-  // Ex.: n=8 => [1,8,4,5,2,7,3,6]
-  function buildSeedOrder(n){
-    if (n === 1) return [1];
-    if (n === 2) return [1,2];
-    let order = [1,2];
-    for (let size = 4; size <= n; size *= 2){
-      const next = [];
-      for (const s of order){
-        next.push(s);
-        next.push(size + 1 - s);
-      }
-      order = next;
-    }
-    return order;
-  }
-
   function isTypingTarget(el){
     if (!el) return false;
     const tag = (el.tagName || '').toLowerCase();
-    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
   }
 
   function goBack(){
@@ -371,17 +319,20 @@ Team C;60"></textarea>
   }
 
   function escapeHtml(str){
-    return (str || '').replace(/[&<>\"']/g, (m)=>({
+    return (str || '').replace(/[&<>"']/g, (m)=>({
       '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
     }[m]));
   }
 
-  // UI render
+  function updateSelCount(){
+    els.selCount.textContent = `${selected.size} selecionado(s)`;
+  }
+
   function renderTeamList(){
     const f = normalizeStr(els.filter.value).toLowerCase();
     const frag = document.createDocumentFragment();
-
     let visible = 0;
+
     for (const row of ranking){
       const name = row.team;
       if (f && !name.toLowerCase().includes(f)) continue;
@@ -418,14 +369,9 @@ Team C;60"></textarea>
 
     els.teamList.innerHTML = '';
     els.teamList.appendChild(frag);
-
     if (visible === 0){
       els.teamList.innerHTML = `<div class="muted" style="padding:10px">Nenhum time encontrado para o filtro atual.</div>`;
     }
-  }
-
-  function updateSelCount(){
-    els.selCount.textContent = `${selected.size} selecionado(s)`;
   }
 
   function parseManualLines(text){
@@ -465,76 +411,26 @@ Team C;60"></textarea>
     els.genInfo.textContent = '';
   }
 
-  // --- Geração de confrontos ---
-  function getStageSize(selectedCount){
-    const v = els.stage.value;
-    if (v === 'auto') return nextPow2(selectedCount);
-    const n = parseInt(v, 10);
-    return Number.isFinite(n) && n > 0 ? n : nextPow2(selectedCount);
-  }
-
   function getSelectedTeamsSorted(){
     const chosen = ranking.filter(r => selected.has(r.team));
     return sortRanking(chosen);
   }
 
-  function generateBracketPairings(teams, bracketSize){
-    const order = buildSeedOrder(bracketSize);
-    // mapa seed -> team
-    const seedToTeam = new Map();
-    teams.forEach((t, i)=> seedToTeam.set(i+1, t));
-
-    // posições da chave em ordem
-    const slots = order.map(seed => ({ seed, team: seedToTeam.get(seed) || null }));
-
-    // confrontos do round 1 = pares consecutivos
-    const matches = [];
-    for (let i=0;i<slots.length;i+=2){
-      matches.push({
-        round: 1,
-        a: slots[i],
-        b: slots[i+1],
-      });
-    }
-    return {matches};
-  }
-
-  function generateReseedRound(teams, bracketSize){
-    // Round atual no formato 1 vs N, 2 vs N-1, ...
-    const seeded = teams.map((t,i)=>({seed:i+1, team:t}));
-    const padded = seeded.concat(Array.from({length: bracketSize - seeded.length}, (_,k)=>({seed: seeded.length + k + 1, team:null})));
-
-    const matches = [];
-    for (let i=0;i<bracketSize/2;i++){
-      const a = padded[i];
-      const b = padded[bracketSize - 1 - i];
-      matches.push({
-        round: 1,
-        a: {seed: a.seed, team: a.team},
-        b: {seed: b.seed, team: b.team},
-      });
-    }
-    return {matches};
-  }
-
-  function renderSelectedTable(teams, capSize){
+  function renderSelectedTable(teams){
     let txt = '';
     teams.forEach((t,i)=>{
       txt += `${String(i+1).padStart(2,'0')}  ${t.team}  —  ${t.points}\n`;
     });
-    if (capSize && teams.length < capSize){
-      txt += `\n(BYEs: +${capSize - teams.length} para completar ${capSize})\n`;
-    }
     els.selectedTable.textContent = txt || '—';
   }
 
-  function renderTeamBox(slot){
+  function renderTeamBox(seed, t){
     const box = document.createElement('div');
-    box.className = 'team' + (slot.team ? '' : ' bye');
-    if (slot.team){
-      box.innerHTML = `<strong>#${slot.seed} ${escapeHtml(slot.team.team)}</strong><small>${slot.team.points} pts</small>`;
+    box.className = 'team' + (t ? '' : ' bye');
+    if (t){
+      box.innerHTML = `<strong>#${seed} ${escapeHtml(t.team)}</strong><small>${t.points} pts</small>`;
     } else {
-      box.innerHTML = `<strong>#${slot.seed} BYE</strong><small>avança automaticamente</small>`;
+      box.innerHTML = `<strong>#${seed} BYE</strong><small>sem adversário</small>`;
     }
     return box;
   }
@@ -542,7 +438,7 @@ Team C;60"></textarea>
   function renderMatches(matches){
     els.matchups.innerHTML = '';
     if (!matches.length){
-      els.matchups.innerHTML = '<div class="muted">Sem confrontos para mostrar.</div>';
+      els.matchups.innerHTML = '<div class="muted">Sem matches para mostrar.</div>';
       return;
     }
 
@@ -553,17 +449,17 @@ Team C;60"></textarea>
 
       const hdr = document.createElement('div');
       hdr.className = 'hdr';
-      hdr.innerHTML = `<div><strong>Jogo ${idx+1}</strong></div><div class="round">Rodada ${m.round}</div>`;
+      hdr.innerHTML = `<div><strong>Match ${idx+1}</strong></div><div class="round">Forte vs Fraco</div>`;
 
       const pair = document.createElement('div');
       pair.className = 'pair';
 
-      pair.appendChild(renderTeamBox(m.a));
+      pair.appendChild(renderTeamBox(m.aSeed, m.a));
       const vs = document.createElement('div');
       vs.className = 'vs';
       vs.textContent = 'VS';
       pair.appendChild(vs);
-      pair.appendChild(renderTeamBox(m.b));
+      pair.appendChild(renderTeamBox(m.bSeed, m.b));
 
       div.appendChild(hdr);
       div.appendChild(pair);
@@ -573,14 +469,32 @@ Team C;60"></textarea>
     els.matchups.appendChild(frag);
   }
 
-  function buildOutputText(matches, stageSize, mode){
+  function buildMatches(teams){
+    // teams já vem ordenado (pontos desc)
+    const n = teams.length;
+    const matches = [];
+    for (let i=0; i<Math.ceil(n/2); i++){
+      const a = teams[i];
+      const bIndex = n - 1 - i;
+      const b = (bIndex > i) ? teams[bIndex] : null;
+      matches.push({
+        aSeed: i+1,
+        bSeed: b ? (bIndex+1) : (bIndex+1),
+        a,
+        b
+      });
+    }
+    return matches;
+  }
+
+  function buildOutputText(teams, matches){
     const lines = [];
-    lines.push(`Fase/Chave: ${stageSize} (modo: ${mode === 'bracket' ? 'bracket padrão' : 're-seeding por rodada'})`);
+    lines.push(`Matches gerados (seeding forte vs fraco) — total selecionados: ${teams.length}`);
     lines.push('');
     matches.forEach((m, idx)=>{
-      const a = m.a.team ? `${m.a.team.team} (${m.a.team.points})` : 'BYE';
-      const b = m.b.team ? `${m.b.team.team} (${m.b.team.points})` : 'BYE';
-      lines.push(`Jogo ${idx+1}: #${m.a.seed} ${a}  vs  #${m.b.seed} ${b}`);
+      const a = m.a ? `${m.a.team} (${m.a.points})` : 'BYE';
+      const b = m.b ? `${m.b.team} (${m.b.points})` : 'BYE';
+      lines.push(`Match ${idx+1}: #${m.aSeed} ${a}  vs  #${m.bSeed} ${b}`);
     });
     return lines.join('\n');
   }
@@ -603,39 +517,24 @@ Team C;60"></textarea>
   }
 
   function generate(){
-    const teamsAll = getSelectedTeamsSorted();
-    if (teamsAll.length < 2){
+    const teams = getSelectedTeamsSorted();
+    if (teams.length < 2){
       els.genInfo.textContent = 'Selecione pelo menos 2 times.';
       return;
     }
 
-    const stageSize = getStageSize(teamsAll.length);
-    const mode = els.reseed.value;
-
-    // Se selecionou mais que a fase, corta para os melhores
-    const teams = teamsAll.slice(0, stageSize);
-
-    // Completa chave com BYEs até próxima potência de 2
-    const bracketSize = nextPow2(stageSize);
-
-    let matches = [];
-    if (mode === 'reseed'){
-      matches = generateReseedRound(teams, bracketSize).matches;
-    } else {
-      matches = generateBracketPairings(teams, bracketSize).matches;
-    }
-
-    renderSelectedTable(teams, bracketSize);
+    const matches = buildMatches(teams);
+    renderSelectedTable(teams);
     renderMatches(matches);
 
-    lastOutputText = buildOutputText(matches, bracketSize, mode);
+    lastOutputText = buildOutputText(teams, matches);
     els.copy.disabled = false;
     els.download.disabled = false;
 
-    els.genInfo.textContent = `Gerado para ${teams.length} time(s) → chave ${bracketSize}.`;
+    const byeCount = teams.length % 2 === 1 ? 1 : 0;
+    els.genInfo.textContent = `Gerado: ${matches.length} match(es)` + (byeCount ? ' (1 BYE).' : '.');
   }
 
-  // --- Leitura do Excel ---
   function findColumnKey(obj, wanted){
     const keys = Object.keys(obj);
     const lower = wanted.toLowerCase();
@@ -687,7 +586,6 @@ Team C;60"></textarea>
   }
 
   async function init(){
-    // Voltar
     els.backBtn.addEventListener('click', goBack);
     document.addEventListener('keydown', (e)=>{
       if (e.key === '0' && !isTypingTarget(document.activeElement)){
@@ -696,7 +594,6 @@ Team C;60"></textarea>
       }
     });
 
-    // UI
     els.filter.addEventListener('input', renderTeamList);
     els.applyBulk.addEventListener('click', applyBulkNames);
     els.clearSel.addEventListener('click', clearSelection);
@@ -705,17 +602,16 @@ Team C;60"></textarea>
     els.copy.addEventListener('click', async ()=>{
       try{
         await copyToClipboard(lastOutputText);
-        els.genInfo.textContent = 'Confrontos copiados!';
+        els.genInfo.textContent = 'Matches copiados!';
       } catch {
         els.genInfo.textContent = 'Não consegui copiar automaticamente. Selecione e copie manualmente.';
       }
     });
 
     els.download.addEventListener('click', ()=>{
-      downloadText('confrontos.txt', lastOutputText || '');
+      downloadText('matches.txt', lastOutputText || '');
     });
 
-    // Manual fallback
     els.useManual.addEventListener('click', ()=>{
       const data = parseManualLines(els.manualInput.value);
       if (data.length < 2){
@@ -728,7 +624,6 @@ Team C;60"></textarea>
       renderTeamList();
     });
 
-    // Carrega Excel
     try{
       ranking = await loadRankingFromXlsx();
       setLoadedState(true, `Ranking carregado: ${ranking.length} times (de ${RANKING_PATH}).`);
