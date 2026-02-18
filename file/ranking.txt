@@ -3,6 +3,3 @@ DreamHack Winter 2026 - 1:0 pt 1
 
 NEW
 DreamHack Winter 2026 - 1:0 pt 2
-
-
-Em "archives" salvar também o histórico as partidas antigas, pois a cada Season, um novo excel será puxado do 0.

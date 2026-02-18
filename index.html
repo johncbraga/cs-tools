@@ -248,39 +248,106 @@
           <h1>Tools</h1>
           <p>
             Main page that show all tools avaliable for use.
-            All tools are <span class="kbd">free</span> to use. Last matches on database:
-            <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal fire] - 02-18-26</span>.
+            All tools are <span class="kbd">free</span> to use. Last matches on database: <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal fire] - 02-18-26</span>.
           </p>
         </div>
 
-        <div class="badge" title="Shortcuts">
+        <div class="badge" title="Dica: atalhos">
           <span class="kbd">1</span> HLTV &nbsp;
           <span class="kbd">2</span> VRS &nbsp;
           <span class="kbd">3</span> PRO &nbsp;
           <span class="kbd">4</span> Seeding &nbsp;
-          <span class="kbd">5</span> Events &nbsp;
-          <span class="kbd">6</span> Database
+          <span class="kbd">5</span> Events
         </div>
       </header>
 
       <section class="grid">
-        <!-- Existing cards unchanged -->
-
-        <!-- ✅ NEW: Database -->
         <article class="card">
           <div class="inner">
             <div class="topline">
               <div>
-                <div class="title">Database</div>
-                <div class="desc">Central database viewer with structured match and team data.</div>
+                <div class="title">HLTV</div>
+                <div class="desc">Dashboards for every aspect on team's statistics.</div>
               </div>
-              <div class="icon" aria-hidden="true">🗄️</div>
+              <div class="icon" aria-hidden="true">🎯</div>
             </div>
             <div class="cta">
-              database.html
-                Open Database <span aria-hidden="true">→</span>
+              <a class="btn" href="hltv.html">
+                Open HLTV <span aria-hidden="true">→</span>
               </a>
-              <div class="hint">Shortcut: press <span class="kbd">6</span></div>
+              <div class="hint">Shortcut: press <span class="kbd">1</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">VRS Rating</div>
+                <div class="desc">Highlight VRS Rating for every team based on points. Also includes comparisons and indicators.</div>
+              </div>
+              <div class="icon" aria-hidden="true">📈</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="vrs.html">
+                Open VRS Rating <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">2</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">PRO Analyses</div>
+                <div class="desc">Sophisticated tool to detailed comparison between two teams and deep analyses.</div>
+              </div>
+              <div class="icon" aria-hidden="true">🧠</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="pro-analyses.html">
+                Open PRO Analyses <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">3</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">Seeding</div>
+                <div class="desc">Random picker tool for fast and simple draws.</div>
+              </div>
+              <div class="icon" aria-hidden="true">🎲</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="seeding.html">
+                Open Seeding <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">4</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">Events</div>
+                <div class="desc">Events hub to view and track important updates.</div>
+              </div>
+              <div class="icon" aria-hidden="true">📅</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="events.html">
+                Open Events <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">5</span></div>
             </div>
           </div>
         </article>
@@ -288,28 +355,20 @@
 
       <footer>
         <span>
-          Update: last update <span class="kbd">02-18-26</span> at <span class="kbd">17:14</span>.
+          Update: laste update <span class="kbd">02-18-26</span> at <span class="kbd">15:46</span>.
         </span>
         <span>
-          file/Open error 404</a>
+          <a class="mini" href="file/">Open error 404</a>
         </span>
       </footer>
     </div>
   </div>
 
   <script>
-    // Keyboard shortcuts: 1, 2, 3, 4, 5, 6
-    const pages = [
-      "hltv.html",
-      "vrs.html",
-      "pro-analyses.html",
-      "seeding.html",
-      "events.html",
-      "database.html"
-    ];
-
+    // Keyboard shortcuts: 1, 2, 3, 4, 5
+    const pages = ["hltv.html", "vrs.html", "pro-analyses.html", "seeding.html", "events.html"];
     window.addEventListener("keydown", (e) => {
-      if (["1","2","3","4","5","6"].includes(e.key)) {
+      if (["1","2","3","4","5"].includes(e.key)) {
         const idx = Number(e.key) - 1;
         window.location.href = pages[idx];
       }
