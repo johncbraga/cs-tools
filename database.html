@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ranking — Elo + Streak + Torneios + Prestige</title>
+<title>Ranking — Elo + Streak + Tournaments + Prestige</title>
 
-<!-- SheetJS (leitura/escrita de XLSX no navegador) -->
+<!-- SheetJS (read/write XLSX in browser) -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
@@ -39,49 +39,24 @@
     min-height: 100vh;
     padding: 28px;
   }
-  .container{
-    max-width: 1220px;
-    margin: 0 auto;
-  }
+  .container{ max-width: 1220px; margin: 0 auto; }
   header{
-    display:flex;
-    justify-content: space-between;
-    align-items:flex-start;
-    gap: 16px;
-    margin-bottom: 18px;
+    display:flex; justify-content: space-between; align-items:flex-start;
+    gap: 16px; margin-bottom: 18px;
   }
-  h1{
-    margin:0;
-    font-size: 26px;
-    letter-spacing: .2px;
-  }
-  .sub{
-    color: var(--muted);
-    margin-top: 6px;
-    line-height: 1.4;
-    font-size: 14px;
-  }
+  h1{ margin:0; font-size: 26px; letter-spacing: .2px; }
+  .sub{ color: var(--muted); margin-top: 6px; line-height: 1.4; font-size: 14px; }
   .pill{
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    padding: 8px 12px;
-    border: 1px solid var(--stroke);
-    border-radius: 999px;
-    background: rgba(255,255,255,.03);
-    font-size: 13px;
-    color: var(--muted);
-    user-select:none;
+    display:inline-flex; align-items:center; gap: 8px;
+    padding: 8px 12px; border: 1px solid var(--stroke);
+    border-radius: 999px; background: rgba(255,255,255,.03);
+    font-size: 13px; color: var(--muted); user-select:none;
   }
   .grid{
-    display:grid;
-    grid-template-columns: 1.35fr 1fr;
-    gap: 18px;
-    align-items:start;
+    display:grid; grid-template-columns: 1.35fr 1fr;
+    gap: 18px; align-items:start;
   }
-  @media (max-width: 980px){
-    .grid{ grid-template-columns: 1fr; }
-  }
+  @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
   .card{
     border: 1px solid var(--stroke);
     background: linear-gradient(180deg, var(--card), var(--card2));
@@ -90,26 +65,12 @@
     overflow:hidden;
   }
   .card-head{
-    padding: 14px 16px;
-    border-bottom: 1px solid rgba(34,48,95,.85);
-    display:flex;
-    justify-content: space-between;
-    align-items:center;
-    gap: 12px;
+    padding: 14px 16px; border-bottom: 1px solid rgba(34,48,95,.85);
+    display:flex; justify-content: space-between; align-items:center; gap: 12px;
   }
-  .card-title{
-    font-weight: 650;
-    letter-spacing: .2px;
-  }
-  .card-body{
-    padding: 16px;
-  }
-  .row{
-    display:flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items:center;
-  }
+  .card-title{ font-weight: 650; letter-spacing: .2px; }
+  .card-body{ padding: 16px; }
+  .row{ display:flex; gap: 12px; flex-wrap: wrap; align-items:center; }
   .btn{
     border: 1px solid var(--stroke);
     background: rgba(255,255,255,.04);
@@ -118,7 +79,7 @@
     border-radius: 12px;
     cursor:pointer;
     font-weight: 600;
-    transition: transform .08s ease, background .2s ease, border-color .2s ease;
+    transition: transform .08s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
   }
   .btn:hover{ background: rgba(255,255,255,.07); border-color: rgba(124,92,255,.55); }
   .btn:active{ transform: translateY(1px); }
@@ -138,6 +99,7 @@
     color:#04110e;
   }
   .btn.small{ padding: 8px 10px; border-radius: 10px; font-size: 13px; }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
   .input, select{
     width: 100%;
     padding: 10px 12px;
@@ -174,14 +136,9 @@
     border-radius: 14px;
     border: 1px solid rgba(34,48,95,.75);
   }
-  table{
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
+  table{ width: 100%; border-collapse: collapse; font-size: 14px; }
   thead th{
-    position: sticky;
-    top:0;
+    position: sticky; top:0;
     background: rgba(10,15,32,.96);
     border-bottom: 1px solid rgba(34,48,95,.75);
     padding: 10px 10px;
@@ -190,13 +147,8 @@
     font-weight: 650;
     z-index: 1;
   }
-  tbody td{
-    padding: 10px 10px;
-    border-bottom: 1px solid rgba(34,48,95,.35);
-  }
-  tbody tr:hover{
-    background: rgba(255,255,255,.03);
-  }
+  tbody td{ padding: 10px 10px; border-bottom: 1px solid rgba(34,48,95,.35); }
+  tbody tr:hover{ background: rgba(255,255,255,.03); }
   td.num, th.num{ text-align:right; font-family: var(--mono); }
   .badge{
     display:inline-flex;
@@ -211,29 +163,11 @@
   .tier1{ background: rgba(37,99,235,.18); border-color: rgba(37,99,235,.45); }
   .tier2{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.40); }
   .tier3{ background: rgba(100,116,139,.16); border-color: rgba(100,116,139,.35); }
-  .bonus{
-    background: rgba(45,212,191,.14);
-    border-color: rgba(45,212,191,.35);
-  }
-  .split{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  @media(max-width:520px){
-    .split{ grid-template-columns: 1fr; }
-  }
-  .footer-note{
-    margin-top: 14px;
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.5;
-  }
-  .hr{
-    height:1px;
-    background: rgba(34,48,95,.65);
-    margin: 14px 0;
-  }
+  .bonus{ background: rgba(45,212,191,.14); border-color: rgba(45,212,191,.35); }
+  .split{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:520px){ .split{ grid-template-columns: 1fr; } }
+  .footer-note{ margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .hr{ height:1px; background: rgba(34,48,95,.65); margin: 14px 0; }
 </style>
 </head>
 
@@ -244,15 +178,15 @@
   <div>
     <h1>Ranking</h1>
     <div class="sub">
-      Elo (Points) + K dinâmico (Streak + bônus de torneio) + Reset com Prestige<br>
-      Arquivo padrão: <span class="mono">file/rating.xlsx</span> (GitHub Pages é estático: você baixa o Excel atualizado)
+      Elo (Points) + Dynamic K (Streak + Tournament Bonus) + Season Reset with Prestige<br>
+      Default file: <span class="mono">file/ranking.xlsx</span> (GitHub Pages is static — download the updated Excel after changes)
     </div>
   </div>
 
   <div class="row">
-    <span class="pill">📄 Carregar: <span class="mono">file/rating.xlsx</span></span>
-    <button class="btn small" id="btnReload">Recarregar</button>
-    <button class="btn primary small" id="btnDownload">Baixar Excel atualizado</button>
+    <span class="pill">📄 Auto-load: <span class="mono" id="excelUrlLabel">file/ranking.xlsx</span></span>
+    <button class="btn small" id="btnReload">Reload</button>
+    <button class="btn primary small" id="btnDownload">Download updated Excel</button>
   </div>
 </header>
 
@@ -260,12 +194,12 @@
 
 <div class="grid">
 
-  <!-- TABELA -->
+  <!-- TABLE -->
   <section class="card">
     <div class="card-head">
-      <div class="card-title">Tabela atual</div>
+      <div class="card-title">Current standings</div>
       <div class="row">
-        <label style="margin:0;color:var(--muted);font-size:12px;">Carregar manualmente (.xlsx)</label>
+        <label style="margin:0;color:var(--muted);font-size:12px;">Manual load (.xlsx)</label>
         <input class="input" style="width:260px" id="fileInput" type="file" accept=".xlsx" />
       </div>
     </div>
@@ -276,15 +210,15 @@
             <tr>
               <th>Team</th>
               <th class="num">Points</th>
-              <th class="num">Victories</th>
-              <th class="num">Loses</th>
+              <th class="num">Wins</th>
+              <th class="num">Losses</th>
               <th class="num">Streak</th>
               <th class="num">Majors</th>
               <th class="num">Trophies</th>
               <th class="num">Prestige</th>
               <th>Tier</th>
               <th>Region</th>
-              <th>Bônus</th>
+              <th>Bonus</th>
             </tr>
           </thead>
           <tbody id="tableBody"></tbody>
@@ -292,142 +226,129 @@
       </div>
 
       <div class="footer-note">
-        <strong>Obs:</strong> este site não salva no servidor (GitHub Pages). Depois de atualizar, clique em
-        <strong>“Baixar Excel atualizado”</strong> e substitua o arquivo no seu repositório.
+        <strong>Note:</strong> This site can’t write back to GitHub Pages. After updates, click
+        <strong>“Download updated Excel”</strong> and replace <span class="mono">file/ranking.xlsx</span> in your repo.
       </div>
     </div>
   </section>
 
-  <!-- CONTROLES -->
+  <!-- CONTROLS -->
   <aside>
 
     <!-- VERSUS -->
     <section class="card" style="margin-bottom:18px;">
       <div class="card-head">
         <div class="card-title">Versus</div>
-        <span class="pill">⚙️ Elo + Streak + Bônus</span>
+        <span class="pill">⚙️ Elo + Streak + Bonus</span>
       </div>
       <div class="card-body">
 
         <div class="split">
           <div>
-            <label>Time A</label>
+            <label>Team A</label>
             <select id="teamA"></select>
           </div>
           <div>
-            <label>Time B</label>
+            <label>Team B</label>
             <select id="teamB"></select>
           </div>
         </div>
 
-        <button class="btn" style="margin-top:12px;width:100%;" id="btnCalc">Calcular ganhos/perdas</button>
+        <button class="btn" style="margin-top:12px;width:100%;" id="btnCalc">Calculate deltas</button>
 
         <div id="versusBox" class="alert" style="display:none;">
-          <div><strong>Expectativa:</strong> A=<span class="mono" id="EA"></span> | B=<span class="mono" id="EB"></span></div>
+          <div><strong>Expected:</strong> A=<span class="mono" id="EA"></span> | B=<span class="mono" id="EB"></span></div>
           <div><strong>K_final:</strong> A=<span class="mono" id="KA"></span> | B=<span class="mono" id="KB"></span></div>
           <div class="hr"></div>
 
           <div class="split">
             <div>
-              <div class="mono">A vence: ΔA <span id="dA_win"></span> | ΔB <span id="dB_lose"></span></div>
-              <div class="mono">B vence: ΔA <span id="dA_lose"></span> | ΔB <span id="dB_win"></span></div>
-              <div class="mono">Empate: ΔA <span id="dA_draw"></span> | ΔB <span id="dB_draw"></span></div>
+              <div class="mono">A wins: ΔA <span id="dA_win"></span> | ΔB <span id="dB_lose"></span></div>
+              <div class="mono">B wins: ΔA <span id="dA_lose"></span> | ΔB <span id="dB_win"></span></div>
+              <div class="mono">Draw:  ΔA <span id="dA_draw"></span> | ΔB <span id="dB_draw"></span></div>
             </div>
             <div>
-              <label>Resultado real</label>
+              <label>Match result</label>
               <select id="matchResult">
-                <option value="A">Time A venceu</option>
-                <option value="B">Time B venceu</option>
-                <option value="D">Empate</option>
+                <option value="A">Team A wins</option>
+                <option value="B">Team B wins</option>
+                <option value="D">Draw</option>
               </select>
 
               <button class="btn good" style="margin-top:10px;width:100%;" id="btnApplyMatch">
-                Aplicar resultado
+                Apply match
               </button>
             </div>
           </div>
 
-          <small>Aplica: Points (Elo), Victories/Loses, Streak e consome 1 jogo do bônus temporário (se houver).</small>
+          <small>Applies: Points (Elo), Wins/Losses, Streak, and consumes 1 bonus game if active.</small>
         </div>
 
       </div>
     </section>
 
-    <!-- TORNEIO -->
+    <!-- TOURNAMENT WIN -->
     <section class="card" style="margin-bottom:18px;">
       <div class="card-head">
-        <div class="card-title">Vitória em torneio (1º lugar)</div>
-        <span class="pill">🏆 Atualiza Majors/Trophies</span>
+        <div class="card-title">Tournament win (1st place)</div>
+        <span class="pill">🏆 Updates Majors / Trophies</span>
       </div>
       <div class="card-body">
-        <label>Time</label>
+        <label>Team</label>
         <select id="tourneyTeam"></select>
 
-        <label>Tipo do torneio</label>
+        <label>Tournament type</label>
         <select id="tourneyType">
-          <option value="regional">Regional (entra em Tournaments Trophies)</option>
-          <option value="global">Global (entra em Tournaments Trophies)</option>
-          <option value="major">Major (entra em Majors)</option>
+          <option value="regional">Regional (counts as Trophies)</option>
+          <option value="global">Global (counts as Trophies)</option>
+          <option value="major">Major (counts as Majors)</option>
         </select>
 
         <button class="btn primary" style="margin-top:12px;width:100%;" id="btnApplyTourney">
-          Aplicar vitória no torneio
+          Apply tournament win
         </button>
 
         <div class="alert warn" style="margin-top:12px;">
-          <div><strong>Bônus temporário:</strong></div>
+          <div><strong>Temporary bonus:</strong></div>
           <small>
-            Regional: +5% por 5 jogos • Global: +10% por 8 jogos • Major: +20% por 12 jogos<br>
-            (isso afeta apenas o K, não dá pontos fixos).
+            Regional: +5% for 5 games • Global: +10% for 8 • Major: +20% for 12<br>
+            (affects K only — no fixed point grants).
           </small>
         </div>
       </div>
     </section>
 
-    <!-- RESET -->
+    <!-- SEASON RESET -->
     <section class="card">
       <div class="card-head">
-        <div class="card-title">Reset justo + Prestige</div>
-        <span class="pill">♻️ “Prestige” permanente</span>
+        <div class="card-title">Season Reset (Global)</div>
+        <span class="pill">♻️ Prestige preserves history</span>
       </div>
       <div class="card-body">
-        <label>Time</label>
-        <select id="resetTeam"></select>
 
-        <div class="split">
-          <div>
-            <label>Baseline de Points (padrão 1000)</label>
-            <input class="input" id="resetBaseline" type="number" value="1000" />
-          </div>
-          <div>
-            <label>Quanto do “distanciamento” manter (0 a 1)</label>
-            <input class="input" id="resetKeep" type="number" step="0.05" value="0.35" />
-          </div>
+        <div class="alert">
+          <div><strong>Fixed reset rules:</strong></div>
+          <small class="mono">basePoints = 1000</small><br>
+          <small class="mono">keep = 0.35</small><br>
+          <small class="mono">newPoints = 1000 + (oldPoints - 1000) * 0.35</small><br>
+          <small class="mono">prestige += oldPoints</small><br>
+          <small>Streak resets to 0, and seasonal Wins/Losses reset to 0. Majors & Trophies stay.</small>
         </div>
 
-        <div class="split">
-          <div>
-            <label>Ganho de Prestige ao resetar</label>
-            <input class="input" id="prestigeGain" type="number" value="1" />
-          </div>
-          <div>
-            <label>Zerar streak ao resetar?</label>
-            <select id="resetStreak">
-              <option value="yes" selected>Sim</option>
-              <option value="no">Não</option>
-            </select>
-          </div>
-        </div>
-
-        <button class="btn danger" style="margin-top:12px;width:100%;" id="btnReset">
-          Aplicar Reset + Prestige
+        <button class="btn" style="margin-top:12px;width:100%;" id="btnPreviewReset">
+          Preview season reset
         </button>
 
-        <div class="alert" style="margin-top:12px;">
-          <div><strong>Fórmula do reset:</strong></div>
-          <small class="mono">newPoints = baseline + (oldPoints - baseline) * keep</small><br>
-          <small>Ex.: old=2000, baseline=1000, keep=0.35 → new=1350 (não volta a zero, apenas comprime).</small>
+        <div id="resetPreview" class="alert warn" style="display:none;">
+          <div><strong>Preview:</strong></div>
+          <div id="resetPreviewText"></div>
+          <small>This is irreversible in the spreadsheet until you replace the file. Confirm only if you’re ready.</small>
         </div>
+
+        <button class="btn danger" style="margin-top:12px;width:100%;" id="btnConfirmReset" disabled>
+          Confirm season reset
+        </button>
+
       </div>
     </section>
 
@@ -437,10 +358,10 @@
 </div>
 
 <script>
-/* ===================== CONFIG DO RANKING ===================== */
+/* ===================== RANKING CONFIG ===================== */
 const K_BASE = 30.0;
 const ELO_DIVISOR = 400.0;
-const STREAK_ALPHA = 0.10;   // até +10%
+const STREAK_ALPHA = 0.10;   // up to +10%
 const STREAK_SCALE = 5.0;    // tanh(streak/5)
 const K_HARD_CAP_MULT = 1.35;
 
@@ -451,14 +372,7 @@ const TOURNEY_BONUS = {
   major:    { bonus: 0.20, dur: 12 },
 };
 
-/* ===================== COLUNAS DO EXCEL ===================== */
-/**
- * REQUERIDAS (exatamente como você pediu):
- * Team, Victories, Streak, Loses, Points, Majors, Prestige, Tournaments Trophies, Tier, Region
- *
- * OPCIONAIS (podem existir após Region; o site usa se existirem):
- * BonusType, BonusRemaining, LastUpdated
- */
+/* ===================== EXCEL COLUMNS ===================== */
 const COL = {
   TEAM: "Team",
   V: "Victories",
@@ -475,11 +389,20 @@ const COL = {
   UPDATED: "LastUpdated"
 };
 
-let teams = [];        // array de objetos (linhas)
-let extraCols = [];    // colunas extras encontradas no arquivo (mantidas no download)
+let teams = [];
+let extraCols = [];
+let resetPreviewReady = false;
 
-/* ===================== UI HELPERS ===================== */
-function esc(s){
+/* ===================== FIXED SEASON RESET RULES ===================== */
+const RESET_BASE = 1000;
+const RESET_KEEP = 0.35; // stable long-term compression
+// Prestige gain rule requested: comparable to team points at reset -> add the full oldPoints.
+function prestigeGainFromPoints(oldPoints){
+  return Math.round(Number(oldPoints) || 0);
+}
+
+/* ===================== HELPERS ===================== */
+function htmlEscape(s){
   return String(s ?? "")
     .replaceAll("&","&amp;")
     .replaceAll("<","&lt;")
@@ -543,30 +466,32 @@ function ensureOptionalCols(row){
 }
 
 function normalizeRow(row){
-  // Garante as colunas essenciais; se faltarem, cria com defaults
   const r = { ...row };
+
+  // Required columns defaults
   if (!(COL.TEAM in r)) r[COL.TEAM] = "";
   r[COL.TEAM] = String(r[COL.TEAM]).trim();
 
   if (!(COL.V in r)) r[COL.V] = 0;
   if (!(COL.S in r)) r[COL.S] = 0;
   if (!(COL.L in r)) r[COL.L] = 0;
-  if (!(COL.PTS in r)) r[COL.PTS] = 1000;
+  if (!(COL.PTS in r)) r[COL.PTS] = RESET_BASE;
   if (!(COL.MAJ in r)) r[COL.MAJ] = 0;
   if (!(COL.PRE in r)) r[COL.PRE] = 0;
   if (!(COL.TRO in r)) r[COL.TRO] = 0;
   if (!(COL.TIER in r)) r[COL.TIER] = tierFromPoints(r[COL.PTS]);
   if (!(COL.REG in r)) r[COL.REG] = "";
 
-  // Types
   r[COL.V]   = parseInt(r[COL.V]   || 0, 10) || 0;
   r[COL.S]   = parseInt(r[COL.S]   || 0, 10) || 0;
   r[COL.L]   = parseInt(r[COL.L]   || 0, 10) || 0;
   r[COL.MAJ] = parseInt(r[COL.MAJ] || 0, 10) || 0;
-  r[COL.PRE] = parseInt(r[COL.PRE] || 0, 10) || 0;
+  r[COL.PRE] = Number(r[COL.PRE] || 0); // allow big / non-integer prestige if needed
+  if (!Number.isFinite(r[COL.PRE])) r[COL.PRE] = 0;
   r[COL.TRO] = parseInt(r[COL.TRO] || 0, 10) || 0;
+
   r[COL.PTS] = Number(r[COL.PTS]);
-  if (!Number.isFinite(r[COL.PTS])) r[COL.PTS] = 1000;
+  if (!Number.isFinite(r[COL.PTS])) r[COL.PTS] = RESET_BASE;
 
   ensureOptionalCols(r);
 
@@ -574,9 +499,7 @@ function normalizeRow(row){
   if (!(r[COL.BONUS_TYPE] in TOURNEY_BONUS)) r[COL.BONUS_TYPE] = "none";
   r[COL.BONUS_REM] = parseInt(r[COL.BONUS_REM] || 0, 10) || 0;
 
-  // Atualiza tier automaticamente baseado em Points
   r[COL.TIER] = tierFromPoints(r[COL.PTS]);
-
   return r;
 }
 
@@ -592,10 +515,10 @@ function dedupeByTeam(rows){
 /* ===================== RENDER ===================== */
 function fillSelects(){
   const names = teams.map(t => t[COL.TEAM]).sort((a,b)=>a.localeCompare(b));
-  const ids = ["teamA","teamB","tourneyTeam","resetTeam"];
+  const ids = ["teamA","teamB","tourneyTeam"];
   for (const id of ids){
     const sel = document.getElementById(id);
-    sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+    sel.innerHTML = names.map(n => `<option value="${htmlEscape(n)}">${htmlEscape(n)}</option>`).join("");
   }
   if (names.length >= 2){
     document.getElementById("teamA").value = names[0];
@@ -611,31 +534,29 @@ function renderTable(){
   for (const t of teams){
     const pts = Number(t[COL.PTS]) || 0;
     const tier = t[COL.TIER];
-    const k = kFinal(t);
 
     const bt = String(t[COL.BONUS_TYPE] || "none");
     const br = Number(t[COL.BONUS_REM] || 0);
     const bonusLabel = (br>0 && bt!=="none")
-      ? `<span class="badge bonus mono">${esc(bt)} (${br})</span>`
+      ? `<span class="badge bonus mono">${htmlEscape(bt)} (${br})</span>`
       : `<span class="badge mono">none</span>`;
 
     tb.innerHTML += `
       <tr>
-        <td>${esc(t[COL.TEAM])}</td>
+        <td>${htmlEscape(t[COL.TEAM])}</td>
         <td class="num">${pts.toFixed(2)}</td>
         <td class="num">${t[COL.V]}</td>
         <td class="num">${t[COL.L]}</td>
         <td class="num">${t[COL.S]}</td>
         <td class="num">${t[COL.MAJ]}</td>
         <td class="num">${t[COL.TRO]}</td>
-        <td class="num">${t[COL.PRE]}</td>
-        <td><span class="${tierClass(tier)}">${esc(tier)}</span></td>
-        <td>${esc(t[COL.REG])}</td>
+        <td class="num">${Number(t[COL.PRE]||0).toFixed(0)}</td>
+        <td><span class="${tierClass(tier)}">${htmlEscape(tier)}</span></td>
+        <td>${htmlEscape(t[COL.REG])}</td>
         <td>${bonusLabel}</td>
       </tr>
     `;
   }
-
   fillSelects();
 }
 
@@ -675,15 +596,16 @@ function consumeBonus(team){
 function applyMatch(result){
   const aName = document.getElementById("teamA").value;
   const bName = document.getElementById("teamB").value;
+
   if (!aName || !bName || aName === bName){
-    showAlert("Escolha dois times diferentes.", "warn");
+    showAlert("Please choose two different teams.", "warn");
     return;
   }
 
   const A = teams.find(t=>t[COL.TEAM]===aName);
   const B = teams.find(t=>t[COL.TEAM]===bName);
   if (!A || !B){
-    showAlert("Time não encontrado na planilha.", "bad");
+    showAlert("Team not found in the spreadsheet.", "bad");
     return;
   }
 
@@ -708,7 +630,7 @@ function applyMatch(result){
     B[COL.S] += 1;
     A[COL.S] = 0;
   } else {
-    // Empate
+    // Draw
     A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.draw.dA;
     B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.draw.dB;
 
@@ -716,33 +638,31 @@ function applyMatch(result){
     B[COL.S] = 0;
   }
 
-  // Consome bônus temporário a cada partida
   consumeBonus(A);
   consumeBonus(B);
 
-  // Atualiza tier automaticamente
   A[COL.TIER] = tierFromPoints(A[COL.PTS]);
   B[COL.TIER] = tierFromPoints(B[COL.PTS]);
 
-  // LastUpdated opcional
   A[COL.UPDATED] = new Date().toISOString();
   B[COL.UPDATED] = new Date().toISOString();
 
   renderTable();
-  showAlert("Resultado aplicado com sucesso. Não esqueça de baixar o Excel atualizado.", "good");
+  showAlert("Match applied. Download the updated Excel to persist changes.", "good");
 }
 
 document.getElementById("btnCalc").addEventListener("click", ()=>{
   if (!teams.length){
-    showAlert("Carregue o Excel primeiro.", "warn");
+    showAlert("Load the Excel first.", "warn");
     return;
   }
   const aName = document.getElementById("teamA").value;
   const bName = document.getElementById("teamB").value;
   if (!aName || !bName || aName===bName){
-    showAlert("Escolha dois times diferentes.", "warn");
+    showAlert("Please choose two different teams.", "warn");
     return;
   }
+
   const A = teams.find(t=>t[COL.TEAM]===aName);
   const B = teams.find(t=>t[COL.TEAM]===bName);
 
@@ -768,26 +688,26 @@ document.getElementById("btnApplyMatch").addEventListener("click", ()=>{
   applyMatch(res);
 });
 
-/* ===================== TORNEIO ===================== */
+/* ===================== TOURNAMENT WIN ===================== */
 function applyTourneyWin(){
   const name = document.getElementById("tourneyTeam").value;
   const type = document.getElementById("tourneyType").value;
 
   const T = teams.find(t=>t[COL.TEAM]===name);
   if (!T){
-    showAlert("Time não encontrado.", "bad");
+    showAlert("Team not found.", "bad");
     return;
   }
 
-  // Atualiza colunas pedidas
+  // Update requested columns:
   if (type === "major"){
     T[COL.MAJ] += 1;
   } else {
-    // regional e global entram na mesma coluna de tournaments
+    // regional + global count in the same trophies column
     T[COL.TRO] += 1;
   }
 
-  // Ativa bônus temporário (colunas extras opcionais)
+  // Activate temporary bonus
   ensureOptionalCols(T);
   T[COL.BONUS_TYPE] = type;
   T[COL.BONUS_REM] = TOURNEY_BONUS[type].dur;
@@ -795,65 +715,104 @@ function applyTourneyWin(){
   T[COL.UPDATED] = new Date().toISOString();
 
   renderTable();
-  showAlert("Vitória em torneio aplicada (Majors/Trophies atualizados + bônus temporário ativado).", "good");
+  showAlert("Tournament win applied (Majors/Trophies updated + temporary bonus activated).", "good");
 }
-
 document.getElementById("btnApplyTourney").addEventListener("click", applyTourneyWin);
 
-/* ===================== RESET + PRESTIGE ===================== */
-function applyReset(){
-  const name = document.getElementById("resetTeam").value;
-  const baseline = Number(document.getElementById("resetBaseline").value);
-  const keep = Number(document.getElementById("resetKeep").value);
-  const gain = parseInt(document.getElementById("prestigeGain").value || "1", 10);
-  const resetStreak = document.getElementById("resetStreak").value;
-
-  if (!Number.isFinite(baseline) || !Number.isFinite(keep) || keep < 0 || keep > 1){
-    showAlert("Baseline deve ser número e keep deve estar entre 0 e 1.", "warn");
+/* ===================== SEASON RESET (GLOBAL) ===================== */
+function previewSeasonReset(){
+  if (!teams.length){
+    showAlert("Load the Excel first.", "warn");
     return;
   }
 
-  const T = teams.find(t=>t[COL.TEAM]===name);
-  if (!T){
-    showAlert("Time não encontrado.", "bad");
-    return;
+  // compute preview stats without mutating
+  let sumOld=0, sumNew=0;
+  let maxDrop = -Infinity;
+  let biggest = null;
+
+  for (const t of teams){
+    const oldP = Number(t[COL.PTS]) || RESET_BASE;
+    const newP = RESET_BASE + (oldP - RESET_BASE) * RESET_KEEP;
+    sumOld += oldP;
+    sumNew += newP;
+    const drop = oldP - newP;
+    if (drop > maxDrop){
+      maxDrop = drop;
+      biggest = { team: t[COL.TEAM], oldP, newP, drop, preGain: prestigeGainFromPoints(oldP) };
+    }
   }
 
-  const old = Number(T[COL.PTS]) || 0;
-  const newPoints = baseline + (old - baseline) * keep;
+  const avgOld = sumOld / teams.length;
+  const avgNew = sumNew / teams.length;
 
-  T[COL.PTS] = newPoints;
-  T[COL.PRE] = (parseInt(T[COL.PRE]||0,10)||0) + (Number.isFinite(gain)?gain:1);
+  const box = document.getElementById("resetPreview");
+  const text = document.getElementById("resetPreviewText");
+  box.style.display = "block";
 
-  if (resetStreak === "yes"){
-    T[COL.S] = 0;
-  }
+  text.innerHTML = `
+    <div>Teams affected: <span class="mono">${teams.length}</span></div>
+    <div>Average Points: <span class="mono">${avgOld.toFixed(2)}</span> → <span class="mono">${avgNew.toFixed(2)}</span></div>
+    <div>Biggest compression: <span class="mono">${htmlEscape(biggest?.team || "")}</span>
+      (<span class="mono">${biggest?.oldP.toFixed(2)}</span> → <span class="mono">${biggest?.newP.toFixed(2)}</span>,
+      Prestige +<span class="mono">${biggest?.preGain}</span>)
+    </div>
+  `;
 
-  // Ao resetar, também removemos bônus ativo (opcional, para ser mais justo/limpo)
-  ensureOptionalCols(T);
-  T[COL.BONUS_TYPE] = "none";
-  T[COL.BONUS_REM] = 0;
-
-  T[COL.TIER] = tierFromPoints(T[COL.PTS]);
-  T[COL.UPDATED] = new Date().toISOString();
-
-  renderTable();
-  showAlert(`Reset aplicado em <strong>${esc(name)}</strong>: Points ${old.toFixed(2)} → ${newPoints.toFixed(2)} e Prestige +${gain}.`, "good");
+  resetPreviewReady = true;
+  document.getElementById("btnConfirmReset").disabled = false;
+  showAlert("Preview ready. Click 'Confirm season reset' to apply.", "warn");
 }
 
-document.getElementById("btnReset").addEventListener("click", applyReset);
+function confirmSeasonReset(){
+  if (!resetPreviewReady){
+    showAlert("Please run the preview first.", "warn");
+    return;
+  }
+  // Apply changes
+  for (const t of teams){
+    const oldP = Number(t[COL.PTS]) || RESET_BASE;
+    const newP = RESET_BASE + (oldP - RESET_BASE) * RESET_KEEP;
 
-/* ===================== EXCEL IO ===================== */
+    // prestige comparable to points: add full old points
+    const preAdd = prestigeGainFromPoints(oldP);
+    t[COL.PRE] = Number(t[COL.PRE] || 0) + preAdd;
+
+    // reset season stats
+    t[COL.PTS] = newP;
+    t[COL.V] = 0;
+    t[COL.L] = 0;
+    t[COL.S] = 0;
+
+    // clear active bonus to start season clean
+    ensureOptionalCols(t);
+    t[COL.BONUS_TYPE] = "none";
+    t[COL.BONUS_REM] = 0;
+
+    // tier from points
+    t[COL.TIER] = tierFromPoints(t[COL.PTS]);
+
+    t[COL.UPDATED] = new Date().toISOString();
+  }
+
+  resetPreviewReady = false;
+  document.getElementById("btnConfirmReset").disabled = true;
+
+  renderTable();
+  showAlert("Season reset applied to all teams. Download the updated Excel to persist changes.", "good");
+}
+
+document.getElementById("btnPreviewReset").addEventListener("click", previewSeasonReset);
+document.getElementById("btnConfirmReset").addEventListener("click", confirmSeasonReset);
+
+/* ===================== EXCEL I/O ===================== */
 function computeExtraColsFromSheet(headers){
-  // Mantém quaisquer colunas além das oficiais, para não perder dados no download
   const official = new Set(Object.values(COL));
   return headers.filter(h => !official.has(h));
 }
 
 function toExportRows(){
-  // Garante que exportamos colunas oficiais + extras (se existirem)
   return teams.map(t=>{
-    // garante colunas opcionais
     ensureOptionalCols(t);
 
     const row = {
@@ -863,17 +822,15 @@ function toExportRows(){
       [COL.L]: t[COL.L],
       [COL.PTS]: Number(t[COL.PTS]),
       [COL.MAJ]: t[COL.MAJ],
-      [COL.PRE]: t[COL.PRE],
+      [COL.PRE]: Number(t[COL.PRE] || 0),
       [COL.TRO]: t[COL.TRO],
       [COL.TIER]: t[COL.TIER],
       [COL.REG]: t[COL.REG],
-      // extras internas úteis:
       [COL.BONUS_TYPE]: t[COL.BONUS_TYPE],
       [COL.BONUS_REM]: t[COL.BONUS_REM],
       [COL.UPDATED]: t[COL.UPDATED] || ""
     };
 
-    // Preserva colunas extras do arquivo original, se existirem
     for (const c of extraCols){
       row[c] = t[c] ?? "";
     }
@@ -883,28 +840,43 @@ function toExportRows(){
 
 function downloadExcel(){
   if (!teams.length){
-    showAlert("Nada para baixar. Carregue o Excel primeiro.", "warn");
+    showAlert("Nothing to download. Load the Excel first.", "warn");
     return;
   }
   const rows = toExportRows();
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "rating");
-  XLSX.writeFile(wb, "rating_atualizado.xlsx");
-  showAlert("Excel gerado: <strong>rating_atualizado.xlsx</strong>. Substitua no repo em <span class='mono'>file/rating.xlsx</span>.", "good");
+  XLSX.utils.book_append_sheet(wb, ws, "ranking");
+  XLSX.writeFile(wb, "ranking_updated.xlsx");
+  showAlert("Excel generated: <strong>ranking_updated.xlsx</strong>. Replace <span class='mono'>file/ranking.xlsx</span> in your repo.", "good");
 }
-
 document.getElementById("btnDownload").addEventListener("click", downloadExcel);
 
+/* ===================== AUTO-LOAD FIX ===================== */
+/**
+ * This is the key fix:
+ * Use a base-safe URL so GitHub Pages works regardless of repo subpath or page filename.
+ */
+function getExcelUrl(){
+  const base = new URL(".", window.location.href);            // folder of current page
+  return new URL("file/ranking.xlsx", base).toString();       // absolute-safe
+}
+
 async function loadFromUrl(){
+  const excelUrl = getExcelUrl();
+  document.getElementById("excelUrlLabel").textContent = excelUrl.replace(window.location.origin, "");
   try{
-    const resp = await fetch("file/rating.xlsx", { cache: "no-store" });
+    const resp = await fetch(excelUrl, { cache: "no-store" });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const ab = await resp.arrayBuffer();
     loadFromArrayBuffer(ab);
-    showAlert("Arquivo carregado de <span class='mono'>file/rating.xlsx</span> com sucesso.", "good");
+    showAlert(`Loaded successfully from <span class="mono">${htmlEscape(excelUrl)}</span>`, "good");
   }catch(e){
-    showAlert(`Não consegui carregar automaticamente <span class='mono'>file/rating.xlsx</span>. Use o carregamento manual.<br><small>Detalhe: ${esc(e.message)}</small>`, "warn");
+    showAlert(
+      `Auto-load failed from <span class="mono">${htmlEscape(excelUrl)}</span>.<br>
+       <small>Common causes: file name case mismatch, missing file in published branch, or wrong Pages branch. Error: ${htmlEscape(e.message)}</small>`,
+      "warn"
+    );
   }
 }
 
@@ -913,7 +885,7 @@ function loadFromArrayBuffer(ab){
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
 
-  // Captura headers (para preservar extras)
+  // preserve extra columns
   const range = XLSX.utils.decode_range(ws["!ref"]);
   const headers = [];
   for (let C = range.s.c; C <= range.e.c; C++){
@@ -922,16 +894,18 @@ function loadFromArrayBuffer(ab){
   }
   extraCols = computeExtraColsFromSheet(headers.filter(Boolean));
 
-  // Lê linhas
   const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
   teams = dedupeByTeam(raw.map(normalizeRow));
 
   if (!teams.length){
-    showAlert("Planilha carregada, mas não encontrei linhas válidas (coluna Team).", "warn");
+    showAlert(`Sheet loaded but no valid rows found (missing "${COL.TEAM}" column).`, "warn");
   }
 
   renderTable();
   document.getElementById("versusBox").style.display = "none";
+  document.getElementById("resetPreview").style.display = "none";
+  document.getElementById("btnConfirmReset").disabled = true;
+  resetPreviewReady = false;
 }
 
 document.getElementById("btnReload").addEventListener("click", loadFromUrl);
@@ -941,7 +915,7 @@ document.getElementById("fileInput").addEventListener("change", async (ev)=>{
   if (!file) return;
   const ab = await file.arrayBuffer();
   loadFromArrayBuffer(ab);
-  showAlert(`Arquivo carregado manualmente: <span class='mono'>${esc(file.name)}</span>`, "good");
+  showAlert(`Manual load: <span class="mono">${htmlEscape(file.name)}</span>`, "good");
 });
 
 // INIT
