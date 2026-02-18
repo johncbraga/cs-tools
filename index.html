@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -19,8 +19,10 @@
       --radius: 18px;
       --ring: 0 0 0 4px rgba(96,165,250,.18);
     }
+
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
+
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -30,7 +32,6 @@
         radial-gradient(900px 700px at 90% 20%, #06b6d455, transparent 55%),
         radial-gradient(900px 700px at 50% 100%, #22c55e33, transparent 60%),
         linear-gradient(180deg, var(--bg1), var(--bg2));
-      overflow-x:hidden;
     }
 
     .wrap{
@@ -45,13 +46,11 @@
 
     header{
       display:flex;
-      align-items:flex-start;
       justify-content:space-between;
       gap:16px;
       margin-bottom:22px;
+      flex-wrap:wrap;
     }
-
-    .brand{ display:flex; flex-direction:column; gap:8px; }
 
     .badge{
       display:inline-flex;
@@ -61,29 +60,21 @@
       border:1px solid var(--stroke);
       background:rgba(255,255,255,.05);
       border-radius:999px;
-      width:fit-content;
-      backdrop-filter: blur(10px);
     }
 
     .dot{
       width:10px;height:10px;border-radius:50%;
       background: linear-gradient(135deg, #60a5fa, #a78bfa);
-      box-shadow: 0 0 0 4px rgba(96,165,250,.15);
     }
 
     h1{
       margin:0;
-      font-size: clamp(26px, 3.2vw, 40px);
-      letter-spacing:-0.03em;
-      line-height:1.05;
+      font-size: clamp(28px, 3vw, 40px);
     }
 
     p{
-      margin:0;
       color:var(--muted);
-      font-size: 15px;
-      line-height:1.6;
-      max-width: 65ch;
+      max-width:65ch;
     }
 
     .grid{
@@ -94,306 +85,243 @@
     }
 
     @media (max-width: 900px){
-      header{ flex-direction:column; }
-      .grid{ grid-template-columns: 1fr; }
+      .grid{ grid-template-columns:1fr; }
     }
 
     .card{
-      position:relative;
-      border-radius: var(--radius);
+      border-radius:18px;
       border:1px solid var(--stroke);
       background: linear-gradient(180deg, var(--card), var(--card2));
-      backdrop-filter: blur(12px);
       box-shadow: var(--shadow);
-      overflow:hidden;
-      transform: translateY(0);
-      transition: transform .25s ease, border-color .25s ease, filter .25s ease;
+      transition:.25s;
     }
 
     .card:hover{
       transform: translateY(-6px);
-      border-color: rgba(255,255,255,.22);
-      filter: saturate(1.1);
-    }
-
-    .card:focus-within{
-      box-shadow: var(--shadow), var(--ring);
-    }
-
-    .card::before{
-      content:"";
-      position:absolute; inset:-2px;
-      background: radial-gradient(600px 240px at 10% 10%, rgba(99,102,241,.35), transparent 60%),
-                  radial-gradient(600px 240px at 90% 20%, rgba(34,211,238,.25), transparent 60%);
-      opacity:.85;
-      pointer-events:none;
+      border-color: rgba(255,255,255,.25);
     }
 
     .inner{
-      position:relative;
       padding:22px;
       display:flex;
       flex-direction:column;
       gap:14px;
-      min-height: 190px;
+      min-height:200px;
     }
 
     .topline{
       display:flex;
-      align-items:center;
       justify-content:space-between;
-      gap:10px;
+      align-items:center;
     }
 
     .icon{
-      width:44px;height:44px;border-radius:14px;
-      display:grid;place-items:center;
-      background: rgba(255,255,255,.07);
-      border:1px solid rgba(255,255,255,.12);
-      user-select:none;
+      width:44px;height:44px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      background:rgba(255,255,255,.08);
     }
 
-    .title{
-      font-weight:700;
-      font-size:18px;
-      letter-spacing:-0.01em;
-    }
-
-    .desc{
-      color: var(--muted);
-      font-size:14px;
-      line-height:1.55;
-      margin-top:-2px;
-    }
+    .title{ font-size:18px; font-weight:700; }
+    .desc{ font-size:14px; color:var(--muted); }
 
     .cta{
       margin-top:auto;
       display:flex;
-      align-items:center;
       justify-content:space-between;
+      align-items:center;
       gap:12px;
-      flex-wrap:wrap;
     }
 
-    a.btn{
+    .btn{
       text-decoration:none;
       color:var(--text);
       padding:10px 14px;
-      border-radius: 12px;
-      border:1px solid rgba(255,255,255,.18);
-      background: rgba(255,255,255,.06);
-      transition: transform .2s ease, background .2s ease, border-color .2s ease;
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.07);
       font-weight:600;
-      width:fit-content;
-      outline:none;
+      transition:.2s;
     }
 
-    a.btn:hover{
-      transform: translateY(-1px);
-      background: rgba(255,255,255,.10);
-      border-color: rgba(255,255,255,.28);
+    .btn:hover{
+      background:rgba(255,255,255,.12);
     }
 
-    a.btn:focus-visible{
-      box-shadow: var(--ring);
-    }
-
-    .hint{
-      font-size:12px;
-      color: rgba(167,176,192,.92);
-      display:flex;
-      align-items:center;
-      gap:8px;
-      user-select:none;
+    .kbd{
+      font-family: monospace;
+      padding:2px 8px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.2);
+      background:rgba(0,0,0,.35);
     }
 
     footer{
       margin-top:18px;
-      color: rgba(167,176,192,.85);
       font-size:12px;
+      color:var(--muted);
       display:flex;
-      align-items:center;
       justify-content:space-between;
-      gap:12px;
       flex-wrap:wrap;
     }
-
-    .kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      padding:2px 8px;
-      border-radius: 8px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.25);
-    }
-
-    .mini{
-      color: rgba(167,176,192,.92);
-      text-decoration:none;
-      border-bottom: 1px dashed rgba(167,176,192,.35);
-      padding-bottom:1px;
-    }
-    .mini:hover{ color: var(--text); border-bottom-color: rgba(229,231,235,.55); }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="container">
-      <header>
-        <div class="brand">
-          <div class="badge"><span class="dot"></span> Portal • KZ Studios</div>
-          <h1>Tools</h1>
-          <p>
-            Main page that shows all tools available for use.
-            All tools are <span class="kbd">free</span> to use. Last matches on database:
-            <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal fire] - 02-18-26</span>.
-          </p>
-        </div>
+<div class="wrap">
+<div class="container">
 
-        <div class="badge" title="Tip: shortcuts">
-          <span class="kbd">1</span> HLTV &nbsp;
-          <span class="kbd">2</span> VRS &nbsp;
-          <span class="kbd">3</span> PRO &nbsp;
-          <span class="kbd">4</span> Seeding &nbsp;
-          <span class="kbd">5</span> Events &nbsp;
-          <span class="kbd">6</span> Database
-        </div>
-      </header>
-
-      <section class="grid">
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">HLTV</div>
-                <div class="desc">Dashboards for every aspect of a team's statistics.</div>
-              </div>
-              <div class="icon" aria-hidden="true">🎯</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="hltv.html">
-                Open HLTV <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">1</span></div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">VRS Rating</div>
-                <div class="desc">Highlight VRS Rating for every team based on points. Also includes comparisons and indicators.</div>
-              </div>
-              <div class="icon" aria-hidden="true">📈</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="vrs.html">
-                Open VRS Rating <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">2</span></div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">PRO Analyses</div>
-                <div class="desc">Sophisticated tool for detailed comparison between two teams and deep analyses.</div>
-              </div>
-              <div class="icon" aria-hidden="true">🧠</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="pro-analyses.html">
-                Open PRO Analyses <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">3</span></div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">Seeding</div>
-                <div class="desc">Random picker tool for fast and simple draws.</div>
-              </div>
-              <div class="icon" aria-hidden="true">🎲</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="seeding.html">
-                Open Seeding <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">4</span></div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">Events</div>
-                <div class="desc">Events hub to view and track important updates.</div>
-              </div>
-              <div class="icon" aria-hidden="true">📅</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="events.html">
-                Open Events <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">5</span></div>
-            </div>
-          </div>
-        </article>
-
-        <!-- NEW OPTION 6 -->
-        <article class="card">
-          <div class="inner">
-            <div class="topline">
-              <div>
-                <div class="title">Database</div>
-                <div class="desc">Manage, view, and update match data stored in the database.</div>
-              </div>
-              <div class="icon" aria-hidden="true">🗄️</div>
-            </div>
-            <div class="cta">
-              <a class="btn" href="database.html">
-                Open Database <span aria-hidden="true">→</span>
-              </a>
-              <div class="hint">Shortcut: press <span class="kbd">6</span></div>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <footer>
-        <span>
-          Update: last update <span class="kbd">02-18-26</span> at <span class="kbd">17:25</span>.
-        </span>
-        <span>
-          <a class="mini" href="file/">Open error 404</a>
-        </span>
-      </footer>
-    </div>
+<header>
+  <div>
+    <div class="badge"><span class="dot"></span> Portal • KZ Studios</div>
+    <h1>Tools</h1>
+    <p>
+      Main page that shows all available tools.
+      Last match <span class="kbd">DreamHack Winter 2026 - Stage 2 [Iluminar x Eternal Fire]</span>.
+    </p>
   </div>
 
-  <script>
-    // Keyboard shortcuts: 1, 2, 3, 4, 5, 6
-    const pages = ["hltv.html", "vrs.html", "pro-analyses.html", "seeding.html", "events.html", "database.html"];
-    window.addEventListener("keydown", (e) => {
-      if (["1","2","3","4","5","6"].includes(e.key)) {
-        const idx = Number(e.key) - 1;
-        window.location.href = pages[idx];
-      }
-    });
-  </script>
+  <div class="badge">
+    <span class="kbd">1</span> HLTV
+    <span class="kbd">2</span> VRS
+    <span class="kbd">3</span> PRO
+    <span class="kbd">4</span> Seeding
+    <span class="kbd">5</span> Events
+    <span class="kbd">6</span> Database
+  </div>
+</header>
+
+<section class="grid">
+
+  <!-- 1 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">HLTV</div>
+          <div class="desc">Team statistics dashboards and performance data.</div>
+        </div>
+        <div class="icon">🎯</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="hltv.html">Open HLTV →</a>
+        <div>Shortcut <span class="kbd">1</span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 2 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">VRS Rating</div>
+          <div class="desc">Team rating system based on VRS points.</div>
+        </div>
+        <div class="icon">📈</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="vrs.html">Open VRS →</a>
+        <div>Shortcut <span class="kbd">2</span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 3 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">PRO Analyses</div>
+          <div class="desc">Advanced comparison and in-depth team analysis.</div>
+        </div>
+        <div class="icon">🧠</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="pro-analyses.html">Open PRO →</a>
+        <div>Shortcut <span class="kbd">3</span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 4 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">Seeding</div>
+          <div class="desc">Random draw and seeding generator.</div>
+        </div>
+        <div class="icon">🎲</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="seeding.html">Open Seeding →</a>
+        <div>Shortcut <span class="kbd">4</span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 5 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">Events</div>
+          <div class="desc">Track tournaments and important updates.</div>
+        </div>
+        <div class="icon">📅</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="events.html">Open Events →</a>
+        <div>Shortcut <span class="kbd">5</span></div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 6 -->
+  <article class="card">
+    <div class="inner">
+      <div class="topline">
+        <div>
+          <div class="title">Database</div>
+          <div class="desc">Manage and update match and team data.</div>
+        </div>
+        <div class="icon">🗄️</div>
+      </div>
+      <div class="cta">
+        <a class="btn" href="database.html">Open Database →</a>
+        <div>Shortcut <span class="kbd">6</span></div>
+      </div>
+    </div>
+  </article>
+
+</section>
+
+<footer>
+  <span>Last update: <span class="kbd">02-18-26 | 17:35</span></span>
+  <a href="file/" class="btn">Open 404</a>
+</footer>
+
+</div>
+</div>
+
+<script>
+  const pages = [
+    "hltv.html",
+    "vrs.html",
+    "pro-analyses.html",
+    "seeding.html",
+    "events.html",
+    "database.html"
+  ];
+
+  window.addEventListener("keydown", e => {
+    if (/^[1-6]$/.test(e.key)) {
+      window.location.href = pages[e.key - 1];
+    }
+  });
+</script>
+
 </body>
 </html>
