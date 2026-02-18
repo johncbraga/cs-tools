@@ -255,7 +255,9 @@
         <div class="badge" title="Dica: atalhos">
           <span class="kbd">1</span> HLTV &nbsp;
           <span class="kbd">2</span> VRS &nbsp;
-          <span class="kbd">3</span> PRO
+          <span class="kbd">3</span> PRO &nbsp;
+          <span class="kbd">4</span> Sorteador &nbsp;
+          <span class="kbd">5</span> Events
         </div>
       </header>
 
@@ -313,6 +315,42 @@
             </div>
           </div>
         </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">Sorteador</div>
+                <div class="desc">Random picker tool for fast and simple draws.</div>
+              </div>
+              <div class="icon" aria-hidden="true">🎲</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="sorteador.html">
+                Open Sorteador <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">4</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inner">
+            <div class="topline">
+              <div>
+                <div class="title">Events</div>
+                <div class="desc">Events hub to view and track important updates.</div>
+              </div>
+              <div class="icon" aria-hidden="true">📅</div>
+            </div>
+            <div class="cta">
+              <a class="btn" href="events.html">
+                Open Events <span aria-hidden="true">→</span>
+              </a>
+              <div class="hint">Shortcut: press <span class="kbd">5</span></div>
+            </div>
+          </div>
+        </article>
       </section>
 
       <footer>
@@ -327,10 +365,10 @@
   </div>
 
   <script>
-    // Atalhos de teclado: 1, 2, 3
-    const pages = ["hltv.html", "vrs.html", "pro-analyses.html"];
+    // Keyboard shortcuts: 1, 2, 3, 4, 5
+    const pages = ["hltv.html", "vrs.html", "pro-analyses.html", "sorteador.html", "events.html"];
     window.addEventListener("keydown", (e) => {
-      if (["1","2","3"].includes(e.key)) {
+      if (["1","2","3","4","5"].includes(e.key)) {
         const idx = Number(e.key) - 1;
         window.location.href = pages[idx];
       }
