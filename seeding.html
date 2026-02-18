@@ -9,15 +9,15 @@
   :root{
     --bg:#0b1220;
     --card:#111a2e;
-    --card2:#0f1730;
     --text:#e7ecff;
     --muted:#a9b3d6;
     --accent:#6ea8ff;
-    --accent2:#7cf2c2;
     --danger:#ff6e6e;
     --border:rgba(231,236,255,.12);
     --shadow:0 10px 30px rgba(0,0,0,.35);
     --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --wine:#722F37; /* wine color */
+    --wineGlow: rgba(114,47,55,.25);
   }
   *{box-sizing:border-box}
   body{
@@ -127,6 +127,12 @@
   }
   .team strong{display:block; font-weight:650}
   .team small{color:var(--muted); font-family:var(--mono)}
+  .team.wine{
+    border-color: rgba(114,47,55,.85);
+    background: linear-gradient(135deg, var(--wineGlow), rgba(255,255,255,.02));
+    box-shadow: 0 0 0 1px rgba(114,47,55,.25) inset, 0 10px 30px rgba(114,47,55,.10);
+  }
+  .team.wine strong{color:#ffd6db}
   .vs{color:var(--accent); font-weight:700}
   .bye{border-color:rgba(124,242,194,.35)}
   .footer{max-width:1150px; margin:18px auto; padding:0 18px 30px;}
@@ -137,7 +143,7 @@
   <header class="topbar">
     <div class="title">
       <h1>Match Generator (Seeding)</h1>
-      <p class="subtitle">Strongest vs weakest seeding — match order is randomized.</p>
+      <p class="subtitle">Strongest vs weakest seeding — match order & sides are randomized.</p>
     </div>
 
     <button id="backBtn" class="back-btn" title="Go back to index.html (shortcut: key 0)">
@@ -205,7 +211,8 @@ Team C;60"></textarea>
       <h2>3) Matches</h2>
       <p class="hint">
         Seeding pairs the strongest with the weakest (<strong>#1 vs last</strong>, <strong>#2 vs second-to-last</strong>, etc.).
-        The displayed match order is then <strong>shuffled randomly</strong>.
+        Then the match list is <strong>shuffled randomly</strong>, and within each match, teams can appear on the <strong>left or right</strong> randomly.
+        Each match also randomly highlights <strong>one</strong> of the two teams in <span style="color:#ffd6db">wine</span>.
         Odd team count creates a <strong>BYE</strong>.
       </p>
 
@@ -235,7 +242,6 @@ Team C;60"></textarea>
     <span class="muted">Shortcut: press <kbd>0</kbd> (outside inputs) to go back to <code>index.html</code>.</span>
   </footer>
 
-  <!-- SheetJS (xlsx) to read ranking.xlsx in the browser -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
@@ -271,9 +277,7 @@ Team C;60"></textarea>
   let selected = new Set();   // team names
   let lastOutputText = '';
 
-  function normalizeStr(s){
-    return (s ?? '').toString().trim();
-  }
+  function normalizeStr(s){ return (s ?? '').toString().trim(); }
 
   function parseNumber(v){
     if (typeof v === 'number') return v;
@@ -296,9 +300,7 @@ Team C;60"></textarea>
     return tag === 'input' || tag === 'textarea' || el.isContentEditable;
   }
 
-  function goBack(){
-    window.location.href = 'index.html';
-  }
+  function goBack(){ window.location.href = 'index.html'; }
 
   function escapeHtml(str){
     return (str || '').replace(/[&<>"']/g, (m)=>({
@@ -306,9 +308,7 @@ Team C;60"></textarea>
     }[m]));
   }
 
-  function updateSelCount(){
-    els.selCount.textContent = `${selected.size} selected`;
-  }
+  function updateSelCount(){ els.selCount.textContent = `${selected.size} selected`; }
 
   function renderTeamList(){
     const f = normalizeStr(els.filter.value).toLowerCase();
@@ -406,9 +406,9 @@ Team C;60"></textarea>
     els.selectedTable.textContent = txt || '—';
   }
 
-  function renderTeamBox(seed, t){
+  function renderTeamBox(seed, t, wine){
     const box = document.createElement('div');
-    box.className = 'team' + (t ? '' : ' bye');
+    box.className = 'team' + (t ? '' : ' bye') + (wine ? ' wine' : '');
     if (t){
       box.innerHTML = `<strong>#${seed} ${escapeHtml(t.team)}</strong><small>${t.points} pts</small>`;
     } else {
@@ -431,17 +431,17 @@ Team C;60"></textarea>
 
       const hdr = document.createElement('div');
       hdr.className = 'hdr';
-      hdr.innerHTML = `<div><strong>Match ${idx+1}</strong></div><div class="round">Randomized order</div>`;
+      hdr.innerHTML = `<div><strong>Match ${idx+1}</strong></div><div class="round">Randomized</div>`;
 
       const pair = document.createElement('div');
       pair.className = 'pair';
 
-      pair.appendChild(renderTeamBox(m.aSeed, m.a));
+      pair.appendChild(renderTeamBox(m.leftSeed, m.left, m.wineSide === 'left'));
       const vs = document.createElement('div');
       vs.className = 'vs';
       vs.textContent = 'VS';
       pair.appendChild(vs);
-      pair.appendChild(renderTeamBox(m.bSeed, m.b));
+      pair.appendChild(renderTeamBox(m.rightSeed, m.right, m.wineSide === 'right'));
 
       div.appendChild(hdr);
       div.appendChild(pair);
@@ -453,19 +453,19 @@ Team C;60"></textarea>
 
   function buildSeededPairs(teams){
     const n = teams.length;
-    const matches = [];
+    const pairs = [];
     for (let i=0; i<Math.ceil(n/2); i++){
-      const a = teams[i];
-      const bIndex = n - 1 - i;
-      const b = (bIndex > i) ? teams[bIndex] : null;
-      matches.push({
-        aSeed: i+1,
-        bSeed: b ? (bIndex+1) : (bIndex+1),
-        a,
-        b
+      const strong = teams[i];
+      const weakIndex = n - 1 - i;
+      const weak = (weakIndex > i) ? teams[weakIndex] : null;
+      pairs.push({
+        strongSeed: i+1,
+        weakSeed: weak ? (weakIndex+1) : (weakIndex+1),
+        strong,
+        weak
       });
     }
-    return matches;
+    return pairs;
   }
 
   function shuffleInPlace(arr){
@@ -476,21 +476,42 @@ Team C;60"></textarea>
     return arr;
   }
 
+  function buildMatchesRandomSidesAndWine(pairs){
+    const matches = pairs.map(p => {
+      // Randomize left/right (keeps the same strong-vs-weak pairing)
+      const swap = p.weak && Math.random() < 0.5;
+      const left = swap ? p.weak : p.strong;
+      const right = swap ? p.strong : p.weak;
+      const leftSeed = swap ? p.weakSeed : p.strongSeed;
+      const rightSeed = swap ? p.strongSeed : p.weakSeed;
+
+      // Randomly highlight exactly one of the two teams (only if both exist)
+      let wineSide = null;
+      if (left && right){
+        wineSide = Math.random() < 0.5 ? 'left' : 'right';
+      }
+
+      return { left, right, leftSeed, rightSeed, wineSide };
+    });
+
+    // Randomize match order
+    return shuffleInPlace(matches);
+  }
+
   function buildOutputText(teams, matches){
     const lines = [];
-    lines.push(`Generated matches (seeded strong vs weak, randomized order) — selected teams: ${teams.length}`);
+    lines.push(`Generated matches (seeded strong vs weak, randomized order & sides) — selected teams: ${teams.length}`);
     lines.push('');
     matches.forEach((m, idx)=>{
-      const a = m.a ? `${m.a.team} (${m.a.points})` : 'BYE';
-      const b = m.b ? `${m.b.team} (${m.b.points})` : 'BYE';
-      lines.push(`Match ${idx+1}: #${m.aSeed} ${a}  vs  #${m.bSeed} ${b}`);
+      const L = m.left ? `${m.left.team} (${m.left.points})` : 'BYE';
+      const R = m.right ? `${m.right.team} (${m.right.points})` : 'BYE';
+      const wineNote = m.wineSide ? ` [wine: ${m.wineSide}]` : '';
+      lines.push(`Match ${idx+1}: #${m.leftSeed} ${L}  vs  #${m.rightSeed} ${R}${wineNote}`);
     });
     return lines.join('\n');
   }
 
-  function copyToClipboard(text){
-    return navigator.clipboard.writeText(text);
-  }
+  function copyToClipboard(text){ return navigator.clipboard.writeText(text); }
 
   function downloadText(filename, text){
     const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
@@ -512,8 +533,8 @@ Team C;60"></textarea>
       return;
     }
 
-    const seededPairs = buildSeededPairs(teams);
-    const matches = shuffleInPlace(seededPairs.slice());
+    const pairs = buildSeededPairs(teams);
+    const matches = buildMatchesRandomSidesAndWine(pairs);
 
     renderSelectedTable(teams);
     renderMatches(matches);
