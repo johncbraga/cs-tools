@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ranking — Elo + Streak + Torneios</title>
+
+  <!-- Bootstrap (UI) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- SheetJS (ler/escrever XLSX no browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body { padding: 24px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .small-muted { color: #6c757d; font-size: .9rem; }
+    .table thead th { position: sticky; top: 0; background: #fff; }
+    .badge-tierS { background: #6f42c1; }
+    .badge-tier1 { background: #0d6efd; }
+    .badge-tier2 { background: #198754; }
+    .badge-tier3 { background: #6c757d; }
+    .card { box-shadow: 0 1px 10px rgba(0,0,0,.05); }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+    <div>
+      <h1 class="h3 mb-1">Ranking</h1>
+      <div class="small-muted">Elo (expectativa) + K dinâmico (streak + vitória em torneio) + tiers (organizacional)</div>
+      <div class="small-muted">Arquivo padrão: <span class="mono">file/rating.xlsx</span> (GitHub Pages serve como arquivo estático)</div>
+    </div>
+    <div class="text-end">
+      <button id="btnReload" class="btn btn-outline-secondary btn-sm">Recarregar Excel</button>
+      <button id="btnDownload" class="btn btn-primary btn-sm">Baixar Excel atualizado</button>
+    </div>
+  </div>
+
+  <div id="alertArea"></div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Tabela atual</span>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="small-muted">Carregar manualmente:</span>
+            <input id="fileInput" type="file" accept=".xlsx" class="form-control form-control-sm" style="max-width:260px" />
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-responsive" style="max-height: 520px;">
+            <table class="table table-sm table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th class="text-end">Rating</th>
+                  <th class="text-end">Streak</th>
+                  <th>Torneio</th>
+                  <th class="text-end">Jogos bônus</th>
+                  <th>Tier</th>
+                  <th class="text-end">K_final</th>
+                  <th class="text-end">Atualizado</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="small-muted mt-2">
+            <strong>Notas:</strong> GitHub Pages não permite salvar no servidor. As alterações ficam na página e você baixa o novo Excel.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header">Versus (simular e aplicar resultado)</div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Time A</label>
+              <select id="teamA" class="form-select"></select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Time B</label>
+              <select id="teamB" class="form-select"></select>
+            </div>
+            <div class="col-12">
+              <button id="btnCalc" class="btn btn-outline-primary w-100">Calcular ganhos/perdas</button>
+            </div>
+          </div>
+
+          <div id="versusBox" class="mt-3" style="display:none;">
+            <div class="alert alert-info mb-3">
+              <div><strong>Expectativa</strong>: E_A = <span id="EA" class="mono"></span> | E_B = <span id="EB" class="mono"></span></div>
+              <div><strong>K_final</strong>: K_A = <span id="KA" class="mono"></span> | K_B = <span id="KB" class="mono"></span></div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-striped align-middle">
+                <thead>
+                  <tr>
+                    <th>Resultado</th>
+                    <th class="text-end">Δ A</th>
+                    <th class="text-end">Δ B</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>A vence</td>
+                    <td class="text-end mono" id="dA_Awin"></td>
+                    <td class="text-end mono" id="dB_Awin"></td>
+                  </tr>
+                  <tr>
+                    <td>B vence</td>
+                    <td class="text-end mono" id="dA_Bwin"></td>
+                    <td class="text-end mono" id="dB_Bwin"></td>
+                  </tr>
+                  <tr>
+                    <td>Empate</td>
+                    <td class="text-end mono" id="dA_Draw"></td>
+                    <td class="text-end mono" id="dB_Draw"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <label class="form-label">Quem venceu?</label>
+            <select id="matchResult" class="form-select mb-2">
+              <option value="A">Time A venceu</option>
+              <option value="B">Time B venceu</option>
+              <option value="D">Empate</option>
+            </select>
+
+            <button id="btnApply" class="btn btn-success w-100">Aplicar resultado (atualiza dados)</button>
+            <div class="small-muted mt-2">Atualiza rating + streak + consome 1 jogo do bônus de torneio (se houver).</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Vitória em torneio (1º lugar)</div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Time</label>
+              <select id="tourneyTeam" class="form-select"></select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Tipo</label>
+              <select id="tourneyType" class="form-select">
+                <option value="regional">regional (+5% por 5 jogos)</option>
+                <option value="global">global (+10% por 8 jogos)</option>
+                <option value="major">major (+20% por 12 jogos)</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <button id="btnTourney" class="btn btn-outline-success w-100">Aplicar vitória no torneio</button>
+            </div>
+          </div>
+
+          <div class="small-muted mt-2">O bônus é temporário e afeta apenas o K (não adiciona pontos diretos).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="my-4" />
+  <details class="small-muted">
+    <summary><strong>Matemática (resumo)</strong></summary>
+    <div class="mt-2">
+      <div>Elo: <span class="mono">E = 1/(1 + 10^((Rb-Ra)/400))</span></div>
+      <div>Atualização: <span class="mono">R' = R + K_final*(S - E)</span> (S=1 vitória, 0 derrota, 0.5 empate)</div>
+      <div>K_final: <span class="mono">K*(1+0.1*tanh(streak/5))*(1+bônus_torneio)</span>, com cap <span class="mono">≤ 1.35*K</span></div>
+    </div>
+  </details>
+</div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const K_BASE = 30.0;
+const ELO_DIVISOR = 400.0;
+
+const STREAK_ALPHA = 0.10; // max +10%
+const STREAK_SCALE = 5.0;  // tanh(streak/5)
+
+const K_HARD_CAP_MULT = 1.35;
+
+const TOURNEY = {
+  none:     { bonus: 0.00, dur: 0 },
+  regional: { bonus: 0.05, dur: 5 },
+  global:   { bonus: 0.10, dur: 8 },
+  major:    { bonus: 0.20, dur: 12 },
+};
+
+const REQUIRED_COLS = [
+  'team',
+  'rating',
+  'streak',
+  'tourney_bonus',
+  'tourney_bonus_remaining',
+  'last_updated'
+];
+
+/* ===================== STATE ===================== */
+let workbook = null;
+let teams = []; // array of team objects
+
+/* ===================== HELPERS ===================== */
+function alertBox(msg, type='info') {
+  const area = document.getElementById('alertArea');
+  const cls = type === 'error' ? 'danger' : type;
+  area.innerHTML = `
+    <div class="alert alert-${cls} alert-dismissible fade show" role="alert">
+      ${msg}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+}
+
+function nowISO() {
+  return new Date().toISOString();
+}
+
+function tierFromRating(r) {
+  if (r >= 1700) return {name:'Tier S', cls:'badge-tierS'};
+  if (r >= 1400) return {name:'Tier 1', cls:'badge-tier1'};
+  if (r >= 1100) return {name:'Tier 2', cls:'badge-tier2'};
+  return {name:'Tier 3', cls:'badge-tier3'};
+}
+
+function expectedScore(ra, rb) {
+  return 1.0 / (1.0 + Math.pow(10, (rb - ra) / ELO_DIVISOR));
+}
+
+function tanh(x) {
+  const e2x = Math.exp(2*x);
+  return (e2x - 1) / (e2x + 1);
+}
+
+function streakBonus(streak) {
+  streak = Number(streak) || 0;
+  return STREAK_ALPHA * tanh(streak / STREAK_SCALE);
+}
+
+function tourneyBonus(tType, remaining) {
+  tType = String(tType || 'none').toLowerCase();
+  remaining = Number(remaining) || 0;
+  if (remaining <= 0) return 0.0;
+  return (TOURNEY[tType] || TOURNEY.none).bonus;
+}
+
+function kFinal(teamObj) {
+  const s = Number(teamObj.streak) || 0;
+  const tType = String(teamObj.tourney_bonus || 'none').toLowerCase();
+  const rem = Number(teamObj.tourney_bonus_remaining) || 0;
+
+  let k = K_BASE * (1 + streakBonus(s)) * (1 + tourneyBonus(tType, rem));
+  const cap = K_BASE * K_HARD_CAP_MULT;
+  return Math.min(k, cap);
+}
+
+function normalizeRow(row) {
+  const out = {};
+  for (const key of Object.keys(row)) {
+    out[String(key).trim().toLowerCase()] = row[key];
+  }
+
+  if (!out.team) out.team = '';
+  out.team = String(out.team).trim();
+
+  out.rating = Number(out.rating);
+  if (!Number.isFinite(out.rating)) out.rating = 1000.0;
+
+  out.streak = parseInt(out.streak ?? 0, 10);
+  if (!Number.isFinite(out.streak)) out.streak = 0;
+
+  out.tourney_bonus = String(out.tourney_bonus ?? 'none').toLowerCase();
+  if (!TOURNEY[out.tourney_bonus]) out.tourney_bonus = 'none';
+
+  out.tourney_bonus_remaining = parseInt(out.tourney_bonus_remaining ?? 0, 10);
+  if (!Number.isFinite(out.tourney_bonus_remaining) || out.tourney_bonus_remaining < 0) out.tourney_bonus_remaining = 0;
+
+  out.last_updated = out.last_updated ? String(out.last_updated) : '';
+  return out;
+}
+
+function dedupeTeams(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    if (!r.team) continue;
+    map.set(r.team, r); // keep last
+  }
+  return Array.from(map.values());
+}
+
+function format2(x) {
+  return (Math.round(x*100)/100).toFixed(2);
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#039;');
+}
+
+function getTeam(name) {
+  return teams.find(t => t.team === name);
+}
+
+function renderSelectOptions() {
+  const selects = ['teamA','teamB','tourneyTeam'];
+  const names = teams.map(t => t.team).sort((a,b)=>a.localeCompare(b));
+
+  for (const id of selects) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  }
+
+  if (names.length >= 2) {
+    document.getElementById('teamA').value = names[0];
+    document.getElementById('teamB').value = names[1];
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const sorted = [...teams].sort((a,b)=>b.rating - a.rating);
+
+  tbody.innerHTML = sorted.map(t => {
+    const tier = tierFromRating(t.rating);
+    const k = kFinal(t);
+    const last = t.last_updated ? String(t.last_updated).slice(0,19).replace('T',' ') : '';
+    return `
+      <tr>
+        <td>${escapeHtml(t.team)}</td>
+        <td class="text-end mono">${format2(t.rating)}</td>
+        <td class="text-end mono">${t.streak}</td>
+        <td>${escapeHtml(String(t.tourney_bonus))}</td>
+        <td class="text-end mono">${t.tourney_bonus_remaining}</td>
+        <td><span class="badge ${tier.cls}">${tier.name}</span></td>
+        <td class="text-end mono">${format2(k)}</td>
+        <td class="text-end mono">${escapeHtml(last)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function computeDeltas(teamA, teamB) {
+  const ra = teamA.rating;
+  const rb = teamB.rating;
+  const ea = expectedScore(ra, rb);
+  const eb = 1 - ea;
+
+  const ka = kFinal(teamA);
+  const kb = kFinal(teamB);
+
+  const delta = (k, s, e) => k * (s - e);
+
+  return {
+    E_a: ea, E_b: eb,
+    K_a: ka, K_b: kb,
+    A_win: { dA: delta(ka, 1.0, ea), dB: delta(kb, 0.0, eb) },
+    B_win: { dA: delta(ka, 0.0, ea), dB: delta(kb, 1.0, eb) },
+    Draw:  { dA: delta(ka, 0.5, ea), dB: delta(kb, 0.5, eb) },
+  };
+}
+
+function applyMatch(teamAName, teamBName, result) {
+  if (teamAName === teamBName) throw new Error('Escolha dois times diferentes.');
+  const A = getTeam(teamAName);
+  const B = getTeam(teamBName);
+  if (!A || !B) throw new Error('Time não encontrado.');
+
+  const deltas = computeDeltas(A, B);
+
+  let dA = 0, dB = 0;
+  if (result === 'A') {
+    dA = deltas.A_win.dA; dB = deltas.A_win.dB;
+    A.streak = (Number(A.streak)||0) + 1;
+    B.streak = 0;
+  } else if (result === 'B') {
+    dA = deltas.B_win.dA; dB = deltas.B_win.dB;
+    B.streak = (Number(B.streak)||0) + 1;
+    A.streak = 0;
+  } else {
+    dA = deltas.Draw.dA; dB = deltas.Draw.dB;
+    A.streak = 0;
+    B.streak = 0;
+  }
+
+  A.rating = Number(A.rating) + dA;
+  B.rating = Number(B.rating) + dB;
+
+  // consome 1 jogo do bônus de torneio
+  for (const T of [A,B]) {
+    let rem = Number(T.tourney_bonus_remaining) || 0;
+    if (rem > 0) {
+      rem -= 1;
+      T.tourney_bonus_remaining = rem;
+      if (rem <= 0) {
+        T.tourney_bonus = 'none';
+        T.tourney_bonus_remaining = 0;
+      }
+    }
+    T.last_updated = nowISO();
+  }
+}
+
+function applyTourneyWin(teamName, tType) {
+  const T = getTeam(teamName);
+  if (!T) throw new Error('Time não encontrado.');
+
+  tType = String(tType || '').toLowerCase();
+  if (!TOURNEY[tType] || tType === 'none') throw new Error('Tipo de torneio inválido.');
+
+  const newBonus = TOURNEY[tType].bonus;
+  const newDur = TOURNEY[tType].dur;
+
+  const curType = String(T.tourney_bonus || 'none').toLowerCase();
+  const curRem = Number(T.tourney_bonus_remaining) || 0;
+  const curBonus = tourneyBonus(curType, curRem);
+
+  // mantém apenas o maior bônus ativo (ou renova duração se for igual)
+  if (newBonus > curBonus) {
+    T.tourney_bonus = tType;
+    T.tourney_bonus_remaining = newDur;
+  } else if (newBonus === curBonus) {
+    T.tourney_bonus = tType;
+    T.tourney_bonus_remaining = Math.max(curRem, newDur);
+  }
+
+  T.last_updated = nowISO();
+}
+
+/* ===================== EXCEL IO ===================== */
+function rowsToSheet(rows) {
+  const ordered = rows.map(r => ({
+    team: r.team,
+    rating: r.rating,
+    streak: r.streak,
+    tourney_bonus: r.tourney_bonus,
+    tourney_bonus_remaining: r.tourney_bonus_remaining,
+    last_updated: r.last_updated,
+  }));
+  return XLSX.utils.json_to_sheet(ordered, { header: REQUIRED_COLS });
+}
+
+function downloadExcel() {
+  if (!teams.length) {
+    alertBox('Nenhum dado carregado para baixar.', 'warning');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const ws = rowsToSheet(teams);
+  XLSX.utils.book_append_sheet(wb, ws, 'ranking');
+  XLSX.writeFile(wb, 'rating_atualizado.xlsx');
+}
+
+async function loadFromUrl() {
+  try {
+    const resp = await fetch('file/rating.xlsx', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('Não consegui baixar file/rating.xlsx (HTTP ' + resp.status + ').');
+    const ab = await resp.arrayBuffer();
+    loadFromArrayBuffer(ab);
+    alertBox('Arquivo carregado de file/rating.xlsx com sucesso.', 'success');
+  } catch (e) {
+    alertBox(
+      'Não foi possível carregar automaticamente <span class="mono">file/rating.xlsx</span>. ' +
+      'Use o carregamento manual (input de arquivo).<br><span class="small-muted">Detalhe: ' +
+      escapeHtml(e.message) + '</span>',
+      'warning'
+    );
+  }
+}
+
+function loadFromArrayBuffer(ab) {
+  workbook = XLSX.read(ab, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const ws = workbook.Sheets[sheetName];
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+  const normalized = raw.map(normalizeRow);
+  teams = dedupeTeams(normalized);
+
+  if (!teams.length) {
+    alertBox('Planilha carregada, mas não encontrei linhas com times (coluna "team").', 'warning');
+  }
+
+  renderSelectOptions();
+  renderTable();
+
+  document.getElementById('versusBox').style.display = 'none';
+}
+
+/* ===================== UI EVENTS ===================== */
+document.getElementById('btnDownload').addEventListener('click', downloadExcel);
+document.getElementById('btnReload').addEventListener('click', loadFromUrl);
+
+document.getElementById('fileInput').addEventListener('change', async (ev) => {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  const ab = await file.arrayBuffer();
+  loadFromArrayBuffer(ab);
+  alertBox('Arquivo carregado manualmente: <span class="mono">' + escapeHtml(file.name) + '</span>', 'success');
+});
+
+document.getElementById('btnCalc').addEventListener('click', () => {
+  if (!teams.length) {
+    alertBox('Carregue o Excel antes de usar o Versus.', 'warning');
+    return;
+  }
+
+  const aName = document.getElementById('teamA').value;
+  const bName = document.getElementById('teamB').value;
+
+  if (!aName || !bName) {
+    alertBox('Selecione dois times.', 'warning');
+    return;
+  }
+  if (aName === bName) {
+    alertBox('Escolha dois times diferentes.', 'warning');
+    return;
+  }
+
+  const A = getTeam(aName);
+  const B = getTeam(bName);
+  const d = computeDeltas(A, B);
+
+  document.getElementById('EA').textContent = d.E_a.toFixed(4);
+  document.getElementById('EB').textContent = d.E_b.toFixed(4);
+  document.getElementById('KA').textContent = format2(d.K_a);
+  document.getElementById('KB').textContent = format2(d.K_b);
+
+  document.getElementById('dA_Awin').textContent = format2(d.A_win.dA);
+  document.getElementById('dB_Awin').textContent = format2(d.A_win.dB);
+  document.getElementById('dA_Bwin').textContent = format2(d.B_win.dA);
+  document.getElementById('dB_Bwin').textContent = format2(d.B_win.dB);
+  document.getElementById('dA_Draw').textContent = format2(d.Draw.dA);
+  document.getElementById('dB_Draw').textContent = format2(d.Draw.dB);
+
+  document.getElementById('versusBox').style.display = '';
+});
+
+document.getElementById('btnApply').addEventListener('click', () => {
+  try {
+    const aName = document.getElementById('teamA').value;
+    const bName = document.getElementById('teamB').value;
+    const result = document.getElementById('matchResult').value;
+
+    applyMatch(aName, bName, result);
+    renderTable();
+
+    alertBox('Resultado aplicado! Agora você pode baixar o Excel atualizado.', 'success');
+  } catch (e) {
+    alertBox(escapeHtml(e.message), 'error');
+  }
+});
+
+document.getElementById('btnTourney').addEventListener('click', () => {
+  try {
+    if (!teams.length) {
+      alertBox('Carregue o Excel antes de aplicar vitória em torneio.', 'warning');
+      return;
+    }
+
+    const teamName = document.getElementById('tourneyTeam').value;
+    const tType = document.getElementById('tourneyType').value;
+
+    applyTourneyWin(teamName, tType);
+    renderTable();
+
+    alertBox('Vitória em torneio aplicada (bônus temporário ativado).', 'success');
+  } catch (e) {
+    alertBox(escapeHtml(e.message), 'error');
+  }
+});
+
+/* ===================== INIT ===================== */
+loadFromUrl();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
