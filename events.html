@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>Portal • Events</title>
+
+  <style>
+    :root{
+      --bg1:#070a12;
+      --bg2:#0b1220;
+      --card:#0f172a99;
+      --card2:#111c3599;
+      --text:#e5e7eb;
+      --muted:#a7b0c0;
+      --stroke:#ffffff1a;
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --radius: 18px;
+      --ring: 0 0 0 4px rgba(96,165,250,.18);
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --info:#60a5fa;
+
+      /* Event logo sizing (bigger + adaptive) */
+      --logoSize: clamp(78px, 10vw, 120px);
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 10% 10%, #6d28d955, transparent 55%),
+        radial-gradient(900px 700px at 90% 20%, #06b6d455, transparent 55%),
+        radial-gradient(900px 700px at 50% 100%, #22c55e33, transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+
+    .wrap{ padding:42px 18px 70px; max-width:1000px; margin:auto; }
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:18px;
+    }
+    h1{ margin:0; font-size: clamp(26px, 3.2vw, 40px); letter-spacing:-0.03em; }
+    p{ margin:8px 0 0; color:var(--muted); line-height:1.6; max-width: 78ch; }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.05);
+      border-radius:999px;
+      width:fit-content;
+      backdrop-filter: blur(10px);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      box-shadow: 0 0 0 4px rgba(96,165,250,.15);
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding:2px 8px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+    }
+
+    .topActions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      text-decoration:none;
+      color:var(--text);
+      padding:10px 14px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      transition: transform .2s ease, background .2s ease, border-color .2s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      width:fit-content;
+      outline:none;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.28);
+    }
+    .btn:focus-visible{ box-shadow: var(--ring); }
+    .btn.secondary{ font-weight:600; }
+    .btn.danger{
+      border-color: rgba(239,68,68,.35);
+      background: rgba(239,68,68,.10);
+    }
+    .btn.success{
+      border-color: rgba(34,197,94,.30);
+      background: rgba(34,197,94,.10);
+    }
+
+    .backCorner{
+      position:fixed;
+      left:14px;
+      bottom:14px;
+      z-index:50;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel{
+      border:1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      margin-top:14px;
+    }
+    .panelHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .panelHeader .title{
+      font-weight:800;
+      letter-spacing:-0.01em;
+    }
+    .panelBody{ padding:16px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap:12px;
+    }
+    @media (max-width: 820px){
+      header{ flex-direction:column; }
+      .grid{ grid-template-columns: 1fr; }
+    }
+    label{
+      display:block;
+      font-size:12px;
+      color: rgba(167,176,192,.92);
+      margin:0 0 6px;
+      user-select:none;
+    }
+    input, select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.15);
+      color:var(--text);
+      outline:none;
+    }
+    input:focus, select:focus{ box-shadow: var(--ring); }
+
+    .row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .hint{
+      color: rgba(167,176,192,.92);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .hidden{ display:none !important; }
+
+    /* Location UI (upload flag + single location input) */
+    .locationRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      width:100%;
+    }
+    .flagUploader{
+      width:44px;
+      height:44px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.15);
+      background: rgba(0,0,0,.18);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      user-select:none;
+      overflow:hidden;
+      flex: 0 0 auto;
+      position:relative;
+    }
+    .flagUploader:hover{ box-shadow: var(--ring); }
+    .flagUploader img{
+      width:100%;
+      height:100%;
+      object-fit: contain;
+      display:block;
+      background: rgba(0,0,0,.12);
+    }
+    .flagUploader .emoji{
+      font-size:20px;
+      opacity:.9;
+    }
+    .flagUploader .miniTip{
+      position:absolute;
+      inset:auto 4px 4px auto;
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      color: rgba(229,231,235,.85);
+      pointer-events:none;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:14px; margin-top:18px; }
+
+    .card{
+      position:relative;
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: linear-gradient(180deg, var(--card), var(--card2));
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background-image: var(--eventBg, none);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      opacity: .18;
+      filter: saturate(1.05) contrast(1.03);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(700px 260px at 12% 10%, rgba(99,102,241,.30), transparent 60%),
+                  radial-gradient(700px 260px at 92% 20%, rgba(34,211,238,.20), transparent 60%);
+      opacity:.85;
+      pointer-events:none;
+      z-index:1;
+    }
+
+    .inner{
+      position:relative;
+      padding:16px;
+      display:grid;
+      grid-template-columns: var(--logoSize) 1fr;
+      gap:14px;
+      align-items:start;
+      z-index:2;
+    }
+    @media (max-width: 820px){
+      .inner{ grid-template-columns: 1fr; }
+    }
+
+    .logoBox{
+      width:var(--logoSize);
+      height:var(--logoSize);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+      display:grid;
+      place-items:center;
+      user-select:none;
+    }
+    .logoBox img{
+      width:100%;
+      height:100%;
+      object-fit: contain;
+      display:block;
+      background: rgba(0,0,0,.12);
+    }
+    .logoBox .ph{ font-size:24px; opacity:.9; }
+
+    .head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .nameRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      min-width: 240px;
+    }
+    .eventName{
+      font-weight:900;
+      font-size:18px;
+      letter-spacing:-0.01em;
+      text-decoration:none;
+      color:var(--text);
+      border-bottom: 1px dashed rgba(229,231,235,.28);
+      padding-bottom:1px;
+    }
+    .eventName:hover{ border-bottom-color: rgba(229,231,235,.55); }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(229,231,235,.92);
+      font-size:12px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .pill.live{
+      border-color: rgba(34,197,94,.28);
+      background: rgba(34,197,94,.10);
+    }
+
+    .stars{
+      display:inline-flex;
+      gap:2px;
+      align-items:center;
+      font-size:14px;
+      line-height:1;
+      user-select:none;
+    }
+    .star{ opacity:.38; }
+    .star.on{ opacity:1; color: #fbbf24; }
+
+    .major{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:800;
+      font-size:12px;
+      user-select:none;
+    }
+    .crown{ font-size:15px; filter: drop-shadow(0 6px 16px rgba(0,0,0,.4)); }
+
+    .meta{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+    @media (max-width: 820px){
+      .meta{ grid-template-columns: 1fr; }
+    }
+    .kv{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius: 14px;
+      padding:10px 12px;
+    }
+    .k{
+      font-size:11px;
+      color: rgba(167,176,192,.92);
+      letter-spacing:.02em;
+      text-transform: uppercase;
+    }
+    .v{ margin-top:4px; font-size:14px; color: rgba(229,231,235,.95); line-height:1.3; }
+
+    /* ✅ UPDATED: Mini flag rectangle that is fully filled (no gaps, no crop) */
+    .flagMini{
+      width:30px;               /* rectangle width */
+      height:18px;              /* rectangle height */
+      border-radius:4px;        /* more flag-like corners */
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      vertical-align:-3px;
+      margin-right:8px;
+      display:inline-block;
+      object-fit: fill;         /* ✅ forces full fill, no crop, no gaps */
+    }
+
+    .liveBlock{
+      margin-top:10px;
+      border:1px solid rgba(34,197,94,.20);
+      background: rgba(34,197,94,.07);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .liveTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .matches{
+      margin-top:8px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size:13px;
+      color: rgba(229,231,235,.92);
+    }
+    .match{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+
+    .finishedBlock{
+      margin-top:10px;
+      border:1px solid rgba(96,165,250,.18);
+      background: rgba(96,165,250,.07);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .winnerRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .trophyImg{
+      width:26px; height:26px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      object-fit: contain;
+    }
+    .winnerTeam{ font-weight:900; letter-spacing:-0.01em; }
+    .runnerUpRow{
+      margin-top:8px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      color: rgba(229,231,235,.92);
+      font-size:13px;
+    }
+    .runnerUpRow strong{ color: rgba(229,231,235,.98); }
+
+    .highlights{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:8px;
+    }
+    @media (max-width: 820px){
+      .highlights{ grid-template-columns: 1fr; }
+    }
+    .chip{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      border-radius: 12px;
+      padding:8px 10px;
+      font-size:13px;
+      color: rgba(229,231,235,.92);
+    }
+    .chip strong{ color: rgba(229,231,235,.98); }
+
+    .editBar{
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    footer{
+      margin-top:18px;
+      color: rgba(167,176,192,.85);
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+  </style>
+</head>
+
+<body>
+  <a class="btn backCorner" href="index.html">
+    ← Back to menu <span class="kbd">0</span>
+  </a>
+
+  <div class="wrap">
+    <header>
+      <div>
+        <div class="badge"><span class="dot"></span> Portal • KZ Studios</div>
+        <h1>Events</h1>
+        <p>
+          Add past or live tournaments using the form below. Events are saved locally in your browser.
+          Toggle the add panel with <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">A</span>.
+          Press <span class="kbd">0</span> to return to the menu (only when not typing in a field).
+        </p>
+      </div>
+
+      <div class="topActions">
+        <button class="btn secondary" id="updateBtn" type="button" title="Toggle update mode">
+          Update: OFF
+        </button>
+        <div class="badge" title="Shortcuts">
+          <span class="kbd">0</span> Back &nbsp;
+          <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">A</span> Hide/Show Add
+        </div>
+      </div>
+    </header>
+
+    <section class="panel" id="addPanel">
+      <div class="panelHeader">
+        <div class="title" id="panelTitle">Add new event</div>
+        <div class="hint">Tip: in Update mode you can edit existing events.</div>
+      </div>
+
+      <div class="panelBody">
+        <div class="grid">
+          <div>
+            <label>Event logo (upload)</label>
+            <input id="eventLogo" type="file" accept="image/*" />
+          </div>
+          <div>
+            <label>Trophy logo (upload)</label>
+            <input id="trophyLogo" type="file" accept="image/*" />
+          </div>
+
+          <div>
+            <label>Event name</label>
+            <input id="name" placeholder="e.g. IEM Katowice 2026" />
+          </div>
+
+          <div>
+            <label>Google Drive link</label>
+            <input id="link" placeholder="https://drive.google.com/..." />
+          </div>
+
+          <div>
+            <label>Status</label>
+            <select id="status">
+              <option value="Finished">Finished</option>
+              <option value="Live">Live</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Time / Period (if Live you can write 'Live' or a date range)</label>
+            <input id="time" placeholder="Jan 2026 / 10–20 Jan 2026 / Live" />
+          </div>
+
+          <div>
+            <label>Prize pool</label>
+            <input id="prizePool" placeholder="$1,000,000" />
+          </div>
+
+          <div>
+            <label>Players</label>
+            <input id="players" type="number" min="0" step="1" placeholder="80" />
+          </div>
+
+          <!-- Location with flag upload -->
+          <div>
+            <label>Location</label>
+            <div class="locationRow">
+              <label class="flagUploader" for="flagUpload" title="Upload flag image (optional)">
+                <span class="emoji" id="flagEmoji">🏳️</span>
+                <img id="flagPreview" alt="Flag preview" class="hidden" />
+                <span class="miniTip">upload</span>
+              </label>
+              <input id="location" placeholder="City, Country (type everything together)" />
+            </div>
+            <input id="flagUpload" type="file" accept="image/*" class="hidden" />
+            <div class="hint" style="margin-top:6px;">
+              Optional: click the square to upload a country flag image.
+            </div>
+          </div>
+
+          <div>
+            <label>Importance (1–5)</label>
+            <input id="importance" type="number" min="1" max="5" placeholder="3" />
+          </div>
+
+          <div>
+            <label>Major?</label>
+            <select id="major">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+
+          <div id="liveOnlyA">
+            <label>Stage (Live only)</label>
+            <input id="stage" placeholder="Playoffs — Semifinals" />
+          </div>
+
+          <div id="liveOnlyB">
+            <label>Next matches (Live only, max 3) — format: Team A vs Team B – Time</label>
+            <input id="m1" placeholder="Team A vs Team B – Today 18:00" />
+            <input id="m2" placeholder="Team C vs Team D – Today 20:30" style="margin-top:8px;" />
+            <input id="m3" placeholder="Team E vs Team F – Tomorrow 16:00" style="margin-top:8px;" />
+          </div>
+
+          <div id="finishedOnlyA">
+            <label>Winner team (Finished only)</label>
+            <input id="winnerTeam" placeholder="Winner team name" />
+          </div>
+
+          <div id="finishedOnlyA2">
+            <label>2nd place team (Finished only)</label>
+            <input id="runnerUpTeam" placeholder="Runner-up team name" />
+          </div>
+
+          <div id="finishedOnlyB">
+            <label>MVP / EVP / VP (Finished only)</label>
+            <input id="mvp" placeholder="MVP player name" />
+            <input id="evp" placeholder="EVP player name" style="margin-top:8px;" />
+            <input id="vp"  placeholder="VP player name"  style="margin-top:8px;" />
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn success" id="submitBtn" type="button">Add event</button>
+          <button class="btn secondary hidden" id="cancelEditBtn" type="button">Cancel update</button>
+          <button class="btn danger" id="clearAllBtn" type="button" title="Clears only the form fields">Clear form</button>
+          <span class="hint" id="formHint"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="list" id="eventsList" aria-label="Events list"></section>
+
+    <footer>
+      <span>Saved locally using <span class="kbd">localStorage</span>. Clearing browser data will remove stored events.</span>
+      <span>Shortcuts: <span class="kbd">0</span> Back (when not typing) • <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">A</span> Toggle add panel</span>
+    </footer>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "kz_events_v1";
+
+    function loadEvents(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : [];
+        return Array.isArray(data) ? data : [];
+      }catch{
+        return [];
+      }
+    }
+    function saveEvents(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    }
+
+    let events = loadEvents();
+    let updateMode = false;
+    let editingIndex = null;
+
+    const listEl = document.getElementById("eventsList");
+    const addPanel = document.getElementById("addPanel");
+
+    const updateBtn = document.getElementById("updateBtn");
+    const submitBtn = document.getElementById("submitBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+    const panelTitle = document.getElementById("panelTitle");
+    const formHint = document.getElementById("formHint");
+
+    const statusEl = document.getElementById("status");
+    const liveOnlyA = document.getElementById("liveOnlyA");
+    const liveOnlyB = document.getElementById("liveOnlyB");
+    const finishedOnlyA = document.getElementById("finishedOnlyA");
+    const finishedOnlyA2 = document.getElementById("finishedOnlyA2");
+    const finishedOnlyB = document.getElementById("finishedOnlyB");
+
+    const flagUploadEl = document.getElementById("flagUpload");
+    const flagPreviewEl = document.getElementById("flagPreview");
+    const flagEmojiEl = document.getElementById("flagEmoji");
+
+    const el = (id) => document.getElementById(id);
+
+    const inputs = {
+      eventLogo: el("eventLogo"),
+      trophyLogo: el("trophyLogo"),
+      name: el("name"),
+      link: el("link"),
+      status: el("status"),
+      time: el("time"),
+      prizePool: el("prizePool"),
+      players: el("players"),
+      location: el("location"),
+      importance: el("importance"),
+      major: el("major"),
+      stage: el("stage"),
+      m1: el("m1"),
+      m2: el("m2"),
+      m3: el("m3"),
+      winnerTeam: el("winnerTeam"),
+      runnerUpTeam: el("runnerUpTeam"),
+      mvp: el("mvp"),
+      evp: el("evp"),
+      vp: el("vp"),
+    };
+
+    function safeText(v){ return (v ?? "").toString(); }
+
+    function starsHTML(n){
+      const total = 5;
+      const v = Math.max(0, Math.min(5, Number(n) || 0));
+      let out = '<span class="stars" aria-label="Importance rating">';
+      for(let i=1;i<=total;i++){
+        out += `<span class="star ${i<=v ? "on": ""}">★</span>`;
+      }
+      out += "</span>";
+      return out;
+    }
+
+    function fileToDataURL(file){
+      return new Promise((resolve) => {
+        if(!file){ resolve(""); return; }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result || "");
+        reader.onerror = () => resolve("");
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function flagFromCode(code){
+      if(!code) return "";
+      const cc = code.trim().toUpperCase();
+      if(cc.length !== 2) return "";
+      const A = 0x1F1E6;
+      const base = "A".charCodeAt(0);
+      const first = A + (cc.charCodeAt(0) - base);
+      const second = A + (cc.charCodeAt(1) - base);
+      return String.fromCodePoint(first, second);
+    }
+
+    function setHint(msg, type=""){
+      formHint.textContent = msg || "";
+      formHint.style.color = type==="error" ? "rgba(239,68,68,.95)" :
+                            type==="ok" ? "rgba(34,197,94,.95)" :
+                            "rgba(167,176,192,.92)";
+    }
+
+    function isTypingTarget(target){
+      if(!target) return false;
+      const tag = (target.tagName || "").toLowerCase();
+      return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+    }
+
+    function toggleFinishedLiveFields(){
+      const isLive = inputs.status.value === "Live";
+      liveOnlyA.classList.toggle("hidden", !isLive);
+      liveOnlyB.classList.toggle("hidden", !isLive);
+      finishedOnlyA.classList.toggle("hidden", isLive);
+      finishedOnlyA2.classList.toggle("hidden", isLive);
+      finishedOnlyB.classList.toggle("hidden", isLive);
+    }
+
+    function setFlagPreview(dataUrl){
+      if(dataUrl){
+        flagPreviewEl.src = dataUrl;
+        flagPreviewEl.classList.remove("hidden");
+        flagEmojiEl.classList.add("hidden");
+      } else {
+        flagPreviewEl.removeAttribute("src");
+        flagPreviewEl.classList.add("hidden");
+        flagEmojiEl.classList.remove("hidden");
+      }
+    }
+
+    flagUploadEl.addEventListener("change", async () => {
+      const data = await fileToDataURL(flagUploadEl.files[0]);
+      setFlagPreview(data);
+    });
+
+    function clearForm(){
+      inputs.eventLogo.value = "";
+      inputs.trophyLogo.value = "";
+      inputs.name.value = "";
+      inputs.link.value = "";
+      inputs.status.value = "Finished";
+      inputs.time.value = "";
+      inputs.prizePool.value = "";
+      inputs.players.value = "";
+      inputs.location.value = "";
+      inputs.importance.value = "";
+      inputs.major.value = "false";
+      inputs.stage.value = "";
+      inputs.m1.value = "";
+      inputs.m2.value = "";
+      inputs.m3.value = "";
+      inputs.winnerTeam.value = "";
+      inputs.runnerUpTeam.value = "";
+      inputs.mvp.value = "";
+      inputs.evp.value = "";
+      inputs.vp.value = "";
+      flagUploadEl.value = "";
+      setFlagPreview("");
+      setHint("");
+      toggleFinishedLiveFields();
+    }
+
+    function enterAddMode(){
+      editingIndex = null;
+      panelTitle.textContent = "Add new event";
+      submitBtn.textContent = "Add event";
+      cancelEditBtn.classList.add("hidden");
+      setHint("");
+      clearForm();
+    }
+
+    function enterEditMode(idx){
+      const ev = events[idx];
+      editingIndex = idx;
+
+      panelTitle.textContent = "Update event";
+      submitBtn.textContent = "Save update";
+      cancelEditBtn.classList.remove("hidden");
+
+      inputs.eventLogo.value = "";
+      inputs.trophyLogo.value = "";
+      flagUploadEl.value = "";
+
+      inputs.name.value = safeText(ev.name);
+      inputs.link.value = safeText(ev.driveLink);
+      inputs.status.value = safeText(ev.status || "Finished");
+      inputs.time.value = safeText(ev.time);
+      inputs.prizePool.value = safeText(ev.prizePool);
+      inputs.players.value = safeText(ev.players);
+      inputs.location.value = safeText(ev.location);
+
+      inputs.importance.value = safeText(ev.importance);
+      inputs.major.value = ev.major ? "true" : "false";
+      inputs.stage.value = safeText(ev.stage);
+
+      inputs.m1.value = safeText((ev.nextMatches && ev.nextMatches[0]) ? ev.nextMatches[0] : "");
+      inputs.m2.value = safeText((ev.nextMatches && ev.nextMatches[1]) ? ev.nextMatches[1] : "");
+      inputs.m3.value = safeText((ev.nextMatches && ev.nextMatches[2]) ? ev.nextMatches[2] : "");
+
+      inputs.winnerTeam.value = safeText(ev.winnerTeam);
+      inputs.runnerUpTeam.value = safeText(ev.runnerUpTeam);
+      inputs.mvp.value = safeText(ev.mvp);
+      inputs.evp.value = safeText(ev.evp);
+      inputs.vp.value = safeText(ev.vp);
+
+      toggleFinishedLiveFields();
+      setFlagPreview(ev.flagImage || "");
+
+      setHint("Updating an event: upload a new logo/flag only if you want to replace it.", "ok");
+      addPanel.classList.remove("hidden");
+    }
+
+    function toggleUpdateMode(){
+      updateMode = !updateMode;
+      updateBtn.textContent = `Update: ${updateMode ? "ON" : "OFF"}`;
+      updateBtn.classList.toggle("success", updateMode);
+      if(!updateMode){
+        enterAddMode();
+      }
+      render();
+    }
+
+    function toggleAddPanel(){
+      addPanel.classList.toggle("hidden");
+    }
+
+    async function handleSubmit(){
+      const name = inputs.name.value.trim();
+      const link = inputs.link.value.trim();
+
+      if(!name){
+        setHint("Event name is required.", "error");
+        return;
+      }
+      if(!link || !/^https?:\/\//i.test(link)){
+        setHint("A valid Google Drive link is required (must start with http/https).", "error");
+        return;
+      }
+
+      const status = inputs.status.value;
+      const isLive = status === "Live";
+
+      const importance = Math.max(1, Math.min(5, Number(inputs.importance.value) || 1));
+      const players = Number(inputs.players.value) || 0;
+
+      const newEventLogo = await fileToDataURL(inputs.eventLogo.files[0]);
+      const newTrophyLogo = await fileToDataURL(inputs.trophyLogo.files[0]);
+      const newFlagImage = await fileToDataURL(flagUploadEl.files[0]);
+
+      const nextMatches = [inputs.m1.value.trim(), inputs.m2.value.trim(), inputs.m3.value.trim()]
+        .filter(Boolean)
+        .slice(0,3);
+
+      const winnerTeam = isLive ? "" : inputs.winnerTeam.value.trim();
+      const runnerUpTeam = isLive ? "" : inputs.runnerUpTeam.value.trim();
+      const mvp = isLive ? "" : inputs.mvp.value.trim();
+      const evp = isLive ? "" : inputs.evp.value.trim();
+      const vp  = isLive ? "" : inputs.vp.value.trim();
+
+      const payload = {
+        eventLogo: newEventLogo,
+        trophyLogo: newTrophyLogo,
+        flagImage: newFlagImage,
+
+        name,
+        driveLink: link,
+        status,
+        time: inputs.time.value.trim() || (isLive ? "Live" : ""),
+        prizePool: inputs.prizePool.value.trim(),
+        players,
+        location: inputs.location.value.trim(),
+
+        importance,
+        major: inputs.major.value === "true",
+        stage: isLive ? inputs.stage.value.trim() : "",
+        nextMatches: isLive ? nextMatches : [],
+
+        winnerTeam,
+        runnerUpTeam,
+        mvp, evp, vp
+      };
+
+      if(editingIndex === null){
+        events.unshift(payload);
+        saveEvents();
+        render();
+        setHint("Event added and saved.", "ok");
+        clearForm();
+      }else{
+        const old = events[editingIndex];
+
+        payload.eventLogo = payload.eventLogo || old.eventLogo || "";
+        payload.trophyLogo = payload.trophyLogo || old.trophyLogo || "";
+        payload.flagImage = payload.flagImage || old.flagImage || "";
+
+        // keep legacy fields if they existed
+        payload.countryCode = old.countryCode;
+        payload.countryName = old.countryName;
+
+        events[editingIndex] = payload;
+        saveEvents();
+        render();
+        setHint("Event updated and saved.", "ok");
+      }
+    }
+
+    function deleteEvent(idx){
+      events.splice(idx, 1);
+      saveEvents();
+      render();
+      if(editingIndex === idx){
+        enterAddMode();
+      }
+    }
+
+    function render(){
+      listEl.innerHTML = "";
+
+      if(events.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "panel";
+        empty.innerHTML = `
+          <div class="panelBody">
+            <div style="color: rgba(167,176,192,.92); line-height:1.6;">
+              No events yet. Use the add panel above to create your first entry.
+            </div>
+          </div>
+        `;
+        listEl.appendChild(empty);
+        return;
+      }
+
+      events.forEach((ev, idx) => {
+        const isLive = ev.status === "Live";
+        const card = document.createElement("article");
+        card.className = "card";
+
+        if (ev.eventLogo) card.style.setProperty("--eventBg", `url("${ev.eventLogo}")`);
+        else card.style.setProperty("--eventBg", "none");
+
+        const logoHTML = ev.eventLogo
+          ? `<img src="${ev.eventLogo}" alt="${safeText(ev.name)} logo">`
+          : `<div class="ph" aria-hidden="true">📅</div>`;
+
+        const majorHTML = ev.major
+          ? `<span class="major"><span class="crown" aria-hidden="true">👑</span> MAJOR</span>`
+          : "";
+
+        const timePill = isLive
+          ? `<span class="pill live">● Live</span>`
+          : `<span class="pill">${safeText(ev.time)}</span>`;
+
+        const liveBlock = isLive
+          ? `
+            <div class="liveBlock">
+              <div class="liveTitle">
+                <div style="font-weight:900; letter-spacing:-0.01em;">Live details</div>
+                <div class="pill live">Stage: ${safeText(ev.stage) || "—"}</div>
+              </div>
+              <div class="matches" aria-label="Next matches">
+                ${(ev.nextMatches || []).slice(0,3).map(m => `
+                  <div class="match">
+                    <span>${safeText(m).split(" – ")[0] || safeText(m)}</span>
+                    <span style="margin-left:auto;opacity:.8">${safeText(m).includes(" – ") ? safeText(m).split(" – ").slice(1).join(" – ") : ""}</span>
+                  </div>
+                `).join("") || `<div class="hint">No next matches provided.</div>`}
+              </div>
+            </div>
+          `
+          : "";
+
+        const finishedBlock = !isLive
+          ? `
+            <div class="finishedBlock">
+              <div class="winnerRow">
+                <div style="font-weight:900; letter-spacing:-0.01em;">Winner:</div>
+                <div class="winnerTeam">${safeText(ev.winnerTeam) || "—"}</div>
+                ${
+                  ev.trophyLogo && ev.winnerTeam
+                    ? `<img class="trophyImg" src="${ev.trophyLogo}" alt="Trophy logo">`
+                    : ""
+                }
+              </div>
+
+              <div class="runnerUpRow">
+                <strong>2nd place:</strong> <span>${safeText(ev.runnerUpTeam) || "—"}</span>
+              </div>
+
+              <div class="highlights" aria-label="Highlights">
+                <div class="chip"><strong>MVP:</strong> ${safeText(ev.mvp) || "—"}</div>
+                <div class="chip"><strong>EVP:</strong> ${safeText(ev.evp) || "—"}</div>
+                <div class="chip"><strong>VP:</strong> ${safeText(ev.vp) || "—"}</div>
+              </div>
+            </div>
+          `
+          : "";
+
+        const editControls = updateMode
+          ? `
+            <div class="editBar">
+              <button class="btn secondary" type="button" data-action="edit" data-idx="${idx}">Edit</button>
+              <button class="btn danger" type="button" data-action="delete" data-idx="${idx}">Delete</button>
+            </div>
+          `
+          : "";
+
+        const locText = safeText(ev.location) || "—";
+        let locPrefix = "";
+        if (ev.flagImage){
+          locPrefix = `<img class="flagMini" src="${ev.flagImage}" alt="Flag">`;
+        } else if (ev.countryCode){
+          const emo = flagFromCode(ev.countryCode);
+          locPrefix = emo ? `<span style="margin-right:8px;">${emo}</span>` : "";
+        }
+
+        card.innerHTML = `
+          <div class="inner">
+            <div class="logoBox">${logoHTML}</div>
+
+            <div>
+              <div class="head">
+                <div class="nameRow">
+                  <a class="eventName" href="${safeText(ev.driveLink)}" target="_blank" rel="noopener noreferrer">
+                    ${safeText(ev.name)}
+                  </a>
+                  ${timePill}
+                  ${majorHTML}
+                </div>
+
+                <div>${starsHTML(ev.importance)}</div>
+              </div>
+
+              <div class="meta" role="list">
+                <div class="kv" role="listitem">
+                  <div class="k">Prize pool</div>
+                  <div class="v">${safeText(ev.prizePool) || "—"}</div>
+                </div>
+
+                <div class="kv" role="listitem">
+                  <div class="k">Players</div>
+                  <div class="v">${safeText(ev.players) || "0"}</div>
+                </div>
+
+                <div class="kv" role="listitem">
+                  <div class="k">Location</div>
+                  <div class="v">${locPrefix}${locText}</div>
+                </div>
+              </div>
+
+              ${liveBlock}
+              ${finishedBlock}
+              ${editControls}
+            </div>
+          </div>
+        `;
+
+        listEl.appendChild(card);
+      });
+
+      listEl.querySelectorAll("button[data-action]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const action = btn.getAttribute("data-action");
+          const idx = Number(btn.getAttribute("data-idx"));
+          if(Number.isNaN(idx)) return;
+
+          if(action === "edit"){
+            enterEditMode(idx);
+          }else if(action === "delete"){
+            deleteEvent(idx);
+          }
+        });
+      });
+    }
+
+    statusEl.addEventListener("change", toggleFinishedLiveFields);
+    submitBtn.addEventListener("click", handleSubmit);
+
+    cancelEditBtn.addEventListener("click", () => {
+      enterAddMode();
+      setHint("Update canceled.", "");
+    });
+
+    clearAllBtn.addEventListener("click", () => {
+      clearForm();
+      setHint("Form cleared.", "");
+    });
+
+    updateBtn.addEventListener("click", toggleUpdateMode);
+
+    window.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === "a" || e.key === "A")) {
+        e.preventDefault();
+        toggleAddPanel();
+        return;
+      }
+
+      if (e.key === "0") {
+        if (isTypingTarget(e.target)) return;
+        window.location.href = "index.html";
+      }
+    });
+
+    toggleFinishedLiveFields();
+    enterAddMode();
+    render();
+  </script>
+</body>
+</html>
