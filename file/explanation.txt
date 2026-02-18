@@ -1,7 +1,10 @@
-OLD
+OLD.xlsx
 Base [start]
 
-NEW
+ranking.xlsx
 America Open Qualifier
+
+
+
 
 Em "archives" salvar também o histórico as partidas antigas, pois a cada Season, um novo excel será puxado do 0

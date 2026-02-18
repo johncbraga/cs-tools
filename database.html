@@ -288,6 +288,33 @@
       </div>
     </section>
 
+    <!-- NEW: RECENT MATCHES + UNDO -->
+    <section class="card" style="margin-bottom:18px;">
+      <div class="card-head">
+        <div class="card-title">Recent matches</div>
+        <button class="btn small" id="btnUndo" type="button" disabled>Undo last action</button>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap" style="max-height:240px;">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Match</th>
+                <th>Result</th>
+                <th class="num">ΔA</th>
+                <th class="num">ΔB</th>
+              </tr>
+            </thead>
+            <tbody id="matchesBody"></tbody>
+          </table>
+        </div>
+        <div class="footer-note" style="margin-top:10px;">
+          Match history is stored locally and (if present) in the downloaded Excel sheet <span class="mono">matches</span>.
+        </div>
+      </div>
+    </section>
+
     <!-- TOURNAMENT WIN -->
     <section class="card" style="margin-bottom:18px;">
       <div class="card-head">
@@ -393,6 +420,141 @@ const COL = {
 let teams = [];
 let extraCols = [];
 let resetPreviewReady = false;
+
+/* ===================== NEW: MATCH HISTORY + UNDO ===================== */
+const LS_MATCHES_KEY = "ranking_match_history_v1";
+const MATCH_HISTORY_MAX = 25;
+const UNDO_STACK_MAX = 20;
+
+let matchHistory = [];   // newest first
+let undoStack = [];      // last action on top
+
+function safeJsonParse(s, fallback){
+  try{ return JSON.parse(s); }catch{ return fallback; }
+}
+function deepClone(obj){
+  return JSON.parse(JSON.stringify(obj));
+}
+function saveMatchHistory(){
+  try{
+    localStorage.setItem(LS_MATCHES_KEY, JSON.stringify(matchHistory.slice(0, MATCH_HISTORY_MAX)));
+  }catch(e){
+    // storage might be blocked; ignore safely
+  }
+}
+function loadMatchHistoryFromLocalStorage(){
+  const raw = localStorage.getItem(LS_MATCHES_KEY);
+  const arr = safeJsonParse(raw, []);
+  if (Array.isArray(arr)) matchHistory = arr.slice(0, MATCH_HISTORY_MAX);
+}
+
+function formatWhen(ts){
+  const d = new Date(ts);
+  if (!isFinite(d)) return "";
+  // English output, 24h
+  return d.toLocaleString("en-US", { year:"2-digit", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hour12:false });
+}
+function resultLabel(r){
+  if (r === "A") return "A wins";
+  if (r === "B") return "B wins";
+  return "Draw";
+}
+function renderMatchHistory(){
+  const tb = document.getElementById("matchesBody");
+  if (!tb) return;
+  tb.innerHTML = "";
+
+  const rows = matchHistory.slice(0, 10);
+  if (!rows.length){
+    tb.innerHTML = `<tr><td colspan="5" style="color:var(--muted);">No matches recorded yet.</td></tr>`;
+    return;
+  }
+
+  for (const m of rows){
+    const when = formatWhen(m.ts);
+    const match = `${htmlEscape(m.a)} vs ${htmlEscape(m.b)}`;
+    const res = resultLabel(m.result);
+    const dA = Number(m.deltaA || 0);
+    const dB = Number(m.deltaB || 0);
+    tb.innerHTML += `
+      <tr>
+        <td class="mono">${htmlEscape(when)}</td>
+        <td>${match}</td>
+        <td><span class="badge mono">${htmlEscape(res)}</span></td>
+        <td class="num">${dA.toFixed(2)}</td>
+        <td class="num">${dB.toFixed(2)}</td>
+      </tr>
+    `;
+  }
+}
+function updateUndoButton(){
+  const btn = document.getElementById("btnUndo");
+  if (!btn) return;
+  btn.disabled = undoStack.length === 0;
+}
+function pushUndo(action){
+  undoStack.push(action);
+  if (undoStack.length > UNDO_STACK_MAX) undoStack.shift();
+  updateUndoButton();
+}
+function undoLastAction(){
+  if (!undoStack.length){
+    showAlert("Nothing to undo.", "warn");
+    return;
+  }
+  const action = undoStack.pop();
+  updateUndoButton();
+
+  if (action.type === "match"){
+    // restore both teams
+    const A = teams.find(t => t[COL.TEAM] === action.aName);
+    const B = teams.find(t => t[COL.TEAM] === action.bName);
+
+    if (A && action.beforeA) Object.assign(A, deepClone(action.beforeA));
+    if (B && action.beforeB) Object.assign(B, deepClone(action.beforeB));
+
+    // remove the recorded match (the one we added)
+    if (action.matchId){
+      matchHistory = matchHistory.filter(m => m.id !== action.matchId);
+      saveMatchHistory();
+    }
+
+    renderTable();
+    renderMatchHistory();
+    showAlert("Undone: last match has been reverted.", "good");
+    return;
+  }
+
+  if (action.type === "tourney"){
+    const T = teams.find(t => t[COL.TEAM] === action.teamName);
+    if (T && action.beforeT){
+      Object.assign(T, deepClone(action.beforeT));
+      renderTable();
+      renderMatchHistory();
+      showAlert("Undone: last tournament update has been reverted.", "good");
+    }else{
+      showAlert("Undo failed: team not found.", "bad");
+    }
+    return;
+  }
+
+  if (action.type === "seasonReset"){
+    if (action.beforeTeams){
+      teams = deepClone(action.beforeTeams);
+      // After replacing the teams array, normalize and ensure optional cols:
+      teams = dedupeByTeam(teams.map(normalizeRow));
+      renderTable();
+      renderMatchHistory();
+      showAlert("Undone: season reset has been reverted.", "good");
+    }else{
+      showAlert("Undo failed: no snapshot available.", "bad");
+    }
+    return;
+  }
+
+  showAlert("Nothing to undo (unknown action).", "warn");
+}
+document.getElementById("btnUndo").addEventListener("click", undoLastAction);
 
 /* ===================== FIXED SEASON RESET RULES ===================== */
 const RESET_BASE = 1000;
@@ -558,6 +720,10 @@ function renderTable(){
     `;
   }
   fillSelects();
+
+  // NEW: keep matches view updated when table changes
+  renderMatchHistory();
+  updateUndoButton();
 }
 
 /* ===================== VERSUS ===================== */
@@ -609,11 +775,20 @@ function applyMatch(result){
     return;
   }
 
+  // NEW: push undo snapshot BEFORE mutating
+  const beforeA = deepClone(A);
+  const beforeB = deepClone(B);
+
   const deltas = computeDeltas(A, B);
 
+  let deltaA = 0, deltaB = 0;
+
   if (result === "A"){
-    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.A_win.dA;
-    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.A_win.dB;
+    deltaA = deltas.A_win.dA;
+    deltaB = deltas.A_win.dB;
+
+    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltaA;
+    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltaB;
 
     A[COL.V] += 1;
     B[COL.L] += 1;
@@ -621,8 +796,11 @@ function applyMatch(result){
     A[COL.S] += 1;
     B[COL.S] = 0;
   } else if (result === "B"){
-    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.B_win.dA;
-    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.B_win.dB;
+    deltaA = deltas.B_win.dA;
+    deltaB = deltas.B_win.dB;
+
+    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltaA;
+    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltaB;
 
     B[COL.V] += 1;
     A[COL.L] += 1;
@@ -631,8 +809,11 @@ function applyMatch(result){
     A[COL.S] = 0;
   } else {
     // Draw
-    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.draw.dA;
-    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.draw.dB;
+    deltaA = deltas.draw.dA;
+    deltaB = deltas.draw.dB;
+
+    A[COL.PTS] = (Number(A[COL.PTS])||0) + deltaA;
+    B[COL.PTS] = (Number(B[COL.PTS])||0) + deltaB;
 
     A[COL.S] = 0;
     B[COL.S] = 0;
@@ -644,8 +825,30 @@ function applyMatch(result){
   A[COL.TIER] = tierFromPoints(A[COL.PTS]);
   B[COL.TIER] = tierFromPoints(B[COL.PTS]);
 
-  A[COL.UPDATED] = new Date().toISOString();
-  B[COL.UPDATED] = new Date().toISOString();
+  const ts = new Date().toISOString();
+  A[COL.UPDATED] = ts;
+  B[COL.UPDATED] = ts;
+
+  // NEW: record match
+  const matchId = `${ts}::${aName}::${bName}::${Math.random().toString(16).slice(2)}`;
+  matchHistory.unshift({
+    id: matchId,
+    ts,
+    a: aName,
+    b: bName,
+    result,
+    deltaA,
+    deltaB,
+    ea: deltas.ea,
+    eb: deltas.eb,
+    kA: deltas.kA,
+    kB: deltas.kB
+  });
+  matchHistory = matchHistory.slice(0, MATCH_HISTORY_MAX);
+  saveMatchHistory();
+
+  // NEW: store undo action (includes match id so undo removes it)
+  pushUndo({ type: "match", aName, bName, beforeA, beforeB, matchId });
 
   renderTable();
   showAlert("Match applied. Download the updated Excel to persist changes.", "good");
@@ -699,6 +902,9 @@ function applyTourneyWin(){
     return;
   }
 
+  // NEW: undo snapshot
+  const beforeT = deepClone(T);
+
   // Update requested columns:
   if (type === "major"){
     T[COL.MAJ] += 1;
@@ -713,6 +919,9 @@ function applyTourneyWin(){
   T[COL.BONUS_REM] = TOURNEY_BONUS[type].dur;
 
   T[COL.UPDATED] = new Date().toISOString();
+
+  // NEW: push undo action
+  pushUndo({ type: "tourney", teamName: name, beforeT });
 
   renderTable();
   showAlert("Tournament win applied (Majors/Trophies updated + temporary bonus activated).", "good");
@@ -769,6 +978,10 @@ function confirmSeasonReset(){
     showAlert("Please run the preview first.", "warn");
     return;
   }
+
+  // NEW: undo snapshot of all teams before mutating
+  const beforeTeams = deepClone(teams);
+
   // Apply changes
   for (const t of teams){
     const oldP = Number(t[COL.PTS]) || RESET_BASE;
@@ -794,6 +1007,9 @@ function confirmSeasonReset(){
 
     t[COL.UPDATED] = new Date().toISOString();
   }
+
+  // NEW: push undo action
+  pushUndo({ type: "seasonReset", beforeTeams });
 
   resetPreviewReady = false;
   document.getElementById("btnConfirmReset").disabled = true;
@@ -838,6 +1054,23 @@ function toExportRows(){
   });
 }
 
+function toMatchExportRows(){
+  // Export newest first; keep at most MATCH_HISTORY_MAX
+  const arr = matchHistory.slice(0, MATCH_HISTORY_MAX);
+  return arr.map(m => ({
+    "Timestamp": m.ts || "",
+    "Team A": m.a || "",
+    "Team B": m.b || "",
+    "Result": m.result || "",
+    "Delta A": Number(m.deltaA || 0),
+    "Delta B": Number(m.deltaB || 0),
+    "EA": Number(m.ea || 0),
+    "EB": Number(m.eb || 0),
+    "K_A": Number(m.kA || 0),
+    "K_B": Number(m.kB || 0)
+  }));
+}
+
 function downloadExcel(){
   if (!teams.length){
     showAlert("Nothing to download. Load the Excel first.", "warn");
@@ -847,6 +1080,14 @@ function downloadExcel(){
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "ranking");
+
+  // NEW: Add matches sheet (if any)
+  if (matchHistory.length){
+    const mrows = toMatchExportRows();
+    const mws = XLSX.utils.json_to_sheet(mrows);
+    XLSX.utils.book_append_sheet(wb, mws, "matches");
+  }
+
   XLSX.writeFile(wb, "ranking_updated.xlsx");
   showAlert("Excel generated: <strong>ranking_updated.xlsx</strong>. Replace <span class='mono'>file/ranking.xlsx</span> in your repo.", "good");
 }
@@ -876,6 +1117,54 @@ async function loadFromUrl(){
   }
 }
 
+function loadMatchesFromWorkbook(wb){
+  // Look for "matches" sheet (case-insensitive)
+  const name = wb.SheetNames.find(n => String(n).toLowerCase() === "matches");
+  if (!name) return false;
+
+  const ws = wb.Sheets[name];
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+  const parsed = raw.map(r => {
+    const ts = r["Timestamp"] || r["timestamp"] || r["TS"] || r["ts"] || "";
+    const a  = r["Team A"] || r["A"] || r["teamA"] || r["a"] || "";
+    const b  = r["Team B"] || r["B"] || r["teamB"] || r["b"] || "";
+    const result = (r["Result"] || r["result"] || "").toString().trim().toUpperCase();
+    const deltaA = Number(r["Delta A"] ?? r["deltaA"] ?? 0);
+    const deltaB = Number(r["Delta B"] ?? r["deltaB"] ?? 0);
+    const ea = Number(r["EA"] ?? r["ea"] ?? 0);
+    const eb = Number(r["EB"] ?? r["eb"] ?? 0);
+    const kA = Number(r["K_A"] ?? r["kA"] ?? 0);
+    const kB = Number(r["K_B"] ?? r["kB"] ?? 0);
+
+    const fixedResult = (result === "A" || result === "B" || result === "D") ? result : "D";
+    return {
+      id: `${ts}::${a}::${b}::${Math.random().toString(16).slice(2)}`,
+      ts,
+      a: String(a),
+      b: String(b),
+      result: fixedResult,
+      deltaA: Number.isFinite(deltaA) ? deltaA : 0,
+      deltaB: Number.isFinite(deltaB) ? deltaB : 0,
+      ea: Number.isFinite(ea) ? ea : 0,
+      eb: Number.isFinite(eb) ? eb : 0,
+      kA: Number.isFinite(kA) ? kA : 0,
+      kB: Number.isFinite(kB) ? kB : 0
+    };
+  }).filter(m => m.ts && m.a && m.b);
+
+  // newest first: try to sort by timestamp desc if valid
+  parsed.sort((x,y) => {
+    const dx = Date.parse(x.ts), dy = Date.parse(y.ts);
+    if (isFinite(dx) && isFinite(dy)) return dy - dx;
+    return String(y.ts).localeCompare(String(x.ts));
+  });
+
+  matchHistory = parsed.slice(0, MATCH_HISTORY_MAX);
+  saveMatchHistory();
+  return true;
+}
+
 function loadFromArrayBuffer(ab){
   const wb = XLSX.read(ab, { type:"array" });
   const sheetName = wb.SheetNames[0];
@@ -896,6 +1185,16 @@ function loadFromArrayBuffer(ab){
   if (!teams.length){
     showAlert(`Sheet loaded but no valid rows found (missing "${COL.TEAM}" column).`, "warn");
   }
+
+  // NEW: Load matches from workbook if present; otherwise localStorage
+  const loadedFromFile = loadMatchesFromWorkbook(wb);
+  if (!loadedFromFile){
+    loadMatchHistoryFromLocalStorage();
+  }
+
+  // NEW: Reset undo stack on load (cannot safely undo across different files)
+  undoStack = [];
+  updateUndoButton();
 
   renderTable();
   document.getElementById("versusBox").style.display = "none";
@@ -949,7 +1248,13 @@ document.addEventListener("keydown", (e)=>{
 }, { capture: true });
 
 /* ===================== INIT ===================== */
+// NEW: bootstrap local match history early (in case load fails)
+loadMatchHistoryFromLocalStorage();
+renderMatchHistory();
+updateUndoButton();
+
 loadFromUrl();
 </script>
 </body>
 </html>
+``
