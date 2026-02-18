@@ -1,12 +1,11 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Seeding • Gerador de Confrontos</title>
+  <title>Seeding • Match Generator</title>
 
   <style>
-  /* ====== CSS (tudo em um arquivo) ====== */
   :root{
     --bg:#0b1220;
     --card:#111a2e;
@@ -61,7 +60,6 @@
     padding:16px 16px 14px;
     margin:14px 0;
   }
-  .card.subtle{background:rgba(17,26,46,.55)}
   .state{padding:10px 12px; border-radius:12px; border:1px dashed var(--border); color:var(--muted)}
   .row{display:flex; align-items:center; gap:10px; margin-top:10px}
   .row.wrap{flex-wrap:wrap}
@@ -132,63 +130,62 @@
   .vs{color:var(--accent); font-weight:700}
   .bye{border-color:rgba(124,242,194,.35)}
   .footer{max-width:1150px; margin:18px auto; padding:0 18px 30px;}
-  .explain{color:var(--muted); line-height:1.4}
   kbd{border:1px solid var(--border); border-bottom-color:rgba(255,255,255,.25); padding:2px 6px; border-radius:8px; background:rgba(8,13,25,.55); font-family:var(--mono)}
   </style>
 </head>
 <body>
   <header class="topbar">
     <div class="title">
-      <h1>Gerador de Confrontos (Seeding)</h1>
-      <p class="subtitle">Marca os times e gere os matches automaticamente: mais fortes vs mais fracos.</p>
+      <h1>Match Generator (Seeding)</h1>
+      <p class="subtitle">Strongest vs weakest seeding — match order is randomized.</p>
     </div>
 
-    <button id="backBtn" class="back-btn" title="Voltar para index.html (atalho: tecla 0)">
-      ⟵ Voltar
+    <button id="backBtn" class="back-btn" title="Go back to index.html (shortcut: key 0)">
+      ⟵ Back
     </button>
   </header>
 
   <main class="container">
 
     <section class="card">
-      <h2>1) Fonte do ranking</h2>
+      <h2>1) Ranking source</h2>
       <p>
-        O site tenta ler <code>file/ranking.xlsx</code> e usa apenas as colunas <strong>Team</strong> e <strong>Points</strong>.
+        This page reads <code>file/ranking.xlsx</code> and uses only the <strong>Team</strong> and <strong>Points</strong> columns.
       </p>
 
-      <div id="loadState" class="state">Carregando ranking…</div>
+      <div id="loadState" class="state">Loading ranking…</div>
 
       <details class="fallback" id="fallbackBox">
-        <summary>Não conseguiu ler o Excel? Cole dados manualmente (Team, Points)</summary>
-        <p class="hint">Formato: <code>Nome do time;Pontos</code> (uma linha por time) — separador “;” ou “,”.</p>
-        <textarea id="manualInput" placeholder="Ex.:
+        <summary>Can't read the Excel? Paste data manually (Team, Points)</summary>
+        <p class="hint">Format: <code>Team Name;Points</code> (one per line) — separator “;” or “,”.</p>
+        <textarea id="manualInput" placeholder="Example:
 Team A;105
 Team B;90
 Team C;60"></textarea>
         <div class="row">
-          <button id="useManual" class="btn">Usar dados manuais</button>
+          <button id="useManual" class="btn">Use pasted data</button>
           <span id="manualStatus" class="muted"></span>
         </div>
       </details>
     </section>
 
     <section class="card">
-      <h2>2) Escolha os times</h2>
+      <h2>2) Pick the teams</h2>
 
       <div class="row wrap">
         <div class="field">
-          <label for="filter">Pesquisar time</label>
-          <input id="filter" type="text" placeholder="Digite para filtrar…" autocomplete="off" />
+          <label for="filter">Search teams</label>
+          <input id="filter" type="text" placeholder="Type to filter…" autocomplete="off" />
         </div>
       </div>
 
       <div class="row wrap">
         <div class="field grow">
-          <label for="bulkNames">Colar lista de nomes (opcional)</label>
-          <textarea id="bulkNames" placeholder="Cole nomes (um por linha) para marcar automaticamente…"></textarea>
+          <label for="bulkNames">Paste a list of team names (optional)</label>
+          <textarea id="bulkNames" placeholder="Paste names (one per line) to auto-select…"></textarea>
           <div class="row">
-            <button id="applyBulk" class="btn">Marcar nomes colados</button>
-            <button id="clearSel" class="btn secondary">Limpar seleção</button>
+            <button id="applyBulk" class="btn">Select pasted names</button>
+            <button id="clearSel" class="btn secondary">Clear selection</button>
             <span class="muted" id="selCount"></span>
           </div>
         </div>
@@ -196,8 +193,8 @@ Team C;60"></textarea>
 
       <div class="list-wrap">
         <div class="list-head">
-          <span>Times do ranking</span>
-          <span class="muted">Marque os que vão participar</span>
+          <span>Teams in ranking</span>
+          <span class="muted">Check the ones that will play</span>
         </div>
         <div id="teamList" class="team-list"></div>
       </div>
@@ -205,58 +202,43 @@ Team C;60"></textarea>
     </section>
 
     <section class="card">
-      <h2>3) Matches (seeding automático)</h2>
+      <h2>3) Matches</h2>
       <p class="hint">
-        O seeding é simples e direto: ordena os selecionados por pontos (desc) e pareia <strong>1º vs último</strong>, <strong>2º vs penúltimo</strong>…
-        Se sobrar 1 time (quantidade ímpar), ele recebe <strong>BYE</strong>.
+        Seeding pairs the strongest with the weakest (<strong>#1 vs last</strong>, <strong>#2 vs second-to-last</strong>, etc.).
+        The displayed match order is then <strong>shuffled randomly</strong>.
+        Odd team count creates a <strong>BYE</strong>.
       </p>
 
       <div class="row wrap">
-        <button id="generate" class="btn primary">Gerar matches</button>
-        <button id="copy" class="btn" disabled>Copiar</button>
-        <button id="download" class="btn" disabled>Baixar .txt</button>
+        <button id="generate" class="btn primary">Generate matches</button>
+        <button id="copy" class="btn" disabled>Copy</button>
+        <button id="download" class="btn" disabled>Download .txt</button>
         <span id="genInfo" class="muted"></span>
       </div>
 
       <div class="grid">
         <div>
-          <h3>Selecionados (ordenados por pontos)</h3>
+          <h3>Selected (sorted by points)</h3>
           <div id="selectedTable" class="mono"></div>
         </div>
         <div>
-          <h3>Matches</h3>
+          <h3>Matches (random order)</h3>
           <div id="matchups" class="matchups"></div>
         </div>
       </div>
 
-      <details class="card subtle">
-        <summary>Atalhos e detalhes</summary>
-        <div class="explain">
-          <p>Botão “Voltar” no canto superior direito leva para <code>index.html</code>.</p>
-          <p>Tecla <kbd>0</kbd> faz o mesmo, desde que você não esteja digitando em um campo.</p>
-          <p><strong>Observação:</strong> se você abrir via <code>file://</code>, alguns navegadores bloqueiam o <code>fetch()</code> do Excel. Use um servidor local se necessário.</p>
-        </div>
-      </details>
     </section>
 
   </main>
 
   <footer class="footer">
-    <span class="muted">Atalho: tecla <kbd>0</kbd> (fora de campos) volta para <code>index.html</code>.</span>
+    <span class="muted">Shortcut: press <kbd>0</kbd> (outside inputs) to go back to <code>index.html</code>.</span>
   </footer>
 
-  <!-- SheetJS (xlsx) para ler ranking.xlsx no navegador -->
+  <!-- SheetJS (xlsx) to read ranking.xlsx in the browser -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-  /* ====== JS (tudo em um arquivo) ======
-     Atualização: removido estágio e modo. Agora é sempre: mais fortes vs mais fracos.
-     - Ordena selecionados por Points desc.
-     - Pareia i com (n-1-i).
-     - Ímpar: BYE.
-     - Voltar: botão e tecla 0 fora de inputs.
-  */
-
   const RANKING_PATH = 'file/ranking.xlsx';
 
   const els = {
@@ -304,7 +286,7 @@ Team C;60"></textarea>
   function sortRanking(arr){
     return arr.slice().sort((a,b)=>{
       if (b.points !== a.points) return b.points - a.points;
-      return a.team.localeCompare(b.team, 'pt-BR', {sensitivity:'base'});
+      return a.team.localeCompare(b.team, 'en', {sensitivity:'base'});
     });
   }
 
@@ -325,7 +307,7 @@ Team C;60"></textarea>
   }
 
   function updateSelCount(){
-    els.selCount.textContent = `${selected.size} selecionado(s)`;
+    els.selCount.textContent = `${selected.size} selected`;
   }
 
   function renderTeamList(){
@@ -370,7 +352,7 @@ Team C;60"></textarea>
     els.teamList.innerHTML = '';
     els.teamList.appendChild(frag);
     if (visible === 0){
-      els.teamList.innerHTML = `<div class="muted" style="padding:10px">Nenhum time encontrado para o filtro atual.</div>`;
+      els.teamList.innerHTML = `<div class="muted" style="padding:10px">No teams found for this filter.</div>`;
     }
   }
 
@@ -401,7 +383,7 @@ Team C;60"></textarea>
     }
     updateSelCount();
     renderTeamList();
-    els.genInfo.textContent = matched ? `Marcados ${matched} nome(s) encontrados no ranking.` : 'Nenhum nome colado bateu com o ranking (verifique ortografia).';
+    els.genInfo.textContent = matched ? `Selected ${matched} matching name(s).` : 'No pasted name matched the ranking (check spelling).';
   }
 
   function clearSelection(){
@@ -430,7 +412,7 @@ Team C;60"></textarea>
     if (t){
       box.innerHTML = `<strong>#${seed} ${escapeHtml(t.team)}</strong><small>${t.points} pts</small>`;
     } else {
-      box.innerHTML = `<strong>#${seed} BYE</strong><small>sem adversário</small>`;
+      box.innerHTML = `<strong>#${seed} BYE</strong><small>no opponent</small>`;
     }
     return box;
   }
@@ -438,7 +420,7 @@ Team C;60"></textarea>
   function renderMatches(matches){
     els.matchups.innerHTML = '';
     if (!matches.length){
-      els.matchups.innerHTML = '<div class="muted">Sem matches para mostrar.</div>';
+      els.matchups.innerHTML = '<div class="muted">No matches to show.</div>';
       return;
     }
 
@@ -449,7 +431,7 @@ Team C;60"></textarea>
 
       const hdr = document.createElement('div');
       hdr.className = 'hdr';
-      hdr.innerHTML = `<div><strong>Match ${idx+1}</strong></div><div class="round">Forte vs Fraco</div>`;
+      hdr.innerHTML = `<div><strong>Match ${idx+1}</strong></div><div class="round">Randomized order</div>`;
 
       const pair = document.createElement('div');
       pair.className = 'pair';
@@ -469,8 +451,7 @@ Team C;60"></textarea>
     els.matchups.appendChild(frag);
   }
 
-  function buildMatches(teams){
-    // teams já vem ordenado (pontos desc)
+  function buildSeededPairs(teams){
     const n = teams.length;
     const matches = [];
     for (let i=0; i<Math.ceil(n/2); i++){
@@ -487,9 +468,17 @@ Team C;60"></textarea>
     return matches;
   }
 
+  function shuffleInPlace(arr){
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   function buildOutputText(teams, matches){
     const lines = [];
-    lines.push(`Matches gerados (seeding forte vs fraco) — total selecionados: ${teams.length}`);
+    lines.push(`Generated matches (seeded strong vs weak, randomized order) — selected teams: ${teams.length}`);
     lines.push('');
     matches.forEach((m, idx)=>{
       const a = m.a ? `${m.a.team} (${m.a.points})` : 'BYE';
@@ -519,11 +508,13 @@ Team C;60"></textarea>
   function generate(){
     const teams = getSelectedTeamsSorted();
     if (teams.length < 2){
-      els.genInfo.textContent = 'Selecione pelo menos 2 times.';
+      els.genInfo.textContent = 'Select at least 2 teams.';
       return;
     }
 
-    const matches = buildMatches(teams);
+    const seededPairs = buildSeededPairs(teams);
+    const matches = shuffleInPlace(seededPairs.slice());
+
     renderSelectedTable(teams);
     renderMatches(matches);
 
@@ -532,7 +523,7 @@ Team C;60"></textarea>
     els.download.disabled = false;
 
     const byeCount = teams.length % 2 === 1 ? 1 : 0;
-    els.genInfo.textContent = `Gerado: ${matches.length} match(es)` + (byeCount ? ' (1 BYE).' : '.');
+    els.genInfo.textContent = `Generated: ${matches.length} match(es)` + (byeCount ? ' (1 BYE).' : '.');
   }
 
   function findColumnKey(obj, wanted){
@@ -548,22 +539,22 @@ Team C;60"></textarea>
   }
 
   async function loadRankingFromXlsx(){
-    if (!window.XLSX) throw new Error('Biblioteca XLSX não carregou.');
+    if (!window.XLSX) throw new Error('XLSX library did not load.');
 
     const res = await fetch(RANKING_PATH, {cache:'no-store'});
-    if (!res.ok) throw new Error(`Não foi possível buscar ${RANKING_PATH} (HTTP ${res.status}).`);
+    if (!res.ok) throw new Error(`Could not fetch ${RANKING_PATH} (HTTP ${res.status}).`);
     const buf = await res.arrayBuffer();
 
     const wb = XLSX.read(buf, {type:'array'});
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-    if (!rows.length) throw new Error('Planilha vazia.');
+    if (!rows.length) throw new Error('Empty sheet.');
 
     const teamKey = findColumnKey(rows[0], 'Team');
     const pointsKey = findColumnKey(rows[0], 'Points');
     if (!teamKey || !pointsKey){
-      throw new Error('Não encontrei as colunas Team e Points.');
+      throw new Error('Could not find Team and Points columns.');
     }
 
     const data = [];
@@ -602,9 +593,9 @@ Team C;60"></textarea>
     els.copy.addEventListener('click', async ()=>{
       try{
         await copyToClipboard(lastOutputText);
-        els.genInfo.textContent = 'Matches copiados!';
+        els.genInfo.textContent = 'Copied!';
       } catch {
-        els.genInfo.textContent = 'Não consegui copiar automaticamente. Selecione e copie manualmente.';
+        els.genInfo.textContent = 'Could not copy automatically. Select and copy manually.';
       }
     });
 
@@ -615,22 +606,22 @@ Team C;60"></textarea>
     els.useManual.addEventListener('click', ()=>{
       const data = parseManualLines(els.manualInput.value);
       if (data.length < 2){
-        els.manualStatus.textContent = 'Cole pelo menos 2 linhas válidas.';
+        els.manualStatus.textContent = 'Paste at least 2 valid lines.';
         return;
       }
       ranking = sortRanking(data).map((t,i)=>({ ...t, seed:i+1 }));
-      setLoadedState(true, `Usando dados manuais (${ranking.length} times).`);
-      els.manualStatus.textContent = `OK — ${ranking.length} carregados.`;
+      setLoadedState(true, `Using pasted data (${ranking.length} teams).`);
+      els.manualStatus.textContent = `OK — ${ranking.length} loaded.`;
       renderTeamList();
     });
 
     try{
       ranking = await loadRankingFromXlsx();
-      setLoadedState(true, `Ranking carregado: ${ranking.length} times (de ${RANKING_PATH}).`);
+      setLoadedState(true, `Ranking loaded: ${ranking.length} teams (from ${RANKING_PATH}).`);
       els.fallbackBox.open = false;
     } catch (err){
       console.warn(err);
-      setLoadedState(false, `Falha ao ler ${RANKING_PATH}. Abra o painel abaixo e cole manualmente, ou rode um servidor local.`);
+      setLoadedState(false, `Failed to read ${RANKING_PATH}. Open the section below and paste manually, or use a local server.`);
       els.fallbackBox.open = true;
     }
 
