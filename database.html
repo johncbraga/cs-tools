@@ -185,6 +185,7 @@
 
   <div class="row">
     <span class="pill">📄 Auto-load: <span class="mono" id="excelUrlLabel">file/ranking.xlsx</span></span>
+    <button class="btn small" id="btnBackToMenu">Back to menu</button>
     <button class="btn small" id="btnReload">Reload</button>
     <button class="btn primary small" id="btnDownload">Download updated Excel</button>
   </div>
@@ -332,7 +333,7 @@
           <small class="mono">keep = 0.35</small><br>
           <small class="mono">newPoints = 1000 + (oldPoints - 1000) * 0.35</small><br>
           <small class="mono">prestige += oldPoints</small><br>
-          <small>Streak resets to 0, and seasonal Wins/Losses reset to 0. Majors & Trophies stay.</small>
+          <small>Streak resets to 0, and seasonal Wins/Losses reset to 0. Majors &amp; Trophies stay.</small>
         </div>
 
         <button class="btn" style="margin-top:12px;width:100%;" id="btnPreviewReset">
@@ -396,7 +397,6 @@ let resetPreviewReady = false;
 /* ===================== FIXED SEASON RESET RULES ===================== */
 const RESET_BASE = 1000;
 const RESET_KEEP = 0.35; // stable long-term compression
-// Prestige gain rule requested: comparable to team points at reset -> add the full oldPoints.
 function prestigeGainFromPoints(oldPoints){
   return Math.round(Number(oldPoints) || 0);
 }
@@ -468,7 +468,6 @@ function ensureOptionalCols(row){
 function normalizeRow(row){
   const r = { ...row };
 
-  // Required columns defaults
   if (!(COL.TEAM in r)) r[COL.TEAM] = "";
   r[COL.TEAM] = String(r[COL.TEAM]).trim();
 
@@ -486,8 +485,10 @@ function normalizeRow(row){
   r[COL.S]   = parseInt(r[COL.S]   || 0, 10) || 0;
   r[COL.L]   = parseInt(r[COL.L]   || 0, 10) || 0;
   r[COL.MAJ] = parseInt(r[COL.MAJ] || 0, 10) || 0;
-  r[COL.PRE] = Number(r[COL.PRE] || 0); // allow big / non-integer prestige if needed
+
+  r[COL.PRE] = Number(r[COL.PRE] || 0);
   if (!Number.isFinite(r[COL.PRE])) r[COL.PRE] = 0;
+
   r[COL.TRO] = parseInt(r[COL.TRO] || 0, 10) || 0;
 
   r[COL.PTS] = Number(r[COL.PTS]);
@@ -630,7 +631,6 @@ function applyMatch(result){
     B[COL.S] += 1;
     A[COL.S] = 0;
   } else {
-    // Draw
     A[COL.PTS] = (Number(A[COL.PTS])||0) + deltas.draw.dA;
     B[COL.PTS] = (Number(B[COL.PTS])||0) + deltas.draw.dB;
 
@@ -699,15 +699,12 @@ function applyTourneyWin(){
     return;
   }
 
-  // Update requested columns:
   if (type === "major"){
     T[COL.MAJ] += 1;
   } else {
-    // regional + global count in the same trophies column
     T[COL.TRO] += 1;
   }
 
-  // Activate temporary bonus
   ensureOptionalCols(T);
   T[COL.BONUS_TYPE] = type;
   T[COL.BONUS_REM] = TOURNEY_BONUS[type].dur;
@@ -726,7 +723,6 @@ function previewSeasonReset(){
     return;
   }
 
-  // compute preview stats without mutating
   let sumOld=0, sumNew=0;
   let maxDrop = -Infinity;
   let biggest = null;
@@ -769,29 +765,24 @@ function confirmSeasonReset(){
     showAlert("Please run the preview first.", "warn");
     return;
   }
-  // Apply changes
+
   for (const t of teams){
     const oldP = Number(t[COL.PTS]) || RESET_BASE;
     const newP = RESET_BASE + (oldP - RESET_BASE) * RESET_KEEP;
 
-    // prestige comparable to points: add full old points
     const preAdd = prestigeGainFromPoints(oldP);
     t[COL.PRE] = Number(t[COL.PRE] || 0) + preAdd;
 
-    // reset season stats
     t[COL.PTS] = newP;
     t[COL.V] = 0;
     t[COL.L] = 0;
     t[COL.S] = 0;
 
-    // clear active bonus to start season clean
     ensureOptionalCols(t);
     t[COL.BONUS_TYPE] = "none";
     t[COL.BONUS_REM] = 0;
 
-    // tier from points
     t[COL.TIER] = tierFromPoints(t[COL.PTS]);
-
     t[COL.UPDATED] = new Date().toISOString();
   }
 
@@ -853,13 +844,9 @@ function downloadExcel(){
 document.getElementById("btnDownload").addEventListener("click", downloadExcel);
 
 /* ===================== AUTO-LOAD FIX ===================== */
-/**
- * This is the key fix:
- * Use a base-safe URL so GitHub Pages works regardless of repo subpath or page filename.
- */
 function getExcelUrl(){
-  const base = new URL(".", window.location.href);            // folder of current page
-  return new URL("file/ranking.xlsx", base).toString();       // absolute-safe
+  const base = new URL(".", window.location.href);
+  return new URL("file/ranking.xlsx", base).toString();
 }
 
 async function loadFromUrl(){
@@ -885,7 +872,6 @@ function loadFromArrayBuffer(ab){
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
 
-  // preserve extra columns
   const range = XLSX.utils.decode_range(ws["!ref"]);
   const headers = [];
   for (let C = range.s.c; C <= range.e.c; C++){
@@ -916,6 +902,34 @@ document.getElementById("fileInput").addEventListener("change", async (ev)=>{
   const ab = await file.arrayBuffer();
   loadFromArrayBuffer(ab);
   showAlert(`Manual load: <span class="mono">${htmlEscape(file.name)}</span>`, "good");
+});
+
+/* ===================== BACK TO MENU (BUTTON + KEY 0) ===================== */
+function backToMenu(){
+  const alerts = document.getElementById("alerts");
+  if (alerts) alerts.innerHTML = "";
+
+  const versusBox = document.getElementById("versusBox");
+  if (versusBox) versusBox.style.display = "none";
+
+  const resetPreview = document.getElementById("resetPreview");
+  if (resetPreview) resetPreview.style.display = "none";
+
+  const confirmReset = document.getElementById("btnConfirmReset");
+  if (confirmReset) confirmReset.disabled = true;
+
+  resetPreviewReady = false;
+}
+
+document.getElementById("btnBackToMenu").addEventListener("click", backToMenu);
+
+document.addEventListener("keydown", (e)=>{
+  const tag = e.target && e.target.tagName ? e.target.tagName : "";
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  if (e.key === "0"){
+    e.preventDefault();
+    backToMenu();
+  }
 });
 
 // INIT

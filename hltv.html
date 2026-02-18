@@ -464,7 +464,7 @@
       <option value="Loses">Loses</option>
       <option value="Majors">Majors</option>
       <option value="Prestige">Prestige</option>
-      <option value="Sazonal Prestige">Sazonal Prestige</option>
+      <option value="Tournaments Trophies">Tournaments Trophies</option>
       <option value="Tier">Tier</option>
     </select>
 
@@ -597,7 +597,7 @@
 
     <div class="card" style="grid-column:1 / -1">
       <div class="card-header">
-        <h3>Legends Elo Ranking (501+ Points)</h3>
+        <h3>Legends Elo Ranking (1700++ Points)</h3>
         <select id="legendsRegionFilter" title="Região Legends">
           <option value="Global">Global</option>
           <option value="AM">Americas</option>
@@ -783,7 +783,7 @@
         .filter(r => {
           const points = num(r[idxPoints]);
           const regionMatch = (legendsRegion === "Global" || r[idxRegion] === legendsRegion);
-          return points > 501 && regionMatch;
+          return points > 1700 && regionMatch;
         })
         .sort((a,b) => num(b[idxPoints]) - num(a[idxPoints]));
 
