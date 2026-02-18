@@ -659,7 +659,6 @@
             </select>
           </div>
 
-          <!-- ✅ Event filter -->
           <div class="field">
             <label for="eventSelect">Event</label>
             <select id="eventSelect">
@@ -667,11 +666,37 @@
             </select>
           </div>
 
-          <!-- ✅ NEW: Date filter -->
+          <!-- ✅ NEW: Date (calendar) -->
           <div class="field">
-            <label for="dateSelect">Date</label>
-            <select id="dateSelect">
-              <option value="">All dates</option>
+            <label for="dateInput">Date (calendar)</label>
+            <input id="dateInput" type="date" />
+          </div>
+
+          <!-- ✅ NEW: Month -->
+          <div class="field">
+            <label for="monthSelect">Month</label>
+            <select id="monthSelect">
+              <option value="">All months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+
+          <!-- ✅ NEW: Year -->
+          <div class="field">
+            <label for="yearSelect">Year</label>
+            <select id="yearSelect">
+              <option value="">All years</option>
             </select>
           </div>
 
@@ -697,7 +722,6 @@
               <th>Score</th>
               <th>Result</th>
               <th>Event</th>
-              <!-- ✅ NEW: Date column -->
               <th>Date</th>
             </tr>
           </thead>
@@ -711,6 +735,8 @@
 
       <div class="hint">
         Result is shown as <b>Win/Lose</b> from the perspective of the searched team.
+        <br/>
+        Tip: choose <b>Date</b> for exact day, or use <b>Month/Year</b> to browse long-term.
       </div>
     </section>
 
@@ -721,7 +747,7 @@
 
   <script>
     const EXCEL_PATH = "file/history.xlsx";
-    // ✅ UPDATED: new headers "Event" + "Date"
+    // ✅ UPDATED: includes Date
     const EXPECTED_HEADERS = ["Team 1", "Team 2", "Map", "Result", "Event", "Date"];
     const GENERAL_MAP_VALUE = "__general__";
 
@@ -741,8 +767,12 @@
       search: document.getElementById("searchInput"),
       mapSelect: document.getElementById("mapSelect"),
       eventSelect: document.getElementById("eventSelect"),
-      // ✅ NEW: dateSelect
-      dateSelect: document.getElementById("dateSelect"),
+
+      // ✅ NEW
+      dateInput: document.getElementById("dateInput"),
+      monthSelect: document.getElementById("monthSelect"),
+      yearSelect: document.getElementById("yearSelect"),
+
       opponentSelect: document.getElementById("opponentSelect"),
       clearBtn: document.getElementById("clearBtn"),
 
@@ -837,8 +867,9 @@
         rebuildTeamLookup(allMatches);
         populateMapOptions(allMatches);
         populateEventOptions(allMatches);
-        // ✅ NEW: populate date options
-        populateDateOptions(allMatches);
+
+        // ✅ NEW: populate years from matches
+        populateYearOptions(allMatches);
 
         populateTeamOptions(allMatches);
         populateComparisonTeamOptions(allMatches);
@@ -989,8 +1020,32 @@
       els.search.addEventListener("input", onAnyChange);
       els.mapSelect.addEventListener("change", onAnyChange);
       els.eventSelect.addEventListener("change", onAnyChange);
-      // ✅ NEW: Date filter change handler
-      els.dateSelect.addEventListener("change", onAnyChange);
+
+      // ✅ NEW: Date/day/month/year behavior
+      els.dateInput.addEventListener("change", () => {
+        if (els.dateInput.value){
+          // if exact day chosen, clear month/year for clarity
+          els.monthSelect.value = "";
+          els.yearSelect.value = "";
+        }
+        onAnyChange();
+      });
+
+      els.monthSelect.addEventListener("change", () => {
+        if (els.monthSelect.value){
+          // if month chosen, clear exact day for clarity
+          els.dateInput.value = "";
+        }
+        onAnyChange();
+      });
+
+      els.yearSelect.addEventListener("change", () => {
+        if (els.yearSelect.value){
+          // if year chosen, clear exact day for clarity
+          els.dateInput.value = "";
+        }
+        onAnyChange();
+      });
 
       els.opponentSelect.addEventListener("change", () => {
         applyMatchFilters();
@@ -1001,8 +1056,11 @@
         els.search.value = "";
         els.mapSelect.value = "";
         els.eventSelect.value = "";
-        // ✅ NEW: clear date filter
-        els.dateSelect.value = "";
+
+        // ✅ NEW clear date filters
+        els.dateInput.value = "";
+        els.monthSelect.value = "";
+        els.yearSelect.value = "";
 
         els.opponentSelect.value = "";
         els.opponentSelect.disabled = true;
@@ -1050,8 +1108,11 @@
       const s = parseSearchInput();
       const map = els.mapSelect.value;
       const event = els.eventSelect.value;
-      // ✅ NEW
-      const date = els.dateSelect.value;
+
+      // ✅ NEW date filters
+      const pickedDayISO = (els.dateInput.value || "").trim(); // YYYY-MM-DD
+      const month = (els.monthSelect.value || "").trim(); // 01-12
+      const year = (els.yearSelect.value || "").trim(); // 2026...
 
       const focus = getFocusTeam();
       const opponent = els.opponentSelect.value;
@@ -1076,9 +1137,14 @@
         const matchesEvent = !event || (m.event || "") === event;
         if (!matchesEvent) return false;
 
-        // ✅ NEW: Date filter
-        const matchesDate = !date || (m.date || "") === date;
-        if (!matchesDate) return false;
+        // ✅ NEW: Date/day/month/year filters
+        // Priority: exact day (calendar) > month/year
+        if (pickedDayISO){
+          if (!m.dateISO || m.dateISO !== pickedDayISO) return false;
+        } else {
+          if (year && String(m.dateYear || "") !== year) return false;
+          if (month && String(m.dateMonth || "").padStart(2,"0") !== month) return false;
+        }
 
         // Opponent filter
         if (opponent && focus){
@@ -1115,7 +1181,6 @@
           <td><span class="badge neutral">${m.score1}x${m.score2}</span></td>
           <td>${resultCell}</td>
           <td>${escapeHtml(m.event || "")}</td>
-          <!-- ✅ NEW: Date cell -->
           <td>${escapeHtml(m.date || "")}</td>
         `;
         els.tbody.appendChild(tr);
@@ -1174,16 +1239,25 @@
       }
     }
 
-    // ✅ NEW: populate date options (same pattern as Map/Event)
-    function populateDateOptions(matches){
-      while (els.dateSelect.options.length > 1) els.dateSelect.remove(1);
-      const dates = [...new Set(matches.map(m => (m.date || "").trim()).filter(Boolean))]
-        .sort((a,b)=>a.localeCompare(b));
-      for (const dt of dates){
-        const opt = document.createElement("option");
-        opt.value = dt; opt.textContent = dt;
-        els.dateSelect.appendChild(opt);
+    // ✅ NEW: populate years (dropdown) based on loaded matches
+    function populateYearOptions(matches){
+      const prev = els.yearSelect.value;
+      els.yearSelect.innerHTML = `<option value="">All years</option>`;
+
+      const years = new Set();
+      for (const m of matches){
+        if (m.dateYear) years.add(String(m.dateYear));
       }
+      const sorted = [...years].sort((a,b)=>a.localeCompare(b));
+      for (const y of sorted){
+        const opt = document.createElement("option");
+        opt.value = y;
+        opt.textContent = y;
+        els.yearSelect.appendChild(opt);
+      }
+
+      if (prev && sorted.includes(prev)) els.yearSelect.value = prev;
+      else els.yearSelect.value = "";
     }
 
     /* ----------------------------
@@ -1860,46 +1934,91 @@
         .filter(Boolean);
     }
 
-    // ✅ NEW: normalize Date column safely (text / serial / Date)
-    function normalizeDateValue(v){
-      if (v === null || v === undefined) return "";
+    // ✅ NEW: parse date from different Excel formats into:
+    // - display: DD/MM/YYYY (for table)
+    // - iso: YYYY-MM-DD (for calendar filtering)
+    // - year/month numeric
+    function normalizeDateAny(v){
+      if (v === null || v === undefined || v === "") {
+        return { display:"", iso:"", year:null, month:null };
+      }
+
+      // If it's already a Date object
       if (v instanceof Date && !isNaN(v)) {
-        const dd = String(v.getDate()).padStart(2,"0");
-        const mm = String(v.getMonth()+1).padStart(2,"0");
-        const yy = String(v.getFullYear());
-        return `${dd}/${mm}/${yy}`;
+        return dateObjToParts(v);
       }
 
-      // numbers may be Excel serial dates
-      if (typeof v === "number" && Number.isFinite(v)){
-        if (v > 20000 && v < 60000 && XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === "function"){
+      // Excel serial number (often)
+      if (typeof v === "number" && Number.isFinite(v)) {
+        // try SheetJS date parser
+        if (XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === "function") {
           const d = XLSX.SSF.parse_date_code(v);
-          if (d && d.y && d.m && d.d){
-            const dd = String(d.d).padStart(2,"0");
-            const mm = String(d.m).padStart(2,"0");
-            const yy = String(d.y);
-            return `${dd}/${mm}/${yy}`;
+          if (d && d.y && d.m && d.d) {
+            const dt = new Date(Date.UTC(d.y, d.m - 1, d.d));
+            return dateObjToPartsUTC(dt);
           }
         }
-        return String(v).trim();
+        // fallback: treat as string
+        const s = String(v).trim();
+        return parseDateString(s);
       }
 
-      const s = String(v).trim();
-      // numeric-looking string might still be a serial
-      if (/^\d+(\.\d+)?$/.test(s)){
-        const n = Number(s);
-        if (Number.isFinite(n) && n > 20000 && n < 60000 && XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === "function"){
-          const d = XLSX.SSF.parse_date_code(n);
-          if (d && d.y && d.m && d.d){
-            const dd = String(d.d).padStart(2,"0");
-            const mm = String(d.m).padStart(2,"0");
-            const yy = String(d.y);
-            return `${dd}/${mm}/${yy}`;
-          }
-        }
+      // string formats: "DD/MM/YYYY", "YYYY-MM-DD", etc.
+      return parseDateString(String(v).trim());
+    }
+
+    function dateObjToParts(date){
+      const dd = String(date.getDate()).padStart(2,"0");
+      const mm = String(date.getMonth()+1).padStart(2,"0");
+      const yy = String(date.getFullYear());
+      return {
+        display: `${dd}/${mm}/${yy}`,
+        iso: `${yy}-${mm}-${dd}`,
+        year: Number(yy),
+        month: Number(mm)
+      };
+    }
+
+    function dateObjToPartsUTC(date){
+      const dd = String(date.getUTCDate()).padStart(2,"0");
+      const mm = String(date.getUTCMonth()+1).padStart(2,"0");
+      const yy = String(date.getUTCFullYear());
+      return {
+        display: `${dd}/${mm}/${yy}`,
+        iso: `${yy}-${mm}-${dd}`,
+        year: Number(yy),
+        month: Number(mm)
+      };
+    }
+
+    function parseDateString(s){
+      if (!s) return { display:"", iso:"", year:null, month:null };
+
+      // YYYY-MM-DD
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m){
+        const yy = m[1], mm = m[2], dd = m[3];
+        return { display:`${dd}/${mm}/${yy}`, iso:`${yy}-${mm}-${dd}`, year:Number(yy), month:Number(mm) };
       }
 
-      return s;
+      // DD/MM/YYYY
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m){
+        const dd = m[1], mm = m[2], yy = m[3];
+        return { display:`${dd}/${mm}/${yy}`, iso:`${yy}-${mm}-${dd}`, year:Number(yy), month:Number(mm) };
+      }
+
+      // D/M/YYYY or DD/M/YYYY etc (be flexible)
+      m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m){
+        const dd = String(m[1]).padStart(2,"0");
+        const mm = String(m[2]).padStart(2,"0");
+        const yy = m[3];
+        return { display:`${dd}/${mm}/${yy}`, iso:`${yy}-${mm}-${dd}`, year:Number(yy), month:Number(mm) };
+      }
+
+      // If none matched, keep display as-is but no iso
+      return { display:s, iso:"", year:null, month:null };
     }
 
     function normalizeRow(r){
@@ -1908,8 +2027,8 @@
       const map   = String(r["Map"] ?? "").trim();
       const resultRaw = String(r["Result"] ?? "").trim();
       const event = String(r["Event"] ?? "").trim();
-      // ✅ NEW: Date column
-      const date = normalizeDateValue(r["Date"]);
+
+      const d = normalizeDateAny(r["Date"]);
 
       const { s1, s2 } = parseResult(resultRaw);
       if (!team1 || !team2 || !map || s1 === null || s2 === null) return null;
@@ -1919,7 +2038,17 @@
       if (s2 > s1){ winnerSide = "Team 2"; winner = team2; }
       else if (s1 === s2){ winnerSide = "Tie"; winner = "Tie"; }
 
-      return { team1, team2, map, score1: s1, score2: s2, winnerSide, winner, resultRaw, event, date };
+      return {
+        team1, team2, map,
+        score1: s1, score2: s2,
+        winnerSide, winner, resultRaw,
+        event,
+        // ✅ Date fields
+        date: d.display,
+        dateISO: d.iso,
+        dateYear: d.year,
+        dateMonth: d.month
+      };
     }
 
     function parseResult(text){
