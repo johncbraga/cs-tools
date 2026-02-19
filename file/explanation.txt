@@ -8,13 +8,9 @@ Asia Open Qualifier
 
 
 RANKINGS:
-ranking [0] : Base
-ranking [1] : America Open Qualifier
-ranking [2] : 
-
-
-
-
+ranking 0 [Season 0] : Base
+ranking 1 [Season 0] : America Open Qualifier
+ranking 2 [Season 0] : 
 
 
 
