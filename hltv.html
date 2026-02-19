@@ -722,91 +722,101 @@
     }
 
     function update(){
-      if(!headers.length || !rows.length){
-        setLoading(false);
-        setError("Load an Excel file to see the data.");
-        return;
-      }
+  if(!headers.length || !rows.length){
+    setLoading(false);
+    setError("Load an Excel file to see the data.");
+    return;
+  }
 
-      const region = document.getElementById('regionFilter').value;
-      const search = (document.getElementById('teamSearch').value || '').toLowerCase();
-      const metric = document.getElementById('metric').value;
-      const order = document.getElementById('sortOrder').value;
+  const region = document.getElementById('regionFilter').value;
+  const search = (document.getElementById('teamSearch').value || '').toLowerCase();
+  const metric = document.getElementById('metric').value;
+  const order = document.getElementById('sortOrder').value;
 
-      const idxTeam   = headers.indexOf("Team");
-      const idxRegion = headers.indexOf("Region");
-      const idxMetric = headers.indexOf(metric);
-      const idxPoints = headers.indexOf("Points");
+  const idxTeam   = headers.indexOf("Team");
+  const idxRegion = headers.indexOf("Region");
+  const idxMetric = headers.indexOf(metric);
+  const idxPoints = headers.indexOf("Points");
 
-      const regions = { "AM": [], "EU": [], "AS/SIS/ESEA": [] };
+  // 🔧 CORREÇÃO: Usar intPointsDisplay nos gráficos de região
+  const regions = { "AM": [], "EU": [], "AS/SIS/ESEA": [] };
 
-      rows.forEach(r => {
-        const team = (r[idxTeam] || "").toString().toLowerCase();
-        if (search && !team.includes(search)) return;
-        const reg = r[idxRegion];
-        const val = num(r[idxMetric]);
-        if(regions[reg] !== undefined){
-          regions[reg].push(val);
-        }
-      });
-
-      renderRegionChart(
-        ["Americas", "Europa", "Asia"],
-        [avg(regions["AM"]), avg(regions["EU"]), avg(regions["AS/SIS/ESEA"])],
-        metric
-      );
-
-      let filtered = rows.filter(r => {
-        const team = (r[idxTeam] || "").toString().toLowerCase();
-        const regionOk = (region === "Global" || r[idxRegion] === region);
-        const searchOk = (!search || team.includes(search));
-        return regionOk && searchOk;
-      });
-
-      filtered.sort((a,b) =>
-        order === "asc"
-          ? (num(a[idxMetric]) - num(a[idxMetric]))
-          : (num(b[idxMetric]) - num(a[idxMetric]))
-      );
-
-      filtered.sort((a,b) =>
-        order === "asc"
-          ? (num(a[idxMetric]) - num(b[idxMetric]))
-          : (num(b[idxMetric]) - num(a[idxMetric]))
-      );
-
-      renderTable(filtered, idxRegion);
-      renderTopChart(filtered.slice(0,10), idxTeam, idxMetric, metric);
-
-      const legendsRegion = document.getElementById("legendsRegionFilter").value;
-      const legends = rows
-        .filter(r => {
-          const points = num(r[idxPoints]);
-          const regionMatch = (legendsRegion === "Global" || r[idxRegion] === legendsRegion);
-          return points > 1700 && regionMatch;
-        })
-        .sort((a,b) => num(b[idxPoints]) - num(a[idxPoints]));
-
-      renderLegendsTable(legends, idxTeam, idxPoints);
-
-      renderRegionFixedCharts();
-
-      populateTeamPieSelect();
-      renderTeamPie();
-
-      populateTeamCompareSelects();
-      renderTeamCompare();
-
-      document.getElementById('regionChartState').style.display = 'none';
-      document.getElementById('topChartState').style.display = 'none';
-      document.getElementById('dataTableState').style.display = filtered.length ? 'none' : 'flex';
-      document.getElementById('legendsTableState').style.display = legends.length ? 'none' : 'flex';
-
-      document.getElementById('regionChart').style.display = 'block';
-      document.getElementById('topChart').style.display = 'block';
-      document.getElementById('dataTable').style.display = filtered.length ? 'table' : 'none';
-      document.getElementById('legendsTable').style.display = legends.length ? 'table' : 'none';
+  rows.forEach(r => {
+    const team = (r[idxTeam] || "").toString().toLowerCase();
+    if (search && !team.includes(search)) return;
+    const reg = r[idxRegion];
+    const val = num(r[idxMetric]);
+    if(regions[reg] !== undefined){
+      regions[reg].push(val);
     }
+  });
+
+  // Converter Points para inteiro na média
+  const metricIsPoints = (metric === "Points");
+  const avgAM = metricIsPoints ? Math.round(avg(regions["AM"])) : avg(regions["AM"]);
+  const avgEU = metricIsPoints ? Math.round(avg(regions["EU"])) : avg(regions["EU"]);
+  const avgAS = metricIsPoints ? Math.round(avg(regions["AS/SIS/ESEA"])) : avg(regions["AS/SIS/ESEA"]);
+
+  renderRegionChart(
+    ["Americas", "Europa", "Asia"],
+    [avgAM, avgEU, avgAS],
+    metric
+  );
+
+  let filtered = rows.filter(r => {
+    const team = (r[idxTeam] || "").toString().toLowerCase();
+    const regionOk = (region === "Global" || r[idxRegion] === region);
+    const searchOk = (!search || team.includes(search));
+    return regionOk && searchOk;
+  });
+
+  // 🔧 CORREÇÃO: Ordenação com inteiros se for Points
+  if (metricIsPoints) {
+    filtered.sort((a,b) => {
+      const valA = Math.round(num(a[idxMetric]));
+      const valB = Math.round(num(b[idxMetric]));
+      return order === "asc" ? valA - valB : valB - valA;
+    });
+  } else {
+    filtered.sort((a,b) => 
+      order === "asc"
+        ? (num(a[idxMetric]) - num(b[idxMetric]))
+        : (num(b[idxMetric]) - num(a[idxMetric]))
+    );
+  }
+
+  renderTable(filtered, idxRegion);
+  renderTopChart(filtered.slice(0,10), idxTeam, idxMetric, metric);
+
+  const legendsRegion = document.getElementById("legendsRegionFilter").value;
+  const legends = rows
+    .filter(r => {
+      const points = Math.round(num(r[idxPoints])); // 🔧 CORREÇÃO: usar inteiro
+      const regionMatch = (legendsRegion === "Global" || r[idxRegion] === legendsRegion);
+      return points > 1700 && regionMatch;
+    })
+    .sort((a,b) => Math.round(num(b[idxPoints])) - Math.round(num(a[idxPoints]))); // 🔧 CORREÇÃO
+
+  renderLegendsTable(legends, idxTeam, idxPoints);
+
+  renderRegionFixedCharts();
+
+  populateTeamPieSelect();
+  renderTeamPie();
+
+  populateTeamCompareSelects();
+  renderTeamCompare();
+
+  document.getElementById('regionChartState').style.display = 'none';
+  document.getElementById('topChartState').style.display = 'none';
+  document.getElementById('dataTableState').style.display = filtered.length ? 'none' : 'flex';
+  document.getElementById('legendsTableState').style.display = legends.length ? 'none' : 'flex';
+
+  document.getElementById('regionChart').style.display = 'block';
+  document.getElementById('topChart').style.display = 'block';
+  document.getElementById('dataTable').style.display = filtered.length ? 'table' : 'none';
+  document.getElementById('legendsTable').style.display = legends.length ? 'table' : 'none';
+}
 
     function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
 
