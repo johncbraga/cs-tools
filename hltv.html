@@ -819,7 +819,7 @@
         .replace(/\./g, '')   // remove separador de milhar (pt-BR)
         .replace(',', '.');   // troca vírgula decimal por ponto
       const n = Math.trunc(Number(s));
-      return isNaN(n) ? 0 : n;
+      return isNaN(n) ? "0" : String(n); // ✅ ÚNICA MUDANÇA AQUI
     }
 
     function baseChartOptions(title){
@@ -946,7 +946,7 @@
               ? `<span class="badge ${badgeClass}">${escapeHtml(region)}</span>`
               : escapeHtml(region);
           } else {
-            // ✅ ÚNICA MUDANÇA APLICADA NA TABELA: Points exibido como INT
+            // ✅ Points exibido como INT
             if (i === idxPoints) {
               cell = escapeHtml(intPointsDisplay(cell));
             } else {
@@ -985,7 +985,7 @@
           <tr class="${cls}">
             <td>${i+1}</td>
             <td>${escapeHtml(r[teamIdx])}</td>
-            <td>${escapeHtml(intPointsDisplay(r[pointsIdx]))}</td> <!-- ✅ Points como INT só na exibição -->
+            <td>${escapeHtml(intPointsDisplay(r[pointsIdx]))}</td>
           </tr>
         `;
       });
