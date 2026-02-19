@@ -1,16 +1,16 @@
 OLD.xlsx
-America Open Qualifier
+Europe Open Qualifier
 
 ranking.xlsx
-Europe Open Qualifier
+Asia Open Qualifier
 
 
 
 
 RANKINGS:
 ranking [0] : Base
-ranking [1] : 
-
+ranking [1] : America Open Qualifier
+ranking [2] : 
 
 
 
