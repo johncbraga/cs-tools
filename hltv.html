@@ -809,21 +809,7 @@
     }
 
     function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
-
-    // Mantém para cálculos
     function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
-
-    // ✅ ÚNICA MUDANÇA: agora exibe Points com 1 casa decimal (pt-BR), tratando vírgula/ponto
-    function intPointsDisplay(v){
-      const s = (v ?? "").toString().trim()
-        .replace(/\./g, '')   // remove separador de milhar (pt-BR)
-        .replace(',', '.');   // troca vírgula decimal por ponto
-
-      const n = Number(s);
-      if (isNaN(n)) return "0,0";
-
-      return n.toFixed(1).replace('.', ',');
-    }
 
     function baseChartOptions(title){
       return {
@@ -920,7 +906,6 @@
       const metric = document.getElementById("metric").value;
       const idxMetric = headers.indexOf(metric);
       const idxTeam = headers.indexOf("Team");
-      const idxPoints = headers.indexOf("Points"); // ✅ para aplicar só no Points
 
       let html = "<thead><tr>";
       headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
@@ -949,12 +934,7 @@
               ? `<span class="badge ${badgeClass}">${escapeHtml(region)}</span>`
               : escapeHtml(region);
           } else {
-            // ✅ Points exibido com 1 casa decimal
-            if (i === idxPoints) {
-              cell = escapeHtml(intPointsDisplay(cell));
-            } else {
-              cell = escapeHtml(cell);
-            }
+            cell = escapeHtml(cell);
           }
 
           html += `<td class="${cls}">${cell}</td>`;
@@ -988,7 +968,7 @@
           <tr class="${cls}">
             <td>${i+1}</td>
             <td>${escapeHtml(r[teamIdx])}</td>
-            <td>${escapeHtml(intPointsDisplay(r[pointsIdx]))}</td>
+            <td>${escapeHtml(r[pointsIdx])}</td>
           </tr>
         `;
       });
@@ -1000,10 +980,10 @@
     function escapeHtml(v){
       return (v ?? "").toString()
         .replaceAll("&amp;","&amp;amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
+        .replaceAll("&lt;","&amp;lt;")
+        .replaceAll("&gt;","&amp;gt;")
+        .replaceAll('"',"&amp;quot;")
+        .replaceAll("'","&amp;#039;");
     }
 
     function renderRegionFixedCharts(){
@@ -1517,3 +1497,4 @@
   </script>
 </body>
 </html>
+``

@@ -1,8 +1,8 @@
 OLD.xlsx
-Americas RMRs
+Europe RMRs
 
 ranking.xlsx
-Europe RMRs
+Asia RMRs
 
 
 
@@ -12,7 +12,7 @@ ranking 0 [Season 0] : Base
 ranking 1 [Season 0] : America Open Qualifier
 ranking 2 [Season 0] : Europe Open Qualifier
 ranking 3 [Season 0] : Asia Open Qualifier
-ranking 4 [Season 0] : 
+ranking 4 [Season 0] : Americas RMRs
 ranking 5 [Season 0] : 
 ranking n [Season 0] : 
 
