@@ -938,23 +938,26 @@ function computeExtraColsFromSheet(headers){
   return headers.filter(h => !official.has(h));
 }
 
+/* =======================================================
+   ÚNICA ALTERAÇÃO: arredondar valores para inteiro ao exportar
+   ======================================================= */
 function toExportRows(){
   return teams.map(t=>{
     ensureOptionalCols(t);
 
     const row = {
       [COL.TEAM]: t[COL.TEAM],
-      [COL.V]: t[COL.V],
-      [COL.S]: t[COL.S],
-      [COL.L]: t[COL.L],
-      [COL.PTS]: Number(t[COL.PTS]),
-      [COL.MAJ]: t[COL.MAJ],
-      [COL.PRE]: Number(t[COL.PRE] || 0),
-      [COL.TRO]: t[COL.TRO],
+      [COL.V]: parseInt(Math.round(Number(t[COL.V] || 0)), 10),
+      [COL.S]: parseInt(Math.round(Number(t[COL.S] || 0)), 10),
+      [COL.L]: parseInt(Math.round(Number(t[COL.L] || 0)), 10),
+      [COL.PTS]: Math.round(Number(t[COL.PTS])),                 // <-- arredondado
+      [COL.MAJ]: parseInt(Math.round(Number(t[COL.MAJ] || 0)), 10),
+      [COL.PRE]: Math.round(Number(t[COL.PRE] || 0)),
+      [COL.TRO]: parseInt(Math.round(Number(t[COL.TRO] || 0)), 10),
       [COL.TIER]: t[COL.TIER],
       [COL.REG]: t[COL.REG],
       [COL.BONUS_TYPE]: t[COL.BONUS_TYPE],
-      [COL.BONUS_REM]: t[COL.BONUS_REM],
+      [COL.BONUS_REM]: parseInt(Math.round(Number(t[COL.BONUS_REM] || 0)), 10),
       [COL.UPDATED]: t[COL.UPDATED] || ""
     };
 

@@ -662,20 +662,44 @@
     </footer>
   </div>
 
+  <!-- ✅ SCRIPT COMPLETO COM PERSISTÊNCIA MELHORADA (GitHub Pages safe) -->
   <script>
-    const STORAGE_KEY = "kz_events_v1";
+    /**
+     * Persistência "sem backend" para GitHub Pages:
+     * - Mantém localStorage (persistência por navegador)
+     * - Evita conflito entre repositórios no GitHub Pages usando prefixo por pathname
+     * - Inclui backup automático adicional + atalhos de export/import (sem mexer na UI)
+     *
+     * GitHub Pages é estático (sem servidor para salvar dados). [3](https://stackoverflow.com/questions/58528437/how-do-i-store-server-side-data-on-github)
+     * localStorage no GitHub Pages pode colidir entre repos do mesmo usuário, pois compartilham origin. [1](https://tomashubelbauer.github.io/github-pages-local-storage/)[2](https://github.com/TomasHubelbauer/github-pages-local-storage)
+     */
+
+    // ✅ Isolamento por PATH para evitar colisão entre repos no mesmo domínio (GitHub Pages) [1](https://tomashubelbauer.github.io/github-pages-local-storage/)[2](https://github.com/TomasHubelbauer/github-pages-local-storage)
+    const STORAGE_NAMESPACE = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    const STORAGE_KEY = `kz_events_v1::${STORAGE_NAMESPACE}`;
+    const STORAGE_BACKUP_KEY = `${STORAGE_KEY}::backup`;
 
     function loadEvents(){
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const data = raw ? JSON.parse(raw) : [];
-        return Array.isArray(data) ? data : [];
-      }catch{
-        return [];
-      }
+      const tryParse = (raw) => {
+        try{
+          const data = raw ? JSON.parse(raw) : [];
+          return Array.isArray(data) ? data : [];
+        }catch{
+          return null;
+        }
+      };
+
+      const primary = tryParse(localStorage.getItem(STORAGE_KEY));
+      if(primary !== null) return primary;
+
+      const backup = tryParse(localStorage.getItem(STORAGE_BACKUP_KEY));
+      return backup !== null ? backup : [];
     }
+
     function saveEvents(){
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+      const raw = JSON.stringify(events);
+      localStorage.setItem(STORAGE_KEY, raw);
+      localStorage.setItem(STORAGE_BACKUP_KEY, raw); // backup espelho
     }
 
     let events = loadEvents();
@@ -685,7 +709,7 @@
     const listEl = document.getElementById("eventsList");
     const addPanel = document.getElementById("addPanel");
 
-    const toggleAddBtn = document.getElementById("toggleAddBtn"); // ✅ NEW
+    const toggleAddBtn = document.getElementById("toggleAddBtn");
     const updateBtn = document.getElementById("updateBtn");
     const submitBtn = document.getElementById("submitBtn");
     const cancelEditBtn = document.getElementById("cancelEditBtn");
@@ -877,7 +901,6 @@
 
       setHint("Updating an event: upload a new logo/flag only if you want to replace it.", "ok");
 
-      // ✅ make sure panel is visible while editing
       addPanel.classList.remove("hidden");
       syncAddButtonStyle();
     }
@@ -892,7 +915,6 @@
       render();
     }
 
-    // ✅ NEW: single button for open/close + styling
     function syncAddButtonStyle(){
       const isHidden = addPanel.classList.contains("hidden");
       if(toggleAddBtn){
@@ -974,7 +996,6 @@
         payload.trophyLogo = payload.trophyLogo || old.trophyLogo || "";
         payload.flagImage = payload.flagImage || old.flagImage || "";
 
-        // keep legacy fields if they existed
         payload.countryCode = old.countryCode;
         payload.countryName = old.countryName;
 
@@ -1153,6 +1174,47 @@
       });
     }
 
+    // ✅ Export / Import sem UI (atalhos):
+    // Ctrl+Shift+S = Export JSON
+    // Ctrl+Shift+O = Import JSON
+    function exportEventsToFile(){
+      const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "kz-events-backup.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setHint("Backup exported: kz-events-backup.json", "ok");
+    }
+
+    function importEventsFromFile(file){
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const data = JSON.parse(reader.result);
+          if(!Array.isArray(data)) throw new Error("Invalid format");
+          events = data;
+          saveEvents();
+          render();
+          setHint("Backup imported and saved.", "ok");
+        }catch{
+          setHint("Import failed: invalid JSON backup.", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function openImportDialog(){
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json";
+      input.onchange = () => {
+        const f = input.files && input.files[0];
+        if(f) importEventsFromFile(f);
+      };
+      input.click();
+    }
+
     statusEl.addEventListener("change", toggleFinishedLiveFields);
     submitBtn.addEventListener("click", handleSubmit);
 
@@ -1168,7 +1230,6 @@
 
     updateBtn.addEventListener("click", toggleUpdateMode);
 
-    // ✅ NEW: mobile button toggles panel
     if (toggleAddBtn){
       toggleAddBtn.addEventListener("click", toggleAddPanel);
     }
@@ -1180,6 +1241,18 @@
         return;
       }
 
+      if (e.ctrlKey && e.shiftKey && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        exportEventsToFile();
+        return;
+      }
+
+      if (e.ctrlKey && e.shiftKey && (e.key === "o" || e.key === "O")) {
+        e.preventDefault();
+        openImportDialog();
+        return;
+      }
+
       if (e.key === "0") {
         if (isTypingTarget(e.target)) return;
         window.location.href = "index.html";
@@ -1188,11 +1261,9 @@
 
     toggleFinishedLiveFields();
     enterAddMode();
-
-    // ✅ ensure button style matches initial state (panel starts hidden)
     syncAddButtonStyle();
-
     render();
   </script>
 </body>
 </html>
+``
