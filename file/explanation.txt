@@ -1,10 +1,26 @@
 OLD.xlsx
-Base [start]
-
-ranking.xlsx
 America Open Qualifier
 
+ranking.xlsx
+Europe Open Qualifier
 
 
 
+
+RANKINGS:
+ranking [0] : Base
+ranking [1] : 
+
+
+
+
+
+
+
+
+
+
+
+
+Obs:
 Em "archives" salvar também o histórico as partidas antigas, pois a cada Season, um novo excel será puxado do 0
