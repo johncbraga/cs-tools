@@ -581,8 +581,8 @@
           </div>
 
           <div>
-            <label>Players</label>
-            <input id="players" type="number" min="0" step="1" placeholder="80" />
+            <label>Teams</label>
+            <input id="teams" type="number" min="0" step="1" placeholder="80" />
           </div>
 
           <!-- Location with flag upload -->
@@ -738,7 +738,7 @@
       status: el("status"),
       time: el("time"),
       prizePool: el("prizePool"),
-      players: el("players"),
+      teams: el("teams"),
       location: el("location"),
       importance: el("importance"),
       major: el("major"),
@@ -834,7 +834,7 @@
       inputs.status.value = "Finished";
       inputs.time.value = "";
       inputs.prizePool.value = "";
-      inputs.players.value = "";
+      inputs.teams.value = "";
       inputs.location.value = "";
       inputs.importance.value = "";
       inputs.major.value = "false";
@@ -879,7 +879,7 @@
       inputs.status.value = safeText(ev.status || "Finished");
       inputs.time.value = safeText(ev.time);
       inputs.prizePool.value = safeText(ev.prizePool);
-      inputs.players.value = safeText(ev.players);
+      inputs.teams.value = safeText(ev.teams);
       inputs.location.value = safeText(ev.location);
 
       inputs.importance.value = safeText(ev.importance);
@@ -944,7 +944,7 @@
       const isLive = status === "Live";
 
       const importance = Math.max(1, Math.min(5, Number(inputs.importance.value) || 1));
-      const players = Number(inputs.players.value) || 0;
+      const teams = Number(inputs.teams.value) || 0;
 
       const newEventLogo = await fileToDataURL(inputs.eventLogo.files[0]);
       const newTrophyLogo = await fileToDataURL(inputs.trophyLogo.files[0]);
@@ -970,7 +970,7 @@
         status,
         time: inputs.time.value.trim() || (isLive ? "Live" : ""),
         prizePool: inputs.prizePool.value.trim(),
-        players,
+        teams,
         location: inputs.location.value.trim(),
 
         importance,
@@ -1139,8 +1139,8 @@
                 </div>
 
                 <div class="kv" role="listitem">
-                  <div class="k">Players</div>
-                  <div class="v">${safeText(ev.players) || "0"}</div>
+                  <div class="k">Teams</div>
+                  <div class="v">${safeText(ev.teams) || "0"}</div>
                 </div>
 
                 <div class="kv" role="listitem">

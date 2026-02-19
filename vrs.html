@@ -596,6 +596,14 @@
       return Number.isFinite(n) ? n : NaN;
     }
 
+    // ✅ ÚNICA MUDANÇA (Points display as INT): helper só pra exibição
+    function pointsIntDisplay(v){
+      // aceita number ou string com vírgula/ponto; retorna inteiro (truncado)
+      const n = (typeof v === "number") ? v : toNumber(v);
+      const i = Math.trunc(Number(n));
+      return Number.isFinite(i) ? i : 0;
+    }
+
     function buildHeaderMap(rows){
       const map = {};
       const sample = rows[0] || {};
@@ -668,11 +676,11 @@
 
     function escapeHtml(s){
       return String(s)
-        .replaceAll("&amp;amp;","&amp;amp;amp;")
-        .replaceAll("&lt;","&amp;lt;")
-        .replaceAll("&gt;","&amp;gt;")
-        .replaceAll('"',"&amp;quot;")
-        .replaceAll("'","&amp;#039;");
+        .replaceAll("&amp;amp;amp;","&amp;amp;amp;amp;")
+        .replaceAll("&amp;lt;","&amp;amp;lt;")
+        .replaceAll("&amp;gt;","&amp;amp;gt;")
+        .replaceAll('"',"&amp;amp;quot;")
+        .replaceAll("'","&amp;amp;#039;");
     }
 
     function regionLabel(regionValue){
@@ -756,7 +764,7 @@
           <tr class="${rowClass}">
             <td class="right mono">${r.newPos}</td>
             <td>${teamHtml}</td>
-            <td class="right mono">${r.points}</td>
+            <td class="right mono">${pointsIntDisplay(r.points)}</td> <!-- ✅ Points como INT (somente exibição) -->
             <td class="right mono">${diffCell}</td>
             <td>${escapeHtml(regionLabel(r.region))}</td>
             <td>${escapeHtml(r.tier || "")}</td>
@@ -928,7 +936,7 @@
           <tr class="${rowClass}">
             <td class="right mono">${r.newPos}</td>
             <td>${teamHtml}</td>
-            <td class="right mono">${r.points}</td>
+            <td class="right mono">${pointsIntDisplay(r.points)}</td> <!-- ✅ Points como INT (somente exibição) -->
             <td class="right mono">${diffCell}</td>
             <td>${escapeHtml(regionLabel(r.region))}</td>
             <td>${escapeHtml(r.tier || "")}</td>
@@ -1163,10 +1171,10 @@
         <tr>
           <td class="right mono">${aOldPos}</td>
           <td>${escapeHtml(a.team)}</td>
-          <td class="right mono">${ra}</td>
+          <td class="right mono">${pointsIntDisplay(ra)}</td> <!-- ✅ Points como INT (somente exibição) -->
           <td class="right mono">${a.streak}</td>
           <td class="right mono">${aPtsCell}</td>
-          <td class="right mono">${aNewPoints.toFixed(2)}</td>
+          <td class="right mono">${pointsIntDisplay(aNewPoints)}</td> <!-- ✅ Points como INT (somente exibição) -->
           <td class="right">${aMoveCell}</td>
           <td class="right mono small">${aOldPos} → ${aNewPos}</td>
         </tr>
@@ -1176,10 +1184,10 @@
         <tr>
           <td class="right mono">${bOldPos}</td>
           <td>${escapeHtml(b.team)}</td>
-          <td class="right mono">${rb}</td>
+          <td class="right mono">${pointsIntDisplay(rb)}</td> <!-- ✅ Points como INT (somente exibição) -->
           <td class="right mono">${b.streak}</td>
           <td class="right mono">${bPtsCell}</td>
-          <td class="right mono">${bNewPoints.toFixed(2)}</td>
+          <td class="right mono">${pointsIntDisplay(bNewPoints)}</td> <!-- ✅ Points como INT (somente exibição) -->
           <td class="right">${bMoveCell}</td>
           <td class="right mono small">${bOldPos} → ${bNewPos}</td>
         </tr>
