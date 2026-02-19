@@ -662,19 +662,99 @@
     </footer>
   </div>
 
-  <!-- ✅ SCRIPT COMPLETO COM PERSISTÊNCIA MELHORADA (GitHub Pages safe) -->
+  <!-- ===========================
+       [FIREBASE SDK + CLOUD LAYER]
+       =========================== -->
+  <script type="module">
+    // Imports da CDN (modular)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import {
+      getAuth, signInAnonymously, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    // Config que você enviou
+    const firebaseConfig = {
+      apiKey: "AIzaSyC8iTRZRDX0UKmKavndwuqhyqsXareO0GI",
+      authDomain: "teste-f32dc.firebaseapp.com",
+      projectId: "teste-f32dc",
+      storageBucket: "teste-f32dc.firebasestorage.app",
+      messagingSenderId: "577371357875",
+      appId: "1:577371357875:web:93ef689faf690c0d5fa6c6",
+      measurementId: "G-LBM0XJGLRY"
+    };
+
+    // Init
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Namespace estável por caminho (igual ao do app)
+    const STORAGE_NAMESPACE = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    const CLOUD_DOC_ID = btoa(encodeURIComponent(STORAGE_NAMESPACE));
+    const CLOUD_DOC_REF = doc(db, "kzEvents", CLOUD_DOC_ID);
+
+    // Helpers
+    function isValidEventsArray(v){ return Array.isArray(v); }
+
+    async function loadEventsFromCloud(){
+      const snap = await getDoc(CLOUD_DOC_REF);
+      if (snap.exists()){
+        const data = snap.data();
+        if (isValidEventsArray(data.events)) return data.events;
+      }
+      return null;
+    }
+
+    async function saveEventsToCloud(eventsArray){
+      await setDoc(
+        CLOUD_DOC_REF,
+        {
+          events: eventsArray,
+          updatedAt: Date.now(),
+          namespace: STORAGE_NAMESPACE,
+          version: "v1"
+        },
+        { merge: true }
+      );
+    }
+
+    function subscribeCloudUpdates(onUpdate){
+      return onSnapshot(CLOUD_DOC_REF, (snap) => {
+        if (snap.exists()){
+          const data = snap.data();
+          if (isValidEventsArray(data.events)){
+            onUpdate(data.events);
+          }
+        }
+      });
+    }
+
+    // Expor para o script principal
+    window.__KZ_CLOUD__ = {
+      auth,
+      signInAnonymously,
+      onAuthStateChanged,
+      loadEventsFromCloud,
+      saveEventsToCloud,
+      subscribeCloudUpdates,
+    };
+  </script>
+
+  <!-- ===========================
+       [SEU SCRIPT PRINCIPAL + SYNC]
+       =========================== -->
   <script>
     /**
-     * Persistência "sem backend" para GitHub Pages:
-     * - Mantém localStorage (persistência por navegador)
-     * - Evita conflito entre repositórios no GitHub Pages usando prefixo por pathname
-     * - Inclui backup automático adicional + atalhos de export/import (sem mexer na UI)
-     *
-     * GitHub Pages é estático (sem servidor para salvar dados). [3](https://stackoverflow.com/questions/58528437/how-do-i-store-server-side-data-on-github)
-     * localStorage no GitHub Pages pode colidir entre repos do mesmo usuário, pois compartilham origin. [1](https://tomashubelbauer.github.io/github-pages-local-storage/)[2](https://github.com/TomasHubelbauer/github-pages-local-storage)
+     * Persistência "sem backend" + Firestore:
+     * - Mantém localStorage (cache/offline)
+     * - Sincroniza com Firestore (nuvem) por caminho (namespace)
+     * - Import/Export seguem funcionando
      */
 
-    // ✅ Isolamento por PATH para evitar colisão entre repos no mesmo domínio (GitHub Pages) [1](https://tomashubelbauer.github.io/github-pages-local-storage/)[2](https://github.com/TomasHubelbauer/github-pages-local-storage)
+    // Isolamento por PATH (mantém igual ao anterior)
     const STORAGE_NAMESPACE = (location.pathname || "/").replace(/\/+$/, "") || "/";
     const STORAGE_KEY = `kz_events_v1::${STORAGE_NAMESPACE}`;
     const STORAGE_BACKUP_KEY = `${STORAGE_KEY}::backup`;
@@ -696,11 +776,7 @@
       return backup !== null ? backup : [];
     }
 
-    function saveEvents(){
-      const raw = JSON.stringify(events);
-      localStorage.setItem(STORAGE_KEY, raw);
-      localStorage.setItem(STORAGE_BACKUP_KEY, raw); // backup espelho
-    }
+    // >>>> saveEvents foi atualizado para também salvar na nuvem (ver mais abaixo)
 
     let events = loadEvents();
     let updateMode = false;
@@ -985,7 +1061,7 @@
 
       if(editingIndex === null){
         events.unshift(payload);
-        saveEvents();
+        await saveEvents();
         render();
         setHint("Event added and saved.", "ok");
         clearForm();
@@ -1000,7 +1076,7 @@
         payload.countryName = old.countryName;
 
         events[editingIndex] = payload;
-        saveEvents();
+        await saveEvents();
         render();
         setHint("Event updated and saved.", "ok");
       }
@@ -1008,11 +1084,12 @@
 
     function deleteEvent(idx){
       events.splice(idx, 1);
-      saveEvents();
-      render();
-      if(editingIndex === idx){
-        enterAddMode();
-      }
+      saveEvents().then(() => {
+        render();
+        if(editingIndex === idx){
+          enterAddMode();
+        }
+      });
     }
 
     function render(){
@@ -1174,9 +1251,7 @@
       });
     }
 
-    // ✅ Export / Import sem UI (atalhos):
-    // Ctrl+Shift+S = Export JSON
-    // Ctrl+Shift+O = Import JSON
+    // Export / Import (atalhos)
     function exportEventsToFile(){
       const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
@@ -1194,9 +1269,10 @@
           const data = JSON.parse(reader.result);
           if(!Array.isArray(data)) throw new Error("Invalid format");
           events = data;
-          saveEvents();
-          render();
-          setHint("Backup imported and saved.", "ok");
+          saveEvents().then(() => {
+            render();
+            setHint("Backup imported and saved.", "ok");
+          });
         }catch{
           setHint("Import failed: invalid JSON backup.", "error");
         }
@@ -1259,11 +1335,101 @@
       }
     });
 
-    toggleFinishedLiveFields();
-    enterAddMode();
-    syncAddButtonStyle();
-    render();
+    // ===========================
+    // [CLOUD SYNC BOOTSTRAP]
+    // ===========================
+    let cloudReady = false;
+    let cloudUnsubscribe = null;
+
+    async function initCloud(){
+      if (!window.__KZ_CLOUD__) return false;
+
+      const { auth, signInAnonymously, onAuthStateChanged } = window.__KZ_CLOUD__;
+
+      return new Promise((resolve) => {
+        onAuthStateChanged(auth, async (user) => {
+          if (user){
+            cloudReady = true;
+            resolve(true);
+          }else{
+            try{
+              await signInAnonymously(auth);
+              // onAuthStateChanged chamará novamente
+            }catch(e){
+              console.warn("Anonymous auth failed:", e);
+              resolve(false);
+            }
+          }
+        });
+      });
+    }
+
+    async function loadEventsBoot(){
+      // 1) Carrega cache local para render rápido
+      events = loadEvents();
+
+      // 2) Tenta autenticar e sincronizar com nuvem
+      const ok = await initCloud();
+      if (!ok){
+        // Sem nuvem: segue com local
+        toggleFinishedLiveFields();
+        enterAddMode();
+        syncAddButtonStyle();
+        render();
+        return;
+      }
+
+      try{
+        const cloudEvents = await window.__KZ_CLOUD__.loadEventsFromCloud();
+
+        if (Array.isArray(cloudEvents)){
+          // Adota o cloud e salva em cache local
+          events = cloudEvents;
+          await saveEvents(); // cache local + nuvem (idempotente)
+        } else {
+          // Sem dado na nuvem: sobe o que tiver local (se houver)
+          await window.__KZ_CLOUD__.saveEventsToCloud(events);
+        }
+
+        // Assina mudanças em tempo real
+        if (cloudUnsubscribe) cloudUnsubscribe();
+        cloudUnsubscribe = window.__KZ_CLOUD__.subscribeCloudUpdates((cloudArr) => {
+          if (Array.isArray(cloudArr)){
+            events = cloudArr;
+            saveEvents().then(render); // atualiza cache local e re-render
+          }
+        });
+
+      }catch(err){
+        console.warn("Cloud sync failed:", err);
+      }
+
+      // Render inicial
+      toggleFinishedLiveFields();
+      enterAddMode();
+      syncAddButtonStyle();
+      render();
+    }
+
+    // Salva local + nuvem (melhor esforço)
+    async function saveEvents(){
+      // 1) Local cache
+      const raw = JSON.stringify(events);
+      localStorage.setItem(STORAGE_KEY, raw);
+      localStorage.setItem(STORAGE_BACKUP_KEY, raw);
+
+      // 2) Cloud
+      try{
+        if (cloudReady && window.__KZ_CLOUD__){
+          await window.__KZ_CLOUD__.saveEventsToCloud(events);
+        }
+      }catch(err){
+        console.warn("Failed to save to cloud:", err);
+      }
+    }
+
+    // Boot
+    loadEventsBoot();
   </script>
 </body>
 </html>
-``
