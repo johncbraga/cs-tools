@@ -1,8 +1,8 @@
 OLD.xlsx
-Global RMR
+Second Chance RMR
 
 ranking.xlsx
-Second Chance RMR
+Stage 1
 
 
 RANKINGS:
@@ -13,7 +13,7 @@ ranking 3 [Season 0] : Asia Open Qualifier
 ranking 4 [Season 0] : Americas RMRs
 ranking 5 [Season 0] : Europe RMRs
 ranking 6 [Season 0] : Asia RMRs
-ranking 7 [Season 0] : 
+ranking 7 [Season 0] : Global RMR
 ranking 8 [Season 0] : 
 ranking 9 [Season 0] : 
 ranking 10 [Season 0] : 
