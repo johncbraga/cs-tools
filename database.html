@@ -195,7 +195,7 @@
 
 <div class="grid">
 
-  <!-- TABLE -->
+  <!-- TABLE + RECENT MATCHES (MOVED UNDER CURRENT STANDINGS) -->
   <section class="card">
     <div class="card-head">
       <div class="card-title">Current standings</div>
@@ -224,6 +224,33 @@
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
+      </div>
+
+      <!-- MOVED HERE -->
+      <div class="hr"></div>
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="card-title" style="font-size:14px;">Recently applied matches</div>
+        <span class="pill">🧾 Session-only</span>
+      </div>
+
+      <div class="table-wrap" style="max-height:280px; margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Match</th>
+              <th>Result</th>
+              <th class="num">ΔA</th>
+              <th class="num">ΔB</th>
+              <th class="num">Undo</th>
+            </tr>
+          </thead>
+          <tbody id="recentMatchesBody"></tbody>
+        </table>
+      </div>
+
+      <div class="footer-note" style="margin-top:10px;">
+        This list is not saved. It will be cleared on refresh or when leaving this page.
       </div>
 
       <div class="footer-note">
@@ -285,34 +312,6 @@
           <small>Applies: Points (Elo), Wins/Losses, Streak, and consumes 1 bonus game if active.</small>
         </div>
 
-      </div>
-    </section>
-
-    <!-- NEW: RECENT APPLIED MATCHES (IN-MEMORY) -->
-    <section class="card" style="margin-bottom:18px;">
-      <div class="card-head">
-        <div class="card-title">Recently applied matches</div>
-        <span class="pill">🧾 Session-only</span>
-      </div>
-      <div class="card-body">
-        <div class="table-wrap" style="max-height:280px;">
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Match</th>
-                <th>Result</th>
-                <th class="num">ΔA</th>
-                <th class="num">ΔB</th>
-                <th class="num">Undo</th>
-              </tr>
-            </thead>
-            <tbody id="recentMatchesBody"></tbody>
-          </table>
-        </div>
-        <div class="footer-note" style="margin-top:10px;">
-          This list is not saved. It will be cleared on refresh or when leaving this page.
-        </div>
       </div>
     </section>
 
@@ -390,8 +389,8 @@
 /* ===================== RANKING CONFIG ===================== */
 const K_BASE = 30.0;
 const ELO_DIVISOR = 400.0;
-const STREAK_ALPHA = 0.10;   // up to +10%
-const STREAK_SCALE = 5.0;    // tanh(streak/5)
+const STREAK_ALPHA = 0.10;
+const STREAK_SCALE = 5.0;
 const K_HARD_CAP_MULT = 1.35;
 
 const TOURNEY_BONUS = {
@@ -424,12 +423,12 @@ let resetPreviewReady = false;
 
 /* ===================== FIXED SEASON RESET RULES ===================== */
 const RESET_BASE = 1000;
-const RESET_KEEP = 0.35; // stable long-term compression
+const RESET_KEEP = 0.35;
 function prestigeGainFromPoints(oldPoints){
   return Math.round(Number(oldPoints) || 0);
 }
 
-/* ===================== NEW: SESSION-ONLY RECENT MATCHES ===================== */
+/* ===================== SESSION-ONLY RECENT MATCHES ===================== */
 const RECENT_MATCHES_MAX = 25;
 let recentMatches = []; // newest first
 
@@ -443,11 +442,14 @@ function formatWhen(ts){
     hour:"2-digit", minute:"2-digit", hour12:false
   });
 }
-function resultLabel(r){
-  if (r === "A") return "A wins";
-  if (r === "B") return "B wins";
+
+// CHANGED: show winner team name (or Draw)
+function winnerLabel(m){
+  if (m.result === "A") return m.aName;   // Team A name
+  if (m.result === "B") return m.bName;   // Team B name
   return "Draw";
 }
+
 function renderRecentMatches(){
   const tb = document.getElementById("recentMatchesBody");
   tb.innerHTML = "";
@@ -462,7 +464,7 @@ function renderRecentMatches(){
       <tr>
         <td class="mono">${htmlEscape(formatWhen(m.ts))}</td>
         <td>${htmlEscape(m.aName)} vs ${htmlEscape(m.bName)}</td>
-        <td><span class="badge mono">${htmlEscape(resultLabel(m.result))}</span></td>
+        <td><span class="badge mono">${htmlEscape(winnerLabel(m))}</span></td>
         <td class="num">${Number(m.deltaA||0).toFixed(2)}</td>
         <td class="num">${Number(m.deltaB||0).toFixed(2)}</td>
         <td class="num">
@@ -472,7 +474,6 @@ function renderRecentMatches(){
     `;
   }
 
-  // attach click handlers for undo buttons
   tb.querySelectorAll("button[data-undo-id]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const id = btn.getAttribute("data-undo-id");
@@ -498,11 +499,9 @@ function undoSpecificMatch(id){
     return;
   }
 
-  // Restore both teams exactly as they were before that match
   Object.assign(A, deepClone(m.beforeA));
   Object.assign(B, deepClone(m.beforeB));
 
-  // Remove this entry from the session list
   recentMatches.splice(idx, 1);
 
   renderTable();
@@ -577,7 +576,6 @@ function ensureOptionalCols(row){
 function normalizeRow(row){
   const r = { ...row };
 
-  // Required columns defaults
   if (!(COL.TEAM in r)) r[COL.TEAM] = "";
   r[COL.TEAM] = String(r[COL.TEAM]).trim();
 
@@ -718,7 +716,6 @@ function applyMatch(result){
     return;
   }
 
-  // NEW: snapshot BEFORE changes (for per-item undo)
   const beforeA = deepClone(A);
   const beforeB = deepClone(B);
 
@@ -751,7 +748,6 @@ function applyMatch(result){
     B[COL.S] += 1;
     A[COL.S] = 0;
   } else {
-    // Draw
     deltaA = deltas.draw.dA;
     deltaB = deltas.draw.dB;
 
@@ -772,7 +768,6 @@ function applyMatch(result){
   A[COL.UPDATED] = nowIso;
   B[COL.UPDATED] = nowIso;
 
-  // NEW: push into session list (newest first)
   const id = `${nowIso}::${aName}::${bName}::${Math.random().toString(16).slice(2)}`;
   recentMatches.unshift({
     id,
@@ -840,15 +835,12 @@ function applyTourneyWin(){
     return;
   }
 
-  // Update requested columns:
   if (type === "major"){
     T[COL.MAJ] += 1;
   } else {
-    // regional + global count in the same trophies column
     T[COL.TRO] += 1;
   }
 
-  // Activate temporary bonus
   ensureOptionalCols(T);
   T[COL.BONUS_TYPE] = type;
   T[COL.BONUS_REM] = TOURNEY_BONUS[type].dur;
@@ -867,7 +859,6 @@ function previewSeasonReset(){
     return;
   }
 
-  // compute preview stats without mutating
   let sumOld=0, sumNew=0;
   let maxDrop = -Infinity;
   let biggest = null;
@@ -910,29 +901,24 @@ function confirmSeasonReset(){
     showAlert("Please run the preview first.", "warn");
     return;
   }
-  // Apply changes
+
   for (const t of teams){
     const oldP = Number(t[COL.PTS]) || RESET_BASE;
     const newP = RESET_BASE + (oldP - RESET_BASE) * RESET_KEEP;
 
-    // prestige comparable to points: add full old points
     const preAdd = prestigeGainFromPoints(oldP);
     t[COL.PRE] = Number(t[COL.PRE] || 0) + preAdd;
 
-    // reset season stats
     t[COL.PTS] = newP;
     t[COL.V] = 0;
     t[COL.L] = 0;
     t[COL.S] = 0;
 
-    // clear active bonus to start season clean
     ensureOptionalCols(t);
     t[COL.BONUS_TYPE] = "none";
     t[COL.BONUS_REM] = 0;
 
-    // tier from points
     t[COL.TIER] = tierFromPoints(t[COL.PTS]);
-
     t[COL.UPDATED] = new Date().toISOString();
   }
 
@@ -995,8 +981,8 @@ document.getElementById("btnDownload").addEventListener("click", downloadExcel);
 
 /* ===================== AUTO-LOAD FIX ===================== */
 function getExcelUrl(){
-  const base = new URL(".", window.location.href);            // folder of current page
-  return new URL("file/ranking.xlsx", base).toString();       // absolute-safe
+  const base = new URL(".", window.location.href);
+  return new URL("file/ranking.xlsx", base).toString();
 }
 
 async function loadFromUrl(){
@@ -1022,7 +1008,6 @@ function loadFromArrayBuffer(ab){
   const sheetName = wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
 
-  // preserve extra columns
   const range = XLSX.utils.decode_range(ws["!ref"]);
   const headers = [];
   for (let C = range.s.c; C <= range.e.c; C++){
@@ -1044,7 +1029,7 @@ function loadFromArrayBuffer(ab){
   document.getElementById("btnConfirmReset").disabled = true;
   resetPreviewReady = false;
 
-  // NEW: clear session list on reload/load (as requested)
+  // session-only list clears on reload/load
   recentMatches = [];
   renderRecentMatches();
 }
@@ -1058,12 +1043,11 @@ document.getElementById("fileInput").addEventListener("change", async (ev)=>{
   loadFromArrayBuffer(ab);
   showAlert(`Manual load: <span class="mono">${htmlEscape(file.name)}</span>`, "good");
 
-  // NEW: clear session list on manual load (as requested)
   recentMatches = [];
   renderRecentMatches();
 });
 
-/* ===================== BACK TO MENU (FIXED + ROBUST) ===================== */
+/* ===================== BACK TO MENU ===================== */
 function goBackToMenu(){
   if (window.history.length > 1) {
     window.history.back();
