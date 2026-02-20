@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager v7.0</title>
+    <title>Ultimate eSports Manager v7.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -24,16 +24,22 @@
         .warning { color: #ff9800; } .expired { color: #f44336; font-weight: bold; }
         .discount-badge { background: #ffeb3b; color: #000; padding: 2px 5px; border-radius: 3px; font-size: 0.8em; font-weight: bold; margin-left: 5px; }
         .info-badge { color: #aaa; font-size: 0.9em; margin-left: 5px; border-left: 1px solid #444; padding-left: 5px; }
+        .medal-badge { color: #fff; font-size: 0.85em; background: #333; padding: 2px 6px; border-radius: 4px; margin-left: 5px; border: 1px solid #555; }
         
         .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .tab-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .tab-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
         .control-group { margin-bottom: 10px; }
         .flex-inputs { display: flex; gap: 5px; }
         
         /* Dashboard Styles */
-        .dash-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #333; }
+        .dash-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #333; font-size: 0.9em; }
         .dash-row.total { font-weight: bold; border-bottom: none; margin-top: 10px; font-size: 1.1em; }
         .text-green { color: #4caf50; } .text-red { color: #f44336; } .text-blue { color: #2196f3; } .text-orange { color: #ff9800; }
+        
+        /* Analytics Boxes */
+        .analytic-box { background: #000; padding: 10px; border-radius: 5px; border-top: 3px solid #9c27b0; font-size: 0.85em; }
+        .analytic-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 3px 0; }
     </style>
 </head>
 <body>
@@ -47,10 +53,16 @@
         </div>
     </div>
 
+    <div class="section full-width" style="border: 2px solid #9c27b0;">
+        <h2 style="color: #9c27b0; margin-bottom: 10px;">🌐 Global League Analytics</h2>
+        <div class="tab-grid-3" id="global-analytics-content">
+            </div>
+    </div>
+
     <div class="section full-width" style="border: 2px solid #2196f3;">
         <h2 style="color: #2196f3; display: flex; justify-content: space-between;">
             <span>📊 Dashboard & Active Team</span>
-            <span style="font-size: 0.6em; color: #aaa;">This selection controls your perspective</span>
+            <span style="font-size: 0.6em; color: #aaa;">This controls your perspective and market purchases</span>
         </h2>
         
         <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
@@ -66,33 +78,12 @@
 
         <div id="dash-notifications"></div>
 
-        <div id="dash-content" style="background: #111; padding: 15px; border-radius: 5px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            </div>
-    </div>
-
-    <div class="section">
-        <h2>🏆 Tournament & MVP</h2>
-        <div class="tab-grid">
-            <div>
-                <h3>Tournament Win</h3>
-                <select id="tourney-team-select"></select>
-                <input type="number" id="prize-amount" placeholder="Total Prize ($)">
-                <button onclick="distributeTourneyPrize()">Distribute (60% / 40%)</button>
-            </div>
-            <div>
-                <h3>Individual Performance</h3>
-                <select id="perf-player-select" title="Select Player"></select>
-                <select id="perf-tier">
-                    <option value="region">Region (10k)</option>
-                    <option value="global">Global (20k)</option>
-                    <option value="major">Major (50k)</option>
-                </select>
-                <select id="perf-type">
-                    <option value="mvp">MVP</option>
-                    <option value="evp">EVP</option>
-                    <option value="vp">VP</option>
-                </select>
-                <button onclick="applyIndividualPerformance()" class="btn-blue">Apply Reward</button>
+        <div class="tab-grid-3">
+            <div id="dash-content-finances" style="background: #111; padding: 15px; border-radius: 5px;"></div>
+            <div id="dash-content-roster" style="background: #111; padding: 15px; border-radius: 5px;"></div>
+            <div id="dash-ai-advisor" style="background: #1a1100; padding: 15px; border-radius: 5px; border: 1px solid #ff9800;">
+                <h3 style="color: #ff9800; margin-top: 0;">🧠 AI Financial Scout</h3>
+                <div id="ai-advisor-content" style="font-size: 0.9em; line-height: 1.4;"></div>
             </div>
         </div>
     </div>
@@ -117,17 +108,17 @@
                         <option value="all">All Teams</option>
                         <option value="my_roster">🛡️ My Roster</option>
                         <option value="offers">🌟 Special Offers</option>
-                        </select>
+                    </select>
                 </div>
                 <div class="control-group">
                     <label>Sort By:</label>
                     <select id="market-sort" onchange="refreshMarket()">
                         <option value="mv-desc">Highest Market Value</option>
                         <option value="mv-asc">Lowest Market Value</option>
-                        <option value="buy-desc">Highest Buyout</option>
+                        <option value="imp-asc">Lowest 6m Impact (Safe)</option>
+                        <option value="imp-desc">Highest 6m Impact (Risky)</option>
                         <option value="buy-asc">Lowest Buyout</option>
-                        <option value="sal-desc">Highest Salary</option>
-                        <option value="sal-asc">Lowest Salary</option>
+                        <option value="buy-desc">Highest Buyout</option>
                     </select>
                 </div>
             </div>
@@ -165,33 +156,64 @@
                         <input type="number" id="market-duration" min="1" max="24" value="12" style="width: 60px; padding: 5px; margin-left: 5px;">
                     </div>
                 </div>
-                <div id="market-list" class="list-container"></div>
+                <div id="market-list" class="list-container" style="height: 350px;"></div>
             </div>
-
             <div>
                 <h3>📤 My Sent Proposals</h3>
-                <div id="outbound-offers" class="list-container" style="background: #1a1a1a;"></div>
+                <div id="outbound-offers" class="list-container" style="background: #1a1a1a; height: 350px;"></div>
             </div>
         </div>
     </div>
 
-    <div class="section">
-        <h2>⚠️ Contract Alerts</h2>
-        <label>Renewal Duration (1-24m):</label>
-        <input type="number" id="renew-duration" min="1" max="24" value="12" style="width: calc(100% - 22px);">
-        <div id="contract-alerts" class="list-container list-small"></div>
+    <div class="section full-width tab-grid">
+        <div>
+            <h2>🏆 Tournament & MVP Engine</h2>
+            <div style="background: #222; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
+                <h3 style="margin-top:0;">1. Tournament Win</h3>
+                <select id="tourney-team-select"></select>
+                <input type="number" id="prize-amount" placeholder="Total Prize ($)">
+                <button onclick="distributeTourneyPrize()" class="btn-green">Distribute (60% / 40%)</button>
+            </div>
+            
+            <div style="background: #222; padding: 15px; border-radius: 5px;">
+                <h3 style="margin-top:0;">2. Individual Performance</h3>
+                <select id="perf-player-select" title="Select Player"></select>
+                <div class="flex-inputs">
+                    <select id="perf-tier">
+                        <option value="region">Region (10k)</option>
+                        <option value="global">Global (20k)</option>
+                        <option value="major">Major (50k)</option>
+                    </select>
+                    <select id="perf-type">
+                        <option value="mvp">🥇 MVP</option>
+                        <option value="evp">🥈 EVP</option>
+                        <option value="vp">🥉 VP</option>
+                    </select>
+                </div>
+                <button onclick="applyIndividualPerformance()" class="btn-blue">Apply Reward & Medal</button>
+            </div>
+        </div>
+        
+        <div>
+            <h2>⚠️ Contract Alerts</h2>
+            <label>Renewal Duration (1-24m):</label>
+            <input type="number" id="renew-duration" min="1" max="24" value="12" style="width: calc(100% - 22px);">
+            <div id="contract-alerts" class="list-container list-small" style="height: 250px;"></div>
+        </div>
     </div>
 
-    <div class="section">
-        <h2>⚙️ Management Tools</h2>
+    <div class="section full-width">
+        <h2>⚙️ Management Tools & Time Progression</h2>
         <div class="tab-grid">
             <div>
-                <button onclick="runMonthlyCycle()" class="btn-blue" style="width: 100%; height: 50px;">RUN MONTHLY CYCLE</button>
+                <button onclick="runMonthlyCycle()" class="btn-blue" style="width: 100%; height: 50px; font-size: 1.1em;">⏭️ RUN MONTHLY CYCLE</button>
             </div>
             <div>
                 <select id="reset-team-select"></select>
-                <button onclick="applyBailout()" class="btn-red" style="width: 100%;">Bankrupt Bailout (25k + 50% Boost)</button>
-                <button onclick="applySeasonReset()" class="btn-orange" style="width: 100%; margin-top: 10px;">Season Reset (-30% MV)</button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="applyBailout()" class="btn-red" style="width: 50%;">Bankrupt Bailout</button>
+                    <button onclick="applySeasonReset()" class="btn-orange" style="width: 50%;">Season Reset (Wipe Medals)</button>
+                </div>
             </div>
         </div>
     </div>
@@ -218,73 +240,77 @@
 
     const formatMoney = (val) => '$' + Number(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
+    function getPlayerBuyout(p) {
+        const standard = p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5;
+        const offer = temporaryOffers[String(p.PlayerName)];
+        return offer !== undefined ? offer : standard;
+    }
+
     function canAddBenchPlayer(teamName) {
-        const benchCount = players.filter(p => p.TeamName === teamName && p.Role === 'Bench').length;
-        return benchCount < 3;
+        return players.filter(p => p.TeamName === teamName && p.Role === 'Bench').length < 3;
+    }
+
+    // Calculador de Hype/Formato atual (Rising Stars)
+    function getFormScore(p) {
+        return ((p.MVP || 0) * 10) + ((p.EVP || 0) * 5) + ((p.VP || 0) * 2) + ((p.Titles || 0) * 1);
+    }
+
+    // Renderizador visual de troféus
+    function getMedalsHtml(p) {
+        if (!p.MVP && !p.EVP && !p.VP && !p.Titles) return '';
+        let str = '';
+        if (p.MVP) str += `🥇${p.MVP} `;
+        if (p.EVP) str += `🥈${p.EVP} `;
+        if (p.VP) str += `🥉${p.VP} `;
+        if (p.Titles) str += `🏆${p.Titles} `;
+        return `<span class="medal-badge" title="Season Awards">${str.trim()}</span>`;
     }
 
     // --- File Handling ---
-    document.getElementById('upload-finances').addEventListener('change', (e) => handleExcel(e, d => {
-        finances = d;
-        populateTeamDropdowns();
-        addLog("Finance file loaded.");
-    }));
-
-    document.getElementById('upload-players').addEventListener('change', (e) => handleExcel(e, d => {
-        players = d;
-        populatePlayerDropdown();
-        updateDashboardAndMarket(); 
-        checkContracts();
-        addLog("Players file loaded.");
-    }));
+    document.getElementById('upload-finances').addEventListener('change', (e) => handleExcel(e, d => { finances = d; updateAll(); addLog("Finance file loaded."); }));
+    document.getElementById('upload-players').addEventListener('change', (e) => handleExcel(e, d => { players = d; updateAll(); addLog("Players file loaded."); }));
 
     function handleExcel(e, cb) {
-        const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (evt) => {
             const wb = XLSX.read(evt.target.result, { type: 'binary' });
             cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
         };
-        reader.readAsBinaryString(file);
+        reader.readAsBinaryString(e.target.files[0]);
+    }
+
+    function updateAll() {
+        populateTeamDropdowns();
+        populatePlayerDropdown();
+        updateDashboardAndMarket();
+        checkContracts();
+        updateGlobalAnalytics();
     }
 
     function populateTeamDropdowns() {
         const options = finances.map(t => `<option value="${t.TeamName}">${t.TeamName}</option>`).join('');
         document.getElementById('tourney-team-select').innerHTML = options;
         document.getElementById('reset-team-select').innerHTML = options;
-        document.getElementById('dash-team-select').innerHTML = options;
         
-        document.getElementById('market-team-filter').innerHTML = `
-            <option value="all">All Teams</option>
-            <option value="my_roster">🛡️ My Roster</option>
-            <option value="offers">🌟 Special Offers</option>
-        ` + options;
+        const dashSelect = document.getElementById('dash-team-select');
+        const currentActive = dashSelect.value;
+        dashSelect.innerHTML = options;
+        if(currentActive && finances.some(t => t.TeamName === currentActive)) dashSelect.value = currentActive;
         
-        updateDashboardAndMarket();
+        document.getElementById('market-team-filter').innerHTML = `<option value="all">All Teams</option><option value="my_roster">🛡️ My Roster</option><option value="offers">🌟 Special Offers</option>` + options;
     }
 
     function populatePlayerDropdown() {
-        const options = players.map(p => `<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (${p.TeamName})</option>`).join('');
-        document.getElementById('perf-player-select').innerHTML = options;
+        document.getElementById('perf-player-select').innerHTML = players.map(p => `<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (${p.TeamName})</option>`).join('');
     }
 
     function updateRenewDropdown(activeTeam) {
-        const targetSelect = document.getElementById('dash-renew-target');
         let options = `<option value="all">👉 Whole Roster</option>`;
-        players.filter(p => p.TeamName === activeTeam).forEach(p => {
-            options += `<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (Current: ${p.ContractMonths}m)</option>`;
-        });
-        targetSelect.innerHTML = options;
+        players.filter(p => p.TeamName === activeTeam).forEach(p => options += `<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (Current: ${p.ContractMonths}m)</option>`);
+        document.getElementById('dash-renew-target').innerHTML = options;
     }
 
-    // --- Sync Dashboard & Market ---
-    function updateDashboardAndMarket() {
-        updateDashboard();
-        refreshMarket(); 
-        renderOutboundOffers();
-    }
-
-    // --- Dashboard Math & Display ---
+    // --- Core Logic & Math ---
     function getTeamFinances(team) {
         let sponsor = 0;
         const tier = String(team.Tier || "").toLowerCase().trim();
@@ -293,28 +319,117 @@
         else if (tier === "tier 2") sponsor = 40000;
         else if (tier === "tier 3") sponsor = 30000;
 
-        if (team.sponsorshipBoost) {
-            sponsor *= 1.5;
-        }
+        if (team.sponsorshipBoost) sponsor *= 1.5;
 
-        const fixed = Number(team.Coach || 0) + Number(team.Analyst || 0) + 
-                      Number(team.HealthTeam || 0) + Number(team.PhysicalTeam || 0) + 
-                      Number(team.Maintenance || 0) + Number(team.Marketing || 0);
-        
-        const teamPlayers = players.filter(p => p.TeamName === team.TeamName);
-        const salaries = teamPlayers.reduce((sum, p) => sum + ((p.MarketValue || 0) * 0.10), 0);
-        
+        const fixed = Number(team.Coach || 0) + Number(team.Analyst || 0) + Number(team.HealthTeam || 0) + Number(team.PhysicalTeam || 0) + Number(team.Maintenance || 0) + Number(team.Marketing || 0);
+        const salaries = players.filter(p => p.TeamName === team.TeamName).reduce((sum, p) => sum + ((p.MarketValue || 0) * 0.10), 0);
         return { sponsor, fixed, salaries, net: sponsor - (fixed + salaries) };
     }
 
-    function updateDashboard() {
+    // --- GLOBAL ANALYTICS ---
+    function updateGlobalAnalytics() {
+        if(finances.length === 0 || players.length === 0) return;
+
+        let teamData = finances.map(t => {
+            const fins = getTeamFinances(t);
+            const starters = players.filter(p => p.TeamName === t.TeamName && p.Role === 'Starter').length;
+            return { name: t.TeamName, bank: t.CurrentBank || 0, net: fins.net, starters: starters };
+        });
+
+        // 1. Deficit & Warning Check
+        const losingMoney = teamData.filter(t => t.net < 0).sort((a,b) => a.net - b.net);
+        const lowMargin = teamData.filter(t => t.net >= 0 && t.net < 5000).sort((a,b) => a.net - b.net);
+        const missingStarters = teamData.filter(t => t.starters < 5);
+
+        let healthHtml = `<div class="analytic-box"><h4 style="margin:0 0 5px 0; color:#ff9800;">📉 Financial Warnings</h4>`;
+        if (losingMoney.length === 0 && lowMargin.length === 0) healthHtml += `<div class="text-green">All teams are healthy!</div>`;
+        losingMoney.slice(0, 4).forEach(t => healthHtml += `<div class="analytic-item"><span>${t.name}</span> <span class="text-red">${formatMoney(t.net)}/mo</span></div>`);
+        lowMargin.slice(0, 3).forEach(t => healthHtml += `<div class="analytic-item"><span>${t.name} (Low Margin)</span> <span class="text-orange">+${formatMoney(t.net)}/mo</span></div>`);
+        healthHtml += `</div>`;
+
+        let alertHtml = `<div class="analytic-box" style="border-top-color:#f44336;"><h4 style="margin:0 0 5px 0; color:#f44336;">🚨 Roster Alerts</h4>`;
+        if (missingStarters.length === 0) alertHtml += `<div class="text-green">All teams have 5 Starters!</div>`;
+        missingStarters.forEach(t => alertHtml += `<div class="analytic-item text-red"><span>${t.name}</span> <span>${t.starters}/5 Starters!</span></div>`);
+        alertHtml += `</div>`;
+
+        // Rising Stars (Based on Form Score)
+        const risingStars = [...players].filter(p => getFormScore(p) > 0).sort((a,b) => getFormScore(b) - getFormScore(a)).slice(0, 4);
+        let starsHtml = `<div class="analytic-box" style="border-top-color:#ffeb3b;"><h4 style="margin:0 0 5px 0; color:#ffeb3b;">🚀 Rising Stars (Form)</h4>`;
+        if (risingStars.length === 0) starsHtml += `<div style="color:#aaa;">No medals awarded this season yet.</div>`;
+        risingStars.forEach(p => {
+            starsHtml += `<div class="analytic-item"><span>${String(p.PlayerName)} (${p.TeamName})</span> ${getMedalsHtml(p)}</div>`;
+        });
+        starsHtml += `</div>`;
+
+        document.getElementById('global-analytics-content').innerHTML = healthHtml + alertHtml + starsHtml;
+    }
+
+    // --- DASHBOARD & AI ASSISTANT ---
+    function updateDashboardAndMarket() {
         const tName = document.getElementById('dash-team-select').value;
         const team = finances.find(t => t.TeamName === tName);
         if (!team) return;
 
         updateRenewDropdown(tName); 
+        updateGlobalAnalytics();
 
-        // RENDER NOTIFICATIONS (INBOUND OFFERS)
+        // 1. Finance Box
+        const { sponsor, fixed, salaries, net } = getTeamFinances(team);
+        const netClass = net >= 0 ? 'text-green' : 'text-red';
+        const boostBadge = team.sponsorshipBoost ? `<span class="discount-badge" style="margin-left:5px;">50% BOOST</span>` : '';
+        document.getElementById('dash-content-finances').innerHTML = `
+            <h3 style="margin-top:0;">🏦 Bank: <span class="text-blue">${formatMoney(team.CurrentBank || 0)}</span></h3>
+            <div class="dash-row"><span>Income (${team.Tier}):</span> <span class="text-green">+${formatMoney(sponsor)} ${boostBadge}</span></div>
+            <div class="dash-row"><span>Fixed Costs:</span> <span class="text-red">-${formatMoney(fixed)}</span></div>
+            <div class="dash-row"><span>Salaries:</span> <span class="text-red">-${formatMoney(salaries)}</span></div>
+            <div class="dash-row total"><span>Net Result:</span> <span class="${netClass}">${net >= 0 ? '+' : ''}${formatMoney(net)}</span></div>
+        `;
+
+        // 2. Roster Box (Now with Medals!)
+        document.getElementById('dash-content-roster').innerHTML = `
+            <h3 style="margin-top:0;">👥 Roster</h3>
+            <div class="list-container" style="height: 120px; padding: 5px;">
+                ${players.filter(p => p.TeamName === tName).map(p => `
+                    <div style="font-size: 0.85em; padding: 3px; border-bottom: 1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+                        <span><b>${String(p.PlayerName)}</b> (${p.Role}) ${getMedalsHtml(p)}</span>
+                        <span>C: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: ${formatMoney(p.MarketValue * 0.10)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // 3. AI Scout
+        const startersCount = players.filter(p => p.TeamName === tName && p.Role === 'Starter').length;
+        let aiHtml = '';
+        
+        if (net < 0) aiHtml += `<div class="text-red" style="margin-bottom:5px;">⚠️ <b>Warning:</b> Operating at a loss. Sell players or win tournaments immediately.</div>`;
+        else if (net < 5000) aiHtml += `<div class="text-orange" style="margin-bottom:5px;">⚠️ <b>Caution:</b> Tight margins. Avoid high salary signings.</div>`;
+        else aiHtml += `<div class="text-green" style="margin-bottom:5px;">✅ Finances healthy.</div>`;
+
+        if (startersCount < 5) aiHtml += `<div class="text-red" style="margin-bottom:5px;">🚨 <b>CRITICAL:</b> Only ${startersCount} active starters. Sign Free Agents!</div>`;
+
+        let bargains = players.filter(p => p.TeamName !== tName && p.TeamName !== 'none' && (p.ContractMonths <= 1 || temporaryOffers[String(p.PlayerName)] !== undefined));
+        bargains.sort((a,b) => getPlayerBuyout(a) - getPlayerBuyout(b));
+        
+        if (bargains.length > 0) {
+            aiHtml += `<hr style="border:0; border-top:1px dashed #ff9800; margin: 10px 0;"><b>🔥 Scout's Hot Deals:</b><ul style="margin:5px 0; padding-left:20px; font-size:0.9em;">`;
+            bargains.slice(0,3).forEach(p => {
+                const bOut = getPlayerBuyout(p);
+                const isOffer = temporaryOffers[String(p.PlayerName)] !== undefined;
+                aiHtml += `<li><b>${String(p.PlayerName)}</b> (${p.TeamName}): Buyout ${formatMoney(bOut)} ${isOffer ? '<span class="text-green">(ON SALE)</span>' : '<span class="text-orange">(Expiring)</span>'}</li>`;
+            });
+            aiHtml += `</ul>`;
+        } else {
+            aiHtml += `<hr style="border:0; border-top:1px dashed #ff9800; margin: 10px 0;"><div style="color:#aaa;">No major bargains right now.</div>`;
+        }
+        document.getElementById('ai-advisor-content').innerHTML = aiHtml;
+
+        renderInboundOffers(tName);
+        refreshMarket(); 
+        renderOutboundOffers();
+    }
+
+    function renderInboundOffers(tName) {
         const myOffers = pendingTransfers.filter(o => o.seller === tName);
         let notifHtml = '';
         if (myOffers.length > 0) {
@@ -325,118 +440,24 @@
                 const profitText = profit >= 0 ? `<span class="text-green">+${formatMoney(profit)} Profit</span>` : `<span class="text-red">${formatMoney(profit)} Loss</span>`;
                 notifHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:5px; border-radius:4px; border-left: 3px solid #ff9800;">
-                        <span>
-                            <b>${o.buyer}</b> offered <b>${formatMoney(o.amount)}</b> for <b>${o.playerName}</b><br>
-                            <small style="color:#aaa;">Standard Buyout: ${formatMoney(o.standardBuyout)} | ${profitText}</small>
-                        </span>
-                        <div>
-                            <button onclick="acceptTransfer(${o.id})" class="btn-green">Accept</button>
-                            <button onclick="rejectTransfer(${o.id})" class="btn-red">Reject</button>
-                        </div>
+                        <span><b>${o.buyer}</b> offered <b>${formatMoney(o.amount)}</b> for <b>${o.playerName}</b><br><small style="color:#aaa;">Standard Buyout: ${formatMoney(o.standardBuyout)} | ${profitText}</small></span>
+                        <div><button onclick="acceptTransfer(${o.id})" class="btn-green">Accept</button> <button onclick="rejectTransfer(${o.id})" class="btn-red">Reject</button></div>
                     </div>`;
             });
             notifHtml += `</div>`;
         }
         document.getElementById('dash-notifications').innerHTML = notifHtml;
-
-        const { sponsor, fixed, salaries, net } = getTeamFinances(team);
-        const netClass = net >= 0 ? 'text-green' : 'text-red';
-        const netSign = net >= 0 ? '+' : '';
-        const boostBadge = team.sponsorshipBoost ? `<span class="discount-badge" style="margin-left:10px;">50% BAILOUT BOOST</span>` : '';
-
-        document.getElementById('dash-content').innerHTML = `
-            <div>
-                <h3 style="margin-top:0;">🏦 Current Bank: <span class="text-blue">${formatMoney(team.CurrentBank || 0)}</span></h3>
-                <div class="dash-row"><span>Tier Income (${team.Tier}):</span> <span class="text-green">+${formatMoney(sponsor)} ${boostBadge}</span></div>
-                <div class="dash-row"><span>Fixed Costs (Excel):</span> <span class="text-red">-${formatMoney(fixed)}</span></div>
-                <div class="dash-row"><span>Player Salaries (10% MV):</span> <span class="text-red">-${formatMoney(salaries)}</span></div>
-                <div class="dash-row total"><span>Monthly Net Result:</span> <span class="${netClass}">${netSign}${formatMoney(net)}</span></div>
-            </div>
-            <div>
-                <h3 style="margin-top:0;">👥 Roster Overview</h3>
-                <div class="list-container" style="height: 120px; padding: 5px;">
-                    ${players.filter(p => p.TeamName === tName).map(p => `
-                        <div style="font-size: 0.85em; padding: 3px; border-bottom: 1px solid #222;">
-                            <b>${String(p.PlayerName)}</b> (${p.Role}) | Contract: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: ${formatMoney(p.MarketValue * 0.10)}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
     }
 
-    function applyDashboardRenewal() {
-        const activeTeam = document.getElementById('dash-team-select').value;
-        const target = document.getElementById('dash-renew-target').value;
-        const additionalMonths = parseInt(document.getElementById('dash-renew-duration').value);
-
-        if (isNaN(additionalMonths) || additionalMonths < 1 || additionalMonths > 24) return alert("Renewal duration must be between 1 and 24 months.");
-
-        const team = finances.find(t => t.TeamName === activeTeam);
-        if (!team) return;
-
-        let targetPlayers = target === 'all' ? players.filter(p => p.TeamName === activeTeam) : players.filter(p => String(p.PlayerName) === target && p.TeamName === activeTeam);
-        if (targetPlayers.length === 0) return;
-
-        const exceedingPlayer = targetPlayers.find(p => (p.ContractMonths || 0) + additionalMonths > 24);
-        if (exceedingPlayer) return alert(`Cannot renew: ${exceedingPlayer.PlayerName}'s contract would exceed the 24-month cap.`);
-
-        let totalFee = 0;
-        targetPlayers.forEach(p => totalFee += (p.MarketValue * 0.10));
-
-        const confirmMsg = target === 'all' 
-            ? `Renew ALL players for +${additionalMonths} months?\nTotal Fee: ${formatMoney(totalFee)}` 
-            : `Renew ${target} for +${additionalMonths} months?\nFee: ${formatMoney(totalFee)}`;
-
-        if (confirm(confirmMsg)) {
-            saveState();
-            team.CurrentBank -= totalFee;
-            targetPlayers.forEach(p => p.ContractMonths = (p.ContractMonths || 0) + additionalMonths);
-            addLog(`Renewal successful. Total Fee: -$${totalFee.toFixed(2)}.`);
-            checkContracts(); updateDashboardAndMarket();
-        }
-    }
-
-    // --- Outbound Offers UI ---
-    function renderOutboundOffers() {
-        const activeTeam = document.getElementById('dash-team-select').value;
-        const container = document.getElementById('outbound-offers');
-        container.innerHTML = '';
-        
-        const myOutbounds = [
-            ...pendingTransfers.filter(o => o.buyer === activeTeam).map(o => ({...o, status: '⏳ Pending'})),
-            ...transferHistory.filter(o => o.buyer === activeTeam)
-        ];
-
-        if (myOutbounds.length === 0) {
-            container.innerHTML = '<div style="padding:10px; color:#666; font-style:italic;">No active proposals.</div>';
-            return;
-        }
-
-        myOutbounds.forEach(o => {
-            let color = '#aaa';
-            if(o.status.includes('Accepted')) color = '#4caf50';
-            if(o.status.includes('Rejected')) color = '#f44336';
-            if(o.status.includes('Pending')) color = '#ff9800';
-
-            const div = document.createElement('div');
-            div.className = 'item-card';
-            div.style.borderLeft = `3px solid ${color}`;
-            div.innerHTML = `
-                <span>Offered ${formatMoney(o.amount)} to <b>${o.seller}</b> for <b>${o.playerName}</b></span>
-                <span style="color: ${color}; font-weight: bold;">${o.status}</span>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    // --- Market, Offers & Negotiation ---
+    // --- Market ---
     function refreshMarket() {
         const roleFilter = document.getElementById('market-filter').value;
         const teamFilter = document.getElementById('market-team-filter').value;
         const sortBy = document.getElementById('market-sort').value;
         const activeTeam = document.getElementById('dash-team-select').value; 
         
+        const activeBank = finances.find(t => t.TeamName === activeTeam)?.CurrentBank || 0;
+
         const mvMin = parseFloat(document.getElementById('filter-mv-min').value) || 0;
         const mvMax = parseFloat(document.getElementById('filter-mv-max').value) || Infinity;
         const conMin = parseInt(document.getElementById('filter-con-min').value) || 0;
@@ -447,21 +468,18 @@
         const container = document.getElementById('market-list');
         container.innerHTML = '';
         
-        // Map data to calculate buyouts beforehand for accurate filtering and sorting
         let marketData = players.map(p => {
             const standardBuyout = (p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5);
             const playerNameStr = String(p.PlayerName);
             const isDiscounted = temporaryOffers[playerNameStr] !== undefined;
             const currentBuyout = isDiscounted ? temporaryOffers[playerNameStr] : standardBuyout;
             const monthlyCost = p.MarketValue * 0.10;
-            return { ...p, standardBuyout, isDiscounted, currentBuyout, monthlyCost, playerNameStr };
+            const sixMonthCost = monthlyCost * 6; 
+            return { ...p, standardBuyout, isDiscounted, currentBuyout, monthlyCost, sixMonthCost, playerNameStr };
         });
 
-        // 1. FILTERING
         marketData = marketData.filter(p => {
             const passRole = roleFilter === 'all' || (roleFilter === 'none' ? p.TeamName === 'none' : p.Role === roleFilter);
-            
-            // MAGIC RULE: Hide own roster from general view unless explicitly looking for it
             if (teamFilter !== 'my_roster' && p.TeamName === activeTeam) return false;
 
             let passTeam = false;
@@ -470,14 +488,9 @@
             else if (teamFilter === 'offers') passTeam = p.isDiscounted;
             else passTeam = (p.TeamName === teamFilter);
 
-            const passMV = (p.MarketValue >= mvMin && p.MarketValue <= mvMax);
-            const passCon = ((p.ContractMonths || 0) >= conMin && (p.ContractMonths || 0) <= conMax);
-            const passBuy = (p.currentBuyout >= buyMin && p.currentBuyout <= buyMax);
-
-            return passRole && passTeam && passMV && passCon && passBuy;
+            return passRole && passTeam && (p.MarketValue >= mvMin && p.MarketValue <= mvMax) && ((p.ContractMonths || 0) >= conMin && (p.ContractMonths || 0) <= conMax) && (p.currentBuyout >= buyMin && p.currentBuyout <= buyMax);
         });
 
-        // 2. SORTING
         marketData.sort((a, b) => {
             if (sortBy === 'mv-desc') return b.MarketValue - a.MarketValue;
             if (sortBy === 'mv-asc') return a.MarketValue - b.MarketValue;
@@ -485,30 +498,28 @@
             if (sortBy === 'buy-asc') return a.currentBuyout - b.currentBuyout;
             if (sortBy === 'sal-desc') return b.monthlyCost - a.monthlyCost;
             if (sortBy === 'sal-asc') return a.monthlyCost - b.monthlyCost;
+            if (sortBy === 'imp-desc') return b.sixMonthCost - a.sixMonthCost;
+            if (sortBy === 'imp-asc') return a.sixMonthCost - b.sixMonthCost;
             return 0;
         });
 
-        // 3. RENDERING
         marketData.forEach(p => {
             const div = document.createElement('div');
             div.className = 'item-card';
             
             let buttonsHtml = '';
-            
-            if (p.TeamName === 'none') {
-                buttonsHtml = `<button onclick="buyFreeAgent('${p.playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue">Buy (Free Agent)</button>`;
-            } else if (p.TeamName === activeTeam) {
-                buttonsHtml = `<button onclick="createInternalOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.standardBuyout})" class="btn-purple">Put on Sale</button>`;
-            } else if (p.isDiscounted) {
-                // Instantly buy an offered player
-                buttonsHtml = `<button onclick="buyOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-green">Buy Offer</button>`;
-            } else {
-                buttonsHtml = `<button onclick="proposeTransfer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-blue">Propose Transfer</button>`;
-            }
+            if (p.TeamName === 'none') buttonsHtml = `<button onclick="buyFreeAgent('${p.playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue">Buy (Free Agent)</button>`;
+            else if (p.TeamName === activeTeam) buttonsHtml = `<button onclick="createInternalOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.standardBuyout})" class="btn-purple">Put on Sale</button>`;
+            else if (p.isDiscounted) buttonsHtml = `<button onclick="buyOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-green">Buy Offer</button>`;
+            else buttonsHtml = `<button onclick="proposeTransfer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-blue">Propose Transfer</button>`;
+
+            const bankPct = activeBank > 0 ? ((p.sixMonthCost / activeBank) * 100).toFixed(0) : '∞';
+            const impactColor = bankPct > 50 ? '#f44336' : (bankPct > 20 ? '#ff9800' : '#4caf50');
 
             div.innerHTML = `
-                <span><b>${p.playerNameStr}</b> [${p.TeamName}] | MV: ${formatMoney(p.MarketValue)} 
+                <span><b>${p.playerNameStr}</b> [${p.TeamName}] ${getMedalsHtml(p)} | MV: ${formatMoney(p.MarketValue)} 
                     <span class="info-badge">Sal: ${formatMoney(p.monthlyCost)}/mo</span>
+                    <span class="info-badge" style="color:${impactColor}">6m Impact: ${formatMoney(p.sixMonthCost)} (${bankPct}% Bank)</span>
                     <span class="info-badge">Contract: ${p.ContractMonths}m</span>
                     ${p.isDiscounted ? '<span class="discount-badge">ON SALE</span>' : ''}
                 </span>
@@ -519,12 +530,33 @@
         });
     }
 
+    function applyDashboardRenewal() {
+        // [Existing logic omitted for brevity, it's unchanged]
+        const activeTeam = document.getElementById('dash-team-select').value;
+        const target = document.getElementById('dash-renew-target').value;
+        const additionalMonths = parseInt(document.getElementById('dash-renew-duration').value);
+        if (isNaN(additionalMonths) || additionalMonths < 1 || additionalMonths > 24) return alert("Duration must be 1-24.");
+
+        const team = finances.find(t => t.TeamName === activeTeam);
+        let targetPlayers = target === 'all' ? players.filter(p => p.TeamName === activeTeam) : players.filter(p => String(p.PlayerName) === target && p.TeamName === activeTeam);
+        if (!team || targetPlayers.length === 0) return;
+
+        if (targetPlayers.find(p => (p.ContractMonths || 0) + additionalMonths > 24)) return alert(`Exceeds 24-month cap.`);
+
+        let totalFee = 0; targetPlayers.forEach(p => totalFee += (p.MarketValue * 0.10));
+        if (confirm(target === 'all' ? `Renew ALL players for +${additionalMonths}m?\nFee: ${formatMoney(totalFee)}` : `Renew ${target} for +${additionalMonths}m?\nFee: ${formatMoney(totalFee)}`)) {
+            saveState();
+            team.CurrentBank -= totalFee;
+            targetPlayers.forEach(p => p.ContractMonths = (p.ContractMonths || 0) + additionalMonths);
+            addLog(`Renewal successful. Total Fee: -$${totalFee.toFixed(2)}.`);
+            updateAll();
+        }
+    }
+
     function createInternalOffer(name, standardPrice) {
         const offer = prompt(`Put ${name} on sale.\nStandard Buyout is ${formatMoney(standardPrice)}.\nEnter discounted price:`);
         if (offer !== null && !isNaN(offer) && offer >= 0) {
-            temporaryOffers[name] = parseFloat(offer);
-            addLog(`Sale created: ${name} is now available for ${formatMoney(offer)}.`);
-            refreshMarket();
+            temporaryOffers[name] = parseFloat(offer); addLog(`Sale created: ${name}.`); refreshMarket();
         }
     }
 
@@ -532,21 +564,12 @@
         const buyerName = document.getElementById('dash-team-select').value; 
         const months = parseInt(document.getElementById('market-duration').value);
         if (isNaN(months) || months < 1 || months > 24) return alert("Invalid duration.");
-
-        if (!canAddBenchPlayer(buyerName)) {
-            return alert(`Cannot sign ${name}. Your bench is full (Max 3). Demote/Release someone first.`);
-        }
+        if (!canAddBenchPlayer(buyerName)) return alert(`Bench full (Max 3).`);
 
         const player = players.find(p => String(p.PlayerName) === name);
-        if (!player) return;
-
-        if (confirm(`Sign Free Agent ${name} on a ${months} month contract? (Cost: $0)`)) {
-            saveState();
-            player.TeamName = buyerName;
-            player.Role = 'Bench';
-            player.ContractMonths = months;
-            addLog(`Signed Free Agent: ${name} to ${buyerName} (${months}m).`);
-            checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
+        if (player && confirm(`Sign Free Agent ${name} on a ${months} month contract? (Cost: $0)`)) {
+            saveState(); player.TeamName = buyerName; player.Role = 'Bench'; player.ContractMonths = months;
+            addLog(`Signed Free Agent: ${name}.`); updateAll();
         }
     }
 
@@ -554,33 +577,20 @@
         const buyerName = document.getElementById('dash-team-select').value; 
         const months = parseInt(document.getElementById('market-duration').value);
         if (isNaN(months) || months < 1 || months > 24) return alert("Invalid duration.");
-
-        if (!canAddBenchPlayer(buyerName)) return alert(`Cannot buy ${name}. Your bench is full (Max 3).`);
+        if (!canAddBenchPlayer(buyerName)) return alert(`Bench full (Max 3).`);
 
         const buyer = finances.find(t => t.TeamName === buyerName);
         const player = players.find(p => String(p.PlayerName) === name);
         if (!buyer || !player) return;
-        const sellerName = player.TeamName;
-        const seller = finances.find(t => t.TeamName === sellerName);
 
-        if (confirm(`Instantly buy ${name} for ${formatMoney(cost)} (Special Offer)?\nNew Contract: ${months}m`)) {
+        if (confirm(`Buy ${name} for ${formatMoney(cost)}?\nNew Contract: ${months}m`)) {
             if (buyer.CurrentBank >= cost) {
-                saveState();
-                buyer.CurrentBank -= cost;
-                if (seller) seller.CurrentBank += cost;
-
-                player.TeamName = buyerName;
-                player.Role = 'Bench';
-                player.ContractMonths = months;
-
-                if(temporaryOffers[name]) delete temporaryOffers[name];
-                pendingTransfers = pendingTransfers.filter(o => o.playerName !== name); // clear other pending offers
-
-                addLog(`Offer Bought: ${buyerName} instantly bought ${name} from ${sellerName} for ${formatMoney(cost)}.`);
-                checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
-            } else {
-                alert(`Insufficient funds. Your bank: ${formatMoney(buyer.CurrentBank)}`);
-            }
+                saveState(); buyer.CurrentBank -= cost;
+                const seller = finances.find(t => t.TeamName === player.TeamName); if (seller) seller.CurrentBank += cost;
+                player.TeamName = buyerName; player.Role = 'Bench'; player.ContractMonths = months;
+                delete temporaryOffers[name]; pendingTransfers = pendingTransfers.filter(o => o.playerName !== name);
+                addLog(`Offer Bought: ${buyerName} bought ${name}.`); updateAll();
+            } else alert(`Insufficient funds.`);
         }
     }
 
@@ -588,128 +598,115 @@
         const buyerName = document.getElementById('dash-team-select').value; 
         const months = parseInt(document.getElementById('market-duration').value);
         if (isNaN(months) || months < 1 || months > 24) return alert("Invalid duration.");
-
-        if (!canAddBenchPlayer(buyerName)) {
-            return alert(`Cannot propose transfer for ${name}. Your bench is currently full (Max 3).`);
-        }
+        if (!canAddBenchPlayer(buyerName)) return alert(`Bench full (Max 3).`);
 
         const buyer = finances.find(t => t.TeamName === buyerName);
         const player = players.find(p => String(p.PlayerName) === name);
         if (!buyer || !player) return;
+        if(pendingTransfers.some(o => o.buyer === buyerName && o.playerName === name)) return alert("Offer already pending.");
 
-        if(pendingTransfers.some(o => o.buyer === buyerName && o.playerName === name)) {
-            return alert("You already have a pending offer for this player.");
-        }
-
-        const offerStr = prompt(`Propose transfer for ${name}.\nStandard Buyout is ${formatMoney(defaultPrice)}.\nYour offer amount:`, defaultPrice.toFixed(0));
-        if (offerStr === null) return;
-        
-        const offerAmount = parseFloat(offerStr);
-        if (isNaN(offerAmount) || offerAmount < 0) return alert("Invalid offer amount.");
-        if (buyer.CurrentBank < offerAmount) return alert(`Insufficient funds. Your bank: ${formatMoney(buyer.CurrentBank)}`);
+        const offerAmount = parseFloat(prompt(`Propose transfer for ${name}.\nStandard Buyout is ${formatMoney(defaultPrice)}.\nYour offer:`, defaultPrice.toFixed(0)));
+        if (isNaN(offerAmount) || offerAmount < 0) return;
+        if (buyer.CurrentBank < offerAmount) return alert(`Insufficient funds.`);
 
         saveState();
-        pendingTransfers.push({
-            id: Date.now(),
-            buyer: buyerName,
-            seller: player.TeamName,
-            playerName: name,
-            amount: offerAmount,
-            standardBuyout: (player.MarketValue * 0.10 * (player.ContractMonths || 0) * 1.5),
-            months: months
-        });
-
-        addLog(`Offer Sent: ${buyerName} proposed ${formatMoney(offerAmount)} for ${name}.`);
-        updateDashboardAndMarket();
+        pendingTransfers.push({ id: Date.now(), buyer: buyerName, seller: player.TeamName, playerName: name, amount: offerAmount, standardBuyout: getPlayerBuyout(player), months: months });
+        addLog(`Offer Sent: ${buyerName} proposed ${formatMoney(offerAmount)} for ${name}.`); updateAll();
     }
 
     function acceptTransfer(id) {
-        const index = pendingTransfers.findIndex(o => o.id === id);
-        if (index === -1) return;
+        const index = pendingTransfers.findIndex(o => o.id === id); if (index === -1) return;
         const offer = pendingTransfers[index];
-
         const buyer = finances.find(t => t.TeamName === offer.buyer);
         const seller = finances.find(t => t.TeamName === offer.seller);
         const player = players.find(p => String(p.PlayerName) === offer.playerName);
 
-        if (!buyer || !seller || !player) return;
-
         if (buyer.CurrentBank < offer.amount) {
-            alert(`${offer.buyer} no longer has enough funds for this transaction! Offer cancelled.`);
-            transferHistory.unshift({...offer, status: '❌ Rejected (Buyer Broke)'});
-            pendingTransfers.splice(index, 1);
-            updateDashboardAndMarket(); return;
+            alert(`${offer.buyer} is broke!`); transferHistory.unshift({...offer, status: '❌ Rejected (Buyer Broke)'});
+            pendingTransfers.splice(index, 1); updateAll(); return;
         }
+        if (!canAddBenchPlayer(offer.buyer)) return alert(`${offer.buyer}'s bench is full.`);
 
-        if (!canAddBenchPlayer(offer.buyer)) {
-            alert(`${offer.buyer}'s bench is currently full (Max 3). They cannot receive this player right now.`);
-            return; 
-        }
-
-        saveState();
-        buyer.CurrentBank -= offer.amount;
-        seller.CurrentBank += offer.amount;
-        
-        player.TeamName = offer.buyer;
-        player.Role = 'Bench';
-        player.ContractMonths = offer.months;
-
+        saveState(); buyer.CurrentBank -= offer.amount; seller.CurrentBank += offer.amount;
+        player.TeamName = offer.buyer; player.Role = 'Bench'; player.ContractMonths = offer.months;
         transferHistory.unshift({...offer, status: '✅ Accepted'});
-        pendingTransfers = pendingTransfers.filter(o => o.playerName !== offer.playerName); 
-        if(temporaryOffers[offer.playerName]) delete temporaryOffers[offer.playerName];
-
-        addLog(`Transfer Accepted! ${offer.playerName} moved to ${offer.buyer}. ${offer.seller} got ${formatMoney(offer.amount)}.`);
-        checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
+        pendingTransfers = pendingTransfers.filter(o => o.playerName !== offer.playerName); delete temporaryOffers[offer.playerName];
+        addLog(`Transfer Accepted! ${offer.playerName} to ${offer.buyer}.`); updateAll();
     }
 
     function rejectTransfer(id) {
-        const index = pendingTransfers.findIndex(o => o.id === id);
-        if (index === -1) return;
-        const offer = pendingTransfers[index];
-        
-        saveState();
-        transferHistory.unshift({...offer, status: '❌ Rejected'});
-        pendingTransfers.splice(index, 1);
-        addLog(`Transfer Rejected: ${offer.seller} declined ${formatMoney(offer.amount)} for ${offer.playerName}.`);
-        updateDashboardAndMarket();
+        const index = pendingTransfers.findIndex(o => o.id === id); if (index === -1) return;
+        saveState(); transferHistory.unshift({...pendingTransfers[index], status: '❌ Rejected'});
+        addLog(`Transfer Rejected.`); pendingTransfers.splice(index, 1); updateAll();
+    }
+
+    function renderOutboundOffers() {
+        const activeTeam = document.getElementById('dash-team-select').value;
+        const container = document.getElementById('outbound-offers'); container.innerHTML = '';
+        const myOutbounds = [...pendingTransfers.filter(o => o.buyer === activeTeam).map(o => ({...o, status: '⏳ Pending'})), ...transferHistory.filter(o => o.buyer === activeTeam)];
+        if (myOutbounds.length === 0) return container.innerHTML = '<div style="padding:10px; color:#666; font-style:italic;">No active proposals.</div>';
+
+        myOutbounds.forEach(o => {
+            let color = o.status.includes('Accepted') ? '#4caf50' : (o.status.includes('Rejected') ? '#f44336' : '#ff9800');
+            const div = document.createElement('div'); div.className = 'item-card'; div.style.borderLeft = `3px solid ${color}`;
+            div.innerHTML = `<span>Offered ${formatMoney(o.amount)} to <b>${o.seller}</b> for <b>${o.playerName}</b></span><span style="color: ${color}; font-weight: bold;">${o.status}</span>`;
+            container.appendChild(div);
+        });
     }
 
     // --- Core Cycles & Resets ---
     function runMonthlyCycle() {
         saveState();
         finances.forEach(team => {
-            const { net } = getTeamFinances(team);
-            team.CurrentBank = (team.CurrentBank || 0) + net;
-            if (team.sponsorshipBoost) {
-                addLog(`${team.TeamName} consumed their 50% Bailout Boost.`);
-                team.sponsorshipBoost = false; 
-            }
+            team.CurrentBank = (team.CurrentBank || 0) + getTeamFinances(team).net;
+            if (team.sponsorshipBoost) team.sponsorshipBoost = false; 
         });
         players.forEach(p => { if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1; });
-        addLog("Monthly Cycle completed. Contracts reduced by 1 month.");
-        checkContracts(); updateDashboardAndMarket();
+        addLog("Monthly Cycle completed."); updateAll();
     }
 
     function applyBailout() {
-        const tName = document.getElementById('reset-team-select').value;
+        const tName = document.getElementById('reset-team-select').value; const team = finances.find(t => t.TeamName === tName);
+        if (team && confirm(`Apply Bailout to ${tName}?`)) { saveState(); team.CurrentBank = 25000; team.sponsorshipBoost = true; addLog(`Bailout applied for ${tName}.`); updateAll(); }
+    }
+
+    function distributeTourneyPrize() {
+        const amount = parseFloat(document.getElementById('prize-amount').value);
+        const tName = document.getElementById('tourney-team-select').value;
         const team = finances.find(t => t.TeamName === tName);
-        if (team && confirm(`Apply Bailout to ${tName}?\n\n- Bank resets to $25,000\n- Next Sponsor Income receives +50% Boost`)) {
-            saveState(); 
-            team.CurrentBank = 25000;
-            team.sponsorshipBoost = true;
-            addLog(`Bailout applied for ${tName}. Bank set to $25k with a 50% sponsor boost for next month.`);
-            updateDashboardAndMarket();
+        if (!amount || !team) return;
+        saveState(); team.CurrentBank += (amount * 0.6);
+        const playerShare = (amount * 0.4) / 5;
+        players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5).forEach(p => {
+            p.MarketValue += playerShare;
+            p.Titles = (p.Titles || 0) + 1; // <--- ADDING TITLE TO PROFILE
+        });
+        addLog(`Tourney split: ${tName} Bank +${formatMoney(amount*0.6)}.`); updateAll();
+    }
+
+    function applyIndividualPerformance() {
+        const pName = document.getElementById('perf-player-select').value;
+        const player = players.find(p => String(p.PlayerName) === pName);
+        if (player) {
+            saveState();
+            const type = document.getElementById('perf-type').value;
+            const reward = { region: { mvp: 4000, evp: 3500, vp: 2500 }, global: { mvp: 10000, evp: 6000, vp: 4000 }, major: { mvp: 30000, evp: 12500, vp: 7500 } }[document.getElementById('perf-tier').value][type];
+            player.Prestige = (player.Prestige || 0) + reward;
+            
+            // <--- ADDING MEDAL TO PROFILE
+            if (type === 'mvp') player.MVP = (player.MVP || 0) + 1;
+            else if (type === 'evp') player.EVP = (player.EVP || 0) + 1;
+            else if (type === 'vp') player.VP = (player.VP || 0) + 1;
+
+            addLog(`Reward: ${pName} +$${reward} Prestige & ${type.toUpperCase()} Medal.`); updateAll();
         }
     }
 
     function checkContracts() {
-        const container = document.getElementById('contract-alerts');
-        container.innerHTML = '';
+        const container = document.getElementById('contract-alerts'); container.innerHTML = '';
         players.filter(p => p.TeamName !== 'none' && p.ContractMonths <= 2).forEach(p => {
-            const div = document.createElement('div');
-            div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
-            div.innerHTML = `<span>${String(p.PlayerName)} (${p.TeamName}): ${p.ContractMonths}m left</span>
-                             <button onclick="renewContractAlerts('${String(p.PlayerName).replace(/'/g, "\\'")}')">Renew</button>`;
+            const div = document.createElement('div'); div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
+            div.innerHTML = `<span>${String(p.PlayerName)} (${p.TeamName}): ${p.ContractMonths}m left</span> <button onclick="renewContractAlerts('${String(p.PlayerName).replace(/'/g, "\\'")}')">Renew</button>`;
             container.appendChild(div);
         });
     }
@@ -717,94 +714,49 @@
     function renewContractAlerts(name) {
         const p = players.find(p => String(p.PlayerName) === name);
         const team = finances.find(t => t.TeamName === p.TeamName);
-        const additionalMonths = parseInt(document.getElementById('renew-duration').value);
-        if (isNaN(additionalMonths) || additionalMonths < 1 || additionalMonths > 24) return alert("Invalid duration.");
-
+        const addMonths = parseInt(document.getElementById('renew-duration').value);
+        if (isNaN(addMonths) || addMonths < 1 || addMonths > 24) return alert("Invalid duration.");
         if (p && team) {
-            const currentMonths = p.ContractMonths || 0;
-            if (currentMonths + additionalMonths > 24) return alert("Contract would exceed 24-month cap.");
-
+            if ((p.ContractMonths || 0) + addMonths > 24) return alert("Exceeds 24m cap.");
             const fee = p.MarketValue * 0.10;
-            if (confirm(`Renew ${name} for +${additionalMonths} months?\nFee: ${formatMoney(fee)}`)) {
-                saveState();
-                team.CurrentBank -= fee;
-                p.ContractMonths = currentMonths + additionalMonths;
-                addLog(`Renewed ${name}. Fee: -$${fee.toFixed(2)}.`);
-                checkContracts(); updateDashboardAndMarket();
+            if (confirm(`Renew ${name} for +${addMonths}m?\nFee: ${formatMoney(fee)}`)) {
+                saveState(); team.CurrentBank -= fee; p.ContractMonths = (p.ContractMonths || 0) + addMonths;
+                addLog(`Renewed ${name}.`); updateAll();
             }
-        }
-    }
-
-    // --- Others ---
-    function distributeTourneyPrize() {
-        const amount = parseFloat(document.getElementById('prize-amount').value);
-        const tName = document.getElementById('tourney-team-select').value;
-        const team = finances.find(t => t.TeamName === tName);
-        if (!amount || !team) return;
-
-        saveState();
-        team.CurrentBank += (amount * 0.6);
-        const playerShare = (amount * 0.4) / 5;
-        players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5).forEach(p => p.MarketValue += playerShare);
-        
-        addLog(`Tourney split: ${tName} Bank +$${(amount*0.6).toFixed(2)}. Starters MV +$${playerShare.toFixed(2)}.`);
-        updateDashboardAndMarket();
-    }
-
-    function applyIndividualPerformance() {
-        const pName = document.getElementById('perf-player-select').value;
-        const tier = document.getElementById('perf-tier').value;
-        const type = document.getElementById('perf-type').value;
-        const rates = { region: { mvp: 4000, evp: 3500, vp: 2500 }, global: { mvp: 10000, evp: 6000, vp: 4000 }, major: { mvp: 30000, evp: 12500, vp: 7500 } };
-        const player = players.find(p => String(p.PlayerName) === pName);
-        if (player) {
-            saveState();
-            const reward = rates[tier][type];
-            player.Prestige = (player.Prestige || 0) + reward;
-            addLog(`Performance Reward: ${pName} +$${reward} Prestige.`);
         }
     }
 
     function saveState() {
         if (history.length >= 3) history.shift();
-        history.push({ 
-            f: JSON.parse(JSON.stringify(finances)), 
-            p: JSON.parse(JSON.stringify(players)),
-            t: JSON.parse(JSON.stringify(pendingTransfers)),
-            th: JSON.parse(JSON.stringify(transferHistory))
-        });
+        history.push({ f: JSON.parse(JSON.stringify(finances)), p: JSON.parse(JSON.stringify(players)), t: JSON.parse(JSON.stringify(pendingTransfers)), th: JSON.parse(JSON.stringify(transferHistory)) });
     }
 
     function undo() {
         if (history.length > 0) {
             const last = history.pop();
-            finances = last.f; players = last.p; 
-            if(last.t) pendingTransfers = last.t;
-            if(last.th) transferHistory = last.th;
-            addLog("Undo successful.");
-            checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
+            finances = last.f; players = last.p; pendingTransfers = last.t || []; transferHistory = last.th || [];
+            addLog("Undo successful."); updateAll();
         }
     }
 
-    function applySeasonReset() {
-        if(confirm("Apply -30% Market Value to all?")) {
-            saveState(); players.forEach(p => p.MarketValue *= 0.7);
-            updateDashboardAndMarket();
-        }
+    function applySeasonReset() { 
+        if(confirm("Apply Season Reset?\n\n- Cuts 30% Market Value of all players.\n- Wipes all Medals and Titles (MVP, EVP, VP, Titles).")) { 
+            saveState(); 
+            players.forEach(p => {
+                p.MarketValue *= 0.7;
+                // Wipe the trophy cabinet
+                p.MVP = 0; p.EVP = 0; p.VP = 0; p.Titles = 0;
+            }); 
+            addLog("Season Reset Applied.");
+            updateAll(); 
+        } 
     }
 
-    function addLog(msg) {
-        const l = document.getElementById('action-log');
-        l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>${l.innerHTML}`;
-    }
-
+    function addLog(msg) { const l = document.getElementById('action-log'); l.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}<br>${l.innerHTML}`; }
+    
     function exportExcels() {
-        const wb1 = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb1, XLSX.utils.json_to_sheet(finances), "Finances");
-        XLSX.writeFile(wb1, "finances_updated.xlsx");
-        const wb2 = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb2, XLSX.utils.json_to_sheet(players), "Players");
-        XLSX.writeFile(wb2, "players_updated.xlsx");
+        const wb1 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb1, XLSX.utils.json_to_sheet(finances), "Finances"); XLSX.writeFile(wb1, "finances_updated.xlsx");
+        const wb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2, XLSX.utils.json_to_sheet(players), "Players"); XLSX.writeFile(wb2, "players_updated.xlsx");
     }
 </script>
 </body>
