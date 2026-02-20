@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager v6.4</title>
+    <title>Ultimate eSports Manager v6.8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -21,6 +21,7 @@
         .log { background: #000; padding: 15px; height: 150px; overflow-y: auto; font-family: 'Courier New', monospace; color: #00ff00; border-radius: 5px; font-size: 12px; }
         .warning { color: #ff9800; } .expired { color: #f44336; font-weight: bold; }
         .discount-badge { background: #ffeb3b; color: #000; padding: 2px 5px; border-radius: 3px; font-size: 0.8em; font-weight: bold; margin-left: 5px; }
+        .salary-badge { color: #aaa; font-size: 0.9em; margin-left: 5px; }
         
         .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .tab-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -46,10 +47,21 @@
     <div class="section full-width" style="border: 2px solid #2196f3;">
         <h2 style="color: #2196f3; display: flex; justify-content: space-between;">
             <span>📊 Dashboard & Active Team</span>
-            <span style="font-size: 0.6em; color: #aaa;">This selection controls your purchases in the Market</span>
+            <span style="font-size: 0.6em; color: #aaa;">This selection controls your perspective</span>
         </h2>
-        <select id="dash-team-select" onchange="updateDashboardAndMarket()" style="font-size: 1.2em; font-weight: bold;"></select>
-        <div id="dash-content" style="background: #111; padding: 15px; border-radius: 5px; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        
+        <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+            <select id="dash-team-select" onchange="updateDashboardAndMarket()" style="font-size: 1.2em; font-weight: bold; width: 300px;"></select>
+            
+            <div style="background: #2a2a2a; padding: 5px 15px; border-radius: 5px; border: 1px solid #444; display: flex; gap: 10px; align-items: center;">
+                <label style="font-weight: bold; color: #ff9800;">Renew Contract (Max 24m):</label>
+                <select id="dash-renew-target" style="width: 200px; margin: 0; padding: 5px;"></select>
+                <input type="number" id="dash-renew-duration" min="1" max="24" value="12" style="width: 60px; margin: 0; padding: 5px; text-align: center;">
+                <button onclick="applyDashboardRenewal()" class="btn-orange" style="margin: 0; padding: 5px 10px;">Apply</button>
+            </div>
+        </div>
+
+        <div id="dash-content" style="background: #111; padding: 15px; border-radius: 5px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
             </div>
     </div>
 
@@ -96,15 +108,13 @@
                 <label>Team Filter:</label>
                 <select id="market-team-filter" onchange="refreshMarket()">
                     <option value="all">All Teams</option>
-                </select>
+                    <option value="my_roster">🛡️ My Roster</option>
+                    <option value="offers">🌟 Special Offers</option>
+                    </select>
             </div>
             <div class="control-group">
-                <label>Contract Length:</label>
-                <select id="market-duration">
-                    <option value="1">1 Month</option><option value="2">2 Months</option>
-                    <option value="3">3 Months</option><option value="4">4 Months</option>
-                    <option value="5">5 Months</option><option value="6" selected>6 Months</option>
-                </select>
+                <label>Contract Length (1-24m):</label>
+                <input type="number" id="market-duration" min="1" max="24" value="12" style="width: 100%; box-sizing: border-box;">
             </div>
         </div>
         <div id="market-list" class="list-container"></div>
@@ -112,12 +122,8 @@
 
     <div class="section">
         <h2>⚠️ Contract Alerts</h2>
-        <label>Renewal Duration (1-6m):</label>
-        <select id="renew-duration">
-            <option value="1">1 Month</option><option value="2">2 Months</option>
-            <option value="3">3 Months</option><option value="4">4 Months</option>
-            <option value="5">5 Months</option><option value="6" selected>6 Months</option>
-        </select>
+        <label>Renewal Duration (1-24m):</label>
+        <input type="number" id="renew-duration" min="1" max="24" value="12" style="width: calc(100% - 22px);">
         <div id="contract-alerts" class="list-container"></div>
     </div>
 
@@ -152,7 +158,10 @@
     let finances = [];
     let players = [];
     let history = [];
-    let temporaryOffers = {}; // Armazena ofertas de buyout modificadas temporariamente
+    let temporaryOffers = {}; 
+
+    // Helper for formatting money in alerts
+    const formatMoney = (val) => '$' + Number(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
     // --- File Handling ---
     document.getElementById('upload-finances').addEventListener('change', (e) => handleExcel(e, d => {
@@ -164,7 +173,7 @@
     document.getElementById('upload-players').addEventListener('change', (e) => handleExcel(e, d => {
         players = d;
         populatePlayerDropdown();
-        refreshMarket();
+        updateDashboardAndMarket(); 
         checkContracts();
         addLog("Players file loaded.");
     }));
@@ -185,8 +194,11 @@
         document.getElementById('reset-team-select').innerHTML = options;
         document.getElementById('dash-team-select').innerHTML = options;
         
-        // Populate Market Team Filter
-        document.getElementById('market-team-filter').innerHTML = `<option value="all">All Teams</option>` + options;
+        document.getElementById('market-team-filter').innerHTML = `
+            <option value="all">All Teams</option>
+            <option value="my_roster">🛡️ My Roster</option>
+            <option value="offers">🌟 Special Offers</option>
+        ` + options;
         
         updateDashboardAndMarket();
     }
@@ -196,10 +208,19 @@
         document.getElementById('perf-player-select').innerHTML = options;
     }
 
+    function updateRenewDropdown(activeTeam) {
+        const targetSelect = document.getElementById('dash-renew-target');
+        let options = `<option value="all">👉 Whole Roster</option>`;
+        players.filter(p => p.TeamName === activeTeam).forEach(p => {
+            options += `<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (Current: ${p.ContractMonths}m)</option>`;
+        });
+        targetSelect.innerHTML = options;
+    }
+
     // --- Sync Dashboard & Market ---
     function updateDashboardAndMarket() {
         updateDashboard();
-        refreshMarket(); // Refreshing market forces button states to update based on active team
+        refreshMarket(); 
     }
 
     // --- Dashboard Math & Display ---
@@ -226,6 +247,8 @@
         const team = finances.find(t => t.TeamName === tName);
         if (!team) return;
 
+        updateRenewDropdown(tName); 
+
         const { sponsor, fixed, salaries, net } = getTeamFinances(team);
         const netClass = net >= 0 ? 'text-green' : 'text-red';
         const netSign = net >= 0 ? '+' : '';
@@ -243,12 +266,71 @@
                 <div class="list-container" style="height: 120px; padding: 5px;">
                     ${players.filter(p => p.TeamName === tName).map(p => `
                         <div style="font-size: 0.85em; padding: 3px; border-bottom: 1px solid #222;">
-                            <b>${String(p.PlayerName)}</b> (${p.Role}) | MV: $${p.MarketValue} | Sal: $${(p.MarketValue * 0.10).toFixed(0)}
+                            <b>${String(p.PlayerName)}</b> (${p.Role}) | Contract: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: $${(p.MarketValue * 0.10).toFixed(0)}
                         </div>
                     `).join('')}
                 </div>
             </div>
         `;
+    }
+
+    function applyDashboardRenewal() {
+        const activeTeam = document.getElementById('dash-team-select').value;
+        const target = document.getElementById('dash-renew-target').value;
+        const additionalMonths = parseInt(document.getElementById('dash-renew-duration').value);
+
+        if (isNaN(additionalMonths) || additionalMonths < 1 || additionalMonths > 24) {
+            alert("Renewal duration must be between 1 and 24 months.");
+            return;
+        }
+
+        const team = finances.find(t => t.TeamName === activeTeam);
+        if (!team) return;
+
+        let targetPlayers = [];
+        if (target === 'all') {
+            targetPlayers = players.filter(p => p.TeamName === activeTeam);
+        } else {
+            targetPlayers = players.filter(p => String(p.PlayerName) === target && p.TeamName === activeTeam);
+        }
+
+        if (targetPlayers.length === 0) return;
+
+        // 1. Check Hard Cap before calculating anything
+        const exceedingPlayer = targetPlayers.find(p => (p.ContractMonths || 0) + additionalMonths > 24);
+        if (exceedingPlayer) {
+            alert(`Cannot renew: ${exceedingPlayer.PlayerName}'s contract would exceed the 24-month cap (${exceedingPlayer.ContractMonths}m + ${additionalMonths}m > 24m).`);
+            return;
+        }
+
+        // 2. Calculate Total Fee for the confirmation message
+        let totalFee = 0;
+        targetPlayers.forEach(p => {
+            totalFee += (p.MarketValue * 0.10);
+        });
+
+        // 3. Build Confirmation Message
+        const confirmMsg = target === 'all' 
+            ? `Are you sure you want to renew ALL ${targetPlayers.length} players of ${activeTeam} for +${additionalMonths} months?\n\nTotal Renewal Fee (10% MV per player): ${formatMoney(totalFee)}` 
+            : `Are you sure you want to renew ${target} for +${additionalMonths} months?\n\nRenewal Fee: ${formatMoney(totalFee)}`;
+
+        // 4. Confirm and Apply
+        if (confirm(confirmMsg)) {
+            saveState();
+            team.CurrentBank -= totalFee;
+            targetPlayers.forEach(p => {
+                p.ContractMonths = (p.ContractMonths || 0) + additionalMonths;
+            });
+            
+            if (target === 'all') {
+                addLog(`Roster Renewed: All players in ${activeTeam} received +${additionalMonths}m. Total Fee: -$${totalFee.toFixed(2)}.`);
+            } else {
+                addLog(`Contract Renewed: ${target} received +${additionalMonths}m. Fee: -$${totalFee.toFixed(2)}.`);
+            }
+            
+            checkContracts(); 
+            updateDashboardAndMarket();
+        }
     }
 
     // --- Core Logic ---
@@ -262,7 +344,7 @@
 
         players.forEach(p => { if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1; });
         addLog("Monthly Cycle completed. Contracts reduced by 1 month.");
-        checkContracts(); refreshMarket(); updateDashboard();
+        checkContracts(); updateDashboardAndMarket();
     }
 
     function distributeTourneyPrize() {
@@ -277,7 +359,7 @@
         players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5).forEach(p => p.MarketValue += playerShare);
         
         addLog(`Tourney split: ${tName} Bank +$${(amount*0.6).toFixed(2)}. Starters MV +$${playerShare.toFixed(2)}.`);
-        updateDashboard();
+        updateDashboardAndMarket();
     }
 
     function applyIndividualPerformance() {
@@ -298,26 +380,32 @@
     function refreshMarket() {
         const roleFilter = document.getElementById('market-filter').value;
         const teamFilter = document.getElementById('market-team-filter').value;
-        const activeTeam = document.getElementById('dash-team-select').value; // O time que está "olhando" a loja
+        const activeTeam = document.getElementById('dash-team-select').value; 
         const container = document.getElementById('market-list');
         container.innerHTML = '';
         
         players.filter(p => {
             const passRole = roleFilter === 'all' || (roleFilter === 'none' ? p.TeamName === 'none' : p.Role === roleFilter);
-            const passTeam = teamFilter === 'all' || p.TeamName === teamFilter;
+            
+            let passTeam = false;
+            if (teamFilter === 'all') passTeam = true;
+            else if (teamFilter === 'my_roster') passTeam = (p.TeamName === activeTeam);
+            else if (teamFilter === 'offers') passTeam = (temporaryOffers[String(p.PlayerName)] !== undefined);
+            else passTeam = (p.TeamName === teamFilter);
+
             return passRole && passTeam;
         }).forEach(p => {
             const standardBuyout = (p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5);
             const playerNameStr = String(p.PlayerName);
             const isDiscounted = temporaryOffers[playerNameStr] !== undefined;
             const currentBuyout = isDiscounted ? temporaryOffers[playerNameStr] : standardBuyout;
+            const monthlyCost = (p.MarketValue * 0.10).toFixed(0);
             
             const div = document.createElement('div');
             div.className = 'item-card';
             
             let buttonsHtml = '';
             
-            // Lógica: Se o Active Team é o dono do jogador, ele não pode "Comprar", ele pode fazer uma "Oferta"
             if (p.TeamName === activeTeam && p.TeamName !== 'none') {
                 buttonsHtml = `<button onclick="makeOffer('${playerNameStr.replace(/'/g, "\\'")}', ${standardBuyout})" class="btn-purple">Make Offer</button>`;
             } else {
@@ -326,6 +414,7 @@
 
             div.innerHTML = `
                 <span><b>${playerNameStr}</b> [${p.TeamName}] | MV: $${p.MarketValue} 
+                    <span class="salary-badge">Sal: $${monthlyCost}/mo</span>
                     ${isDiscounted ? '<span class="discount-badge">ON SALE</span>' : ''}
                 </span>
                 <span>Buyout: $${p.TeamName === 'none' ? '0' : currentBuyout.toFixed(0)}</span>
@@ -345,8 +434,14 @@
     }
 
     function buyPlayer(name, cost) {
-        const buyerName = document.getElementById('dash-team-select').value; // Comprador é sempre o Active Team
+        const buyerName = document.getElementById('dash-team-select').value; 
         const months = parseInt(document.getElementById('market-duration').value);
+        
+        if (isNaN(months) || months < 1 || months > 24) {
+            alert("Contract length must be between 1 and 24 months.");
+            return;
+        }
+
         const buyer = finances.find(t => t.TeamName === buyerName);
         const player = players.find(p => String(p.PlayerName) === name);
         if (!buyer || !player) return;
@@ -354,34 +449,32 @@
         const sellerName = player.TeamName;
         const finalCost = sellerName === 'none' ? 0 : cost;
 
-        if (confirm(`Confirm purchase of ${name} for $${finalCost.toFixed(2)} with a new ${months} month contract?`)) {
+        if (confirm(`Confirm purchase of ${name} for ${formatMoney(finalCost)} with a new ${months} month contract?`)) {
             if (buyer.CurrentBank >= finalCost) {
                 saveState();
                 
-                // Transfere o dinheiro
                 buyer.CurrentBank -= finalCost;
                 if (sellerName !== 'none') {
                     const seller = finances.find(t => t.TeamName === sellerName);
                     if (seller) seller.CurrentBank = (seller.CurrentBank || 0) + finalCost;
                 }
 
-                // Atualiza o jogador
                 player.TeamName = buyerName;
                 player.Role = 'Bench';
                 player.ContractMonths = months;
                 
-                // Limpa ofertas temporárias
                 if(temporaryOffers[name]) delete temporaryOffers[name];
 
                 let logMsg = `Transfer: ${name} to ${buyerName} (${months}m).`;
                 if (sellerName !== 'none') logMsg += ` $${finalCost.toFixed(2)} paid to ${sellerName}.`;
                 
                 addLog(logMsg);
-                refreshMarket(); checkContracts(); updateDashboard(); populatePlayerDropdown();
+                checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
             } else { alert("Insufficient funds in Active Team Bank!"); }
         }
     }
 
+    // --- Contract Renewals (Alerts Section) ---
     function checkContracts() {
         const container = document.getElementById('contract-alerts');
         container.innerHTML = '';
@@ -389,21 +482,37 @@
             const div = document.createElement('div');
             div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
             div.innerHTML = `<span>${String(p.PlayerName)} (${p.TeamName}): ${p.ContractMonths}m left</span>
-                             <button onclick="renewContract('${String(p.PlayerName).replace(/'/g, "\\'")}')">Renew</button>`;
+                             <button onclick="renewContractAlerts('${String(p.PlayerName).replace(/'/g, "\\'")}')">Renew</button>`;
             container.appendChild(div);
         });
     }
 
-    function renewContract(name) {
+    function renewContractAlerts(name) {
         const p = players.find(p => String(p.PlayerName) === name);
         const team = finances.find(t => t.TeamName === p.TeamName);
-        const months = parseInt(document.getElementById('renew-duration').value);
+        const additionalMonths = parseInt(document.getElementById('renew-duration').value);
+        
+        if (isNaN(additionalMonths) || additionalMonths < 1 || additionalMonths > 24) {
+            alert("Renewal duration must be between 1 and 24 months.");
+            return;
+        }
+
         if (p && team) {
-            saveState();
-            team.CurrentBank -= (p.MarketValue * 0.10);
-            p.ContractMonths += months;
-            addLog(`Renewed ${name} for ${months}m. Fee: 10% MV.`);
-            checkContracts(); updateDashboard();
+            const currentMonths = p.ContractMonths || 0;
+            if (currentMonths + additionalMonths > 24) {
+                alert(`Cannot renew ${name}: Contract would exceed the 24-month cap. Current: ${currentMonths}m.`);
+                return;
+            }
+
+            const fee = p.MarketValue * 0.10;
+            if (confirm(`Renew ${name} for +${additionalMonths} months?\n\nRenewal Fee (10% MV): ${formatMoney(fee)}`)) {
+                saveState();
+                team.CurrentBank -= fee;
+                p.ContractMonths = currentMonths + additionalMonths;
+                
+                addLog(`Renewed ${name} for +${additionalMonths}m (Total: ${p.ContractMonths}m). Fee: 10% MV.`);
+                checkContracts(); updateDashboardAndMarket();
+            }
         }
     }
 
@@ -418,7 +527,7 @@
             const last = history.pop();
             finances = last.f; players = last.p;
             addLog("Undo successful.");
-            updateDashboardAndMarket(); checkContracts(); populatePlayerDropdown();
+            checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
         }
     }
 
@@ -428,14 +537,14 @@
         if (team && confirm(`Set ${tName}'s bank to 0?`)) {
             saveState(); team.CurrentBank = 0;
             addLog(`Bank reset for ${tName}.`);
-            updateDashboard();
+            updateDashboardAndMarket();
         }
     }
 
     function applySeasonReset() {
         if(confirm("Apply -30% Market Value to all?")) {
             saveState(); players.forEach(p => p.MarketValue *= 0.7);
-            addLog("Season Reset successful."); refreshMarket(); updateDashboard();
+            addLog("Season Reset successful."); updateDashboardAndMarket();
         }
     }
 
