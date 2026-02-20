@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager v7.2</title>
+    <title>Ultimate eSports Manager v7.4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -12,7 +12,7 @@
         h1, h2, h3 { color: #4caf50; margin-top: 0; }
         
         input, select { background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; margin: 5px 0; width: calc(100% - 22px); box-sizing: border-box; }
-        button { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; background: #4caf50; color: white; font-weight: bold; transition: 0.2s; margin-top: 5px; }
+        button { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; background: #4caf50; color: white; font-weight: bold; transition: 0.2s; margin-top: 5px; width: 100%; box-sizing: border-box;}
         button:hover { background: #45a049; }
         .btn-blue { background: #2196f3; } .btn-red { background: #f44336; } .btn-orange { background: #ff9800; } .btn-purple { background: #9c27b0; }
         .btn-green { background: #4caf50; }
@@ -28,7 +28,6 @@
         
         .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .tab-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .tab-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
         .control-group { margin-bottom: 10px; }
         .flex-inputs { display: flex; gap: 5px; }
         
@@ -40,6 +39,9 @@
         /* Analytics Boxes */
         .analytic-box { background: #000; padding: 10px; border-radius: 5px; border-top: 3px solid #9c27b0; font-size: 0.85em; }
         .analytic-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 3px 0; }
+        
+        /* Custom Scrollbar for inner lists */
+        .travel-list label:hover { background: #2a2a2a; }
     </style>
 </head>
 <body>
@@ -72,7 +74,7 @@
                 <label style="font-weight: bold; color: #ff9800;">Renew Contract (Max 24m):</label>
                 <select id="dash-renew-target" style="width: 200px; margin: 0; padding: 5px;"></select>
                 <input type="number" id="dash-renew-duration" min="1" max="24" value="12" style="width: 60px; margin: 0; padding: 5px; text-align: center;">
-                <button onclick="applyDashboardRenewal()" class="btn-orange" style="margin: 0; padding: 5px 10px;">Apply</button>
+                <button onclick="applyDashboardRenewal()" class="btn-orange" style="margin: 0; padding: 5px 10px; width: auto;">Apply</button>
             </div>
         </div>
 
@@ -165,18 +167,38 @@
         </div>
     </div>
 
-    <div class="section full-width tab-grid">
-        <div>
-            <h2>🏆 Tournament & MVP Engine</h2>
-            <div style="background: #222; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
-                <h3 style="margin-top:0;">1. Tournament Win</h3>
+    <div class="section full-width">
+        <h2>🏆 Tournaments, Travel & MVP Engine</h2>
+        <div class="tab-grid-3">
+            
+            <div style="background: #222; padding: 15px; border-radius: 5px;">
+                <h3 style="margin-top:0;">✈️ 1. Bulk Travel Planner</h3>
+                
+                <select id="travel-type" onchange="renderTravelList()">
+                    <option value="regional">Regional ($5,000)</option>
+                    <option value="national">National ($15,000)</option>
+                    <option value="international">International ($35,000)</option>
+                </select>
+                
+                <input type="text" id="travel-search" placeholder="Search team..." onkeyup="renderTravelList()" style="width: 100%; box-sizing: border-box; margin-bottom: 5px;">
+                
+                <div id="travel-team-list" class="travel-list list-container" style="height: 160px; background: #111; padding: 5px;">
+                    </div>
+
+                <button onclick="applyTravelExpenses()" class="btn-purple">Pay Selected Expenses</button>
+            </div>
+
+            <div style="background: #222; padding: 15px; border-radius: 5px;">
+                <h3 style="margin-top:0;">🏆 2. Tournament Win</h3>
+                <p style="font-size: 0.85em; color: #aaa; margin-top: -10px;">Distribute 60% Bank / 40% MV.</p>
                 <select id="tourney-team-select"></select>
-                <input type="number" id="prize-amount" placeholder="Total Prize ($)">
-                <button onclick="distributeTourneyPrize()" class="btn-green">Distribute (60% / 40%)</button>
+                <input type="number" id="prize-amount" placeholder="Total Prize Pool ($)">
+                <button onclick="distributeTourneyPrize()" class="btn-green">Distribute Prize</button>
             </div>
             
             <div style="background: #222; padding: 15px; border-radius: 5px;">
-                <h3 style="margin-top:0;">2. Individual Performance</h3>
+                <h3 style="margin-top:0;">⭐ 3. Individual Awards</h3>
+                <p style="font-size: 0.85em; color: #aaa; margin-top: -10px;">Boosts MV and grants Medals.</p>
                 <select id="perf-player-select" title="Select Player"></select>
                 <div class="flex-inputs">
                     <select id="perf-tier">
@@ -192,27 +214,30 @@
                 </div>
                 <button onclick="applyIndividualPerformance()" class="btn-blue">Apply Reward & Medal</button>
             </div>
-        </div>
-        
-        <div>
-            <h2>⚠️ Contract Alerts</h2>
-            <label>Renewal Duration (1-24m):</label>
-            <input type="number" id="renew-duration" min="1" max="24" value="12" style="width: calc(100% - 22px);">
-            <div id="contract-alerts" class="list-container list-small" style="height: 250px;"></div>
+
         </div>
     </div>
 
-    <div class="section full-width">
-        <h2>⚙️ Management Tools & Time Progression</h2>
-        <div class="tab-grid">
-            <div>
-                <button onclick="runMonthlyCycle()" class="btn-blue" style="width: 100%; height: 50px; font-size: 1.1em;">⏭️ RUN MONTHLY CYCLE</button>
+    <div class="section full-width tab-grid">
+        <div>
+            <h2>⚠️ Contract Alerts</h2>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 5px;">
+                <label>Renewal Duration (1-24m):</label>
+                <input type="number" id="renew-duration" min="1" max="24" value="12" style="width: 80px; margin: 0;">
             </div>
-            <div>
-                <select id="reset-team-select"></select>
+            <div id="contract-alerts" class="list-container list-small" style="height: 180px;"></div>
+        </div>
+
+        <div>
+            <h2>⚙️ Management Tools</h2>
+            <button onclick="runMonthlyCycle()" class="btn-blue" style="width: 100%; height: 60px; font-size: 1.2em; margin-bottom: 15px;">⏭️ RUN MONTHLY CYCLE</button>
+            
+            <div style="background: #222; padding: 15px; border-radius: 5px;">
+                <h3 style="margin-top:0; font-size: 1em;">League Interventions</h3>
+                <select id="reset-team-select" style="margin-top: 0;"></select>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="applyBailout()" class="btn-red" style="width: 50%;">Bankrupt Bailout</button>
-                    <button onclick="applySeasonReset()" class="btn-orange" style="width: 50%;">Season Reset (Wipe Medals)</button>
+                    <button onclick="applyBailout()" class="btn-red" style="margin:0;">Bankrupt Bailout (25k + Buff)</button>
+                    <button onclick="applySeasonReset()" class="btn-orange" style="margin:0;">Global Season Reset</button>
                 </div>
             </div>
         </div>
@@ -221,9 +246,9 @@
     <div class="section full-width">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h3>📋 Activity Log</h3>
-            <div>
-                <button onclick="undo()" class="btn-red">Undo</button>
-                <button onclick="exportExcels()" class="btn-blue">📥 Export Updated Excels</button>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="undo()" class="btn-red" style="margin: 0; width: auto;">Undo Action</button>
+                <button onclick="exportExcels()" class="btn-blue" style="margin: 0; width: auto;">📥 Export Updated Excels</button>
             </div>
         </div>
         <div id="action-log" class="log">> Ready. Upload files.</div>
@@ -250,12 +275,10 @@
         return players.filter(p => p.TeamName === teamName && p.Role === 'Bench').length < 3;
     }
 
-    // Calculador de Hype/Formato atual (Rising Stars)
     function getFormScore(p) {
         return ((p.MVP || 0) * 10) + ((p.EVP || 0) * 5) + ((p.VP || 0) * 2) + ((p.Titles || 0) * 1);
     }
 
-    // Renderizador visual de troféus
     function getMedalsHtml(p) {
         if (!p.MVP && !p.EVP && !p.VP && !p.Titles) return '';
         let str = '';
@@ -285,6 +308,7 @@
         updateDashboardAndMarket();
         checkContracts();
         updateGlobalAnalytics();
+        renderTravelList(); // Refresh travel pane
     }
 
     function populateTeamDropdowns() {
@@ -336,7 +360,6 @@
             return { name: t.TeamName, bank: t.CurrentBank || 0, net: fins.net, starters: starters };
         });
 
-        // 1. Deficit & Warning Check
         const losingMoney = teamData.filter(t => t.net < 0).sort((a,b) => a.net - b.net);
         const lowMargin = teamData.filter(t => t.net >= 0 && t.net < 5000).sort((a,b) => a.net - b.net);
         const missingStarters = teamData.filter(t => t.starters < 5);
@@ -352,7 +375,6 @@
         missingStarters.forEach(t => alertHtml += `<div class="analytic-item text-red"><span>${t.name}</span> <span>${t.starters}/5 Starters!</span></div>`);
         alertHtml += `</div>`;
 
-        // Rising Stars (Based on Form Score)
         const risingStars = [...players].filter(p => getFormScore(p) > 0).sort((a,b) => getFormScore(b) - getFormScore(a)).slice(0, 4);
         let starsHtml = `<div class="analytic-box" style="border-top-color:#ffeb3b;"><h4 style="margin:0 0 5px 0; color:#ffeb3b;">🚀 Rising Stars (Form)</h4>`;
         if (risingStars.length === 0) starsHtml += `<div style="color:#aaa;">No medals awarded this season yet.</div>`;
@@ -373,7 +395,6 @@
         updateRenewDropdown(tName); 
         updateGlobalAnalytics();
 
-        // 1. Finance Box
         const { sponsor, fixed, salaries, net } = getTeamFinances(team);
         const netClass = net >= 0 ? 'text-green' : 'text-red';
         const boostBadge = team.sponsorshipBoost ? `<span class="discount-badge" style="margin-left:5px;">50% BOOST</span>` : '';
@@ -385,7 +406,6 @@
             <div class="dash-row total"><span>Net Result:</span> <span class="${netClass}">${net >= 0 ? '+' : ''}${formatMoney(net)}</span></div>
         `;
 
-        // 2. Roster Box (Now with Medals!)
         document.getElementById('dash-content-roster').innerHTML = `
             <h3 style="margin-top:0;">👥 Roster</h3>
             <div class="list-container" style="height: 120px; padding: 5px;">
@@ -398,11 +418,10 @@
             </div>
         `;
 
-        // 3. AI Scout
         const startersCount = players.filter(p => p.TeamName === tName && p.Role === 'Starter').length;
         let aiHtml = '';
         
-        if (net < 0) aiHtml += `<div class="text-red" style="margin-bottom:5px;">⚠️ <b>Warning:</b> Operating at a loss. Sell players or win tournaments immediately.</div>`;
+        if (net < 0) aiHtml += `<div class="text-red" style="margin-bottom:5px;">⚠️ <b>Warning:</b> Operating at a loss. Sell players or win tournaments.</div>`;
         else if (net < 5000) aiHtml += `<div class="text-orange" style="margin-bottom:5px;">⚠️ <b>Caution:</b> Tight margins. Avoid high salary signings.</div>`;
         else aiHtml += `<div class="text-green" style="margin-bottom:5px;">✅ Finances healthy.</div>`;
 
@@ -441,7 +460,7 @@
                 notifHtml += `
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#000; padding:10px; margin-bottom:5px; border-radius:4px; border-left: 3px solid #ff9800;">
                         <span><b>${o.buyer}</b> offered <b>${formatMoney(o.amount)}</b> for <b>${o.playerName}</b><br><small style="color:#aaa;">Standard Buyout: ${formatMoney(o.standardBuyout)} | ${profitText}</small></span>
-                        <div><button onclick="acceptTransfer(${o.id})" class="btn-green">Accept</button> <button onclick="rejectTransfer(${o.id})" class="btn-red">Reject</button></div>
+                        <div><button onclick="acceptTransfer(${o.id})" class="btn-green" style="width: auto; margin-right:5px;">Accept</button> <button onclick="rejectTransfer(${o.id})" class="btn-red" style="width: auto;">Reject</button></div>
                     </div>`;
             });
             notifHtml += `</div>`;
@@ -508,10 +527,10 @@
             div.className = 'item-card';
             
             let buttonsHtml = '';
-            if (p.TeamName === 'none') buttonsHtml = `<button onclick="buyFreeAgent('${p.playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue">Buy (Free Agent)</button>`;
-            else if (p.TeamName === activeTeam) buttonsHtml = `<button onclick="createInternalOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.standardBuyout})" class="btn-purple">Put on Sale</button>`;
-            else if (p.isDiscounted) buttonsHtml = `<button onclick="buyOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-green">Buy Offer</button>`;
-            else buttonsHtml = `<button onclick="proposeTransfer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-blue">Propose Transfer</button>`;
+            if (p.TeamName === 'none') buttonsHtml = `<button onclick="buyFreeAgent('${p.playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue" style="width:auto; margin:0;">Buy (FA)</button>`;
+            else if (p.TeamName === activeTeam) buttonsHtml = `<button onclick="createInternalOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.standardBuyout})" class="btn-purple" style="width:auto; margin:0;">Put on Sale</button>`;
+            else if (p.isDiscounted) buttonsHtml = `<button onclick="buyOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-green" style="width:auto; margin:0;">Buy Offer</button>`;
+            else buttonsHtml = `<button onclick="proposeTransfer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-blue" style="width:auto; margin:0;">Propose</button>`;
 
             const bankPct = activeBank > 0 ? ((p.sixMonthCost / activeBank) * 100).toFixed(0) : '∞';
             const impactColor = bankPct > 50 ? '#f44336' : (bankPct > 20 ? '#ff9800' : '#4caf50');
@@ -523,15 +542,16 @@
                     <span class="info-badge">Contract: ${p.ContractMonths}m</span>
                     ${p.isDiscounted ? '<span class="discount-badge">ON SALE</span>' : ''}
                 </span>
-                <span>Buyout: ${p.TeamName === 'none' ? '$0' : formatMoney(p.currentBuyout)}</span>
-                ${buttonsHtml}
+                <span style="display:flex; align-items:center; gap:10px;">
+                    Buyout: ${p.TeamName === 'none' ? '$0' : formatMoney(p.currentBuyout)}
+                    ${buttonsHtml}
+                </span>
             `;
             container.appendChild(div);
         });
     }
 
     function applyDashboardRenewal() {
-        // [Existing logic omitted for brevity, it's unchanged]
         const activeTeam = document.getElementById('dash-team-select').value;
         const target = document.getElementById('dash-renew-target').value;
         const additionalMonths = parseInt(document.getElementById('dash-renew-duration').value);
@@ -654,7 +674,109 @@
         });
     }
 
-    // --- Core Cycles & Resets ---
+    // --- Bulk Travel Engine ---
+    function renderTravelList() {
+        const type = document.getElementById('travel-type').value;
+        const container = document.getElementById('travel-team-list');
+        const searchTerm = document.getElementById('travel-search')?.value.toLowerCase() || '';
+        
+        let baseCost = 0;
+        if (type === 'regional') baseCost = 5000;
+        else if (type === 'national') baseCost = 15000;
+        else if (type === 'international') baseCost = 35000;
+
+        // Preserve checked states before redrawing
+        const checkedTeams = Array.from(container.querySelectorAll('input.travel-cb:checked')).map(cb => cb.value);
+
+        let html = '';
+        finances.forEach(t => {
+            const isTier3 = String(t.Tier || "").toLowerCase().trim() === 'tier 3';
+            const finalCost = isTier3 ? baseCost * 0.5 : baseCost;
+            const newBank = (t.CurrentBank || 0) - finalCost;
+            
+            const isChecked = checkedTeams.includes(t.TeamName) ? 'checked' : '';
+            const display = t.TeamName.toLowerCase().includes(searchTerm) ? 'flex' : 'none';
+            const tierBadge = isTier3 ? '<span class="discount-badge">50% OFF</span>' : '';
+            const bankColor = newBank < 0 ? '#f44336' : '#aaa';
+            
+            html += `
+                <label style="display: ${display}; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #222; cursor: pointer;">
+                    <span style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" value="${t.TeamName}" class="travel-cb" ${isChecked}> 
+                        <b>${t.TeamName}</b> ${tierBadge}
+                    </span>
+                    <span style="font-size: 0.85em; text-align: right;">
+                        <span class="text-red">-${formatMoney(finalCost)}</span><br>
+                        <span style="color:${bankColor};">New Bank: ${formatMoney(newBank)}</span>
+                    </span>
+                </label>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function applyTravelExpenses() {
+        const type = document.getElementById('travel-type').value;
+        const checkboxes = document.querySelectorAll('.travel-cb:checked');
+        if (checkboxes.length === 0) return alert("Please select at least one team.");
+        
+        let baseCost = 0;
+        if (type === 'regional') baseCost = 5000;
+        else if (type === 'national') baseCost = 15000;
+        else if (type === 'international') baseCost = 35000;
+
+        if (!confirm(`Charge ${checkboxes.length} teams for ${type.toUpperCase()} travel?`)) return;
+
+        saveState();
+        let logTeams = [];
+        checkboxes.forEach(cb => {
+            const tName = cb.value;
+            const team = finances.find(t => t.TeamName === tName);
+            if (team) {
+                const isTier3 = String(team.Tier || "").toLowerCase().trim() === 'tier 3';
+                const finalCost = isTier3 ? baseCost * 0.5 : baseCost;
+                team.CurrentBank -= finalCost;
+                logTeams.push(tName);
+            }
+        });
+
+        addLog(`✈️ Travel (${type}): Charged ${logTeams.join(', ')}.`);
+        document.getElementById('travel-search').value = ''; // clear search
+        updateAll();
+    }
+
+    // --- Core Cycles & Actions ---
+    function distributeTourneyPrize() {
+        const amount = parseFloat(document.getElementById('prize-amount').value);
+        const tName = document.getElementById('tourney-team-select').value;
+        const team = finances.find(t => t.TeamName === tName);
+        if (!amount || !team) return;
+        saveState(); team.CurrentBank += (amount * 0.6);
+        const playerShare = (amount * 0.4) / 5;
+        players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5).forEach(p => {
+            p.MarketValue += playerShare;
+            p.Titles = (p.Titles || 0) + 1; 
+        });
+        addLog(`Tourney split: ${tName} Bank +${formatMoney(amount*0.6)}.`); updateAll();
+    }
+
+    function applyIndividualPerformance() {
+        const pName = document.getElementById('perf-player-select').value;
+        const player = players.find(p => String(p.PlayerName) === pName);
+        if (player) {
+            saveState();
+            const type = document.getElementById('perf-type').value;
+            const reward = { region: { mvp: 4000, evp: 3500, vp: 2500 }, global: { mvp: 10000, evp: 6000, vp: 4000 }, major: { mvp: 30000, evp: 12500, vp: 7500 } }[document.getElementById('perf-tier').value][type];
+            player.Prestige = (player.Prestige || 0) + reward;
+            
+            if (type === 'mvp') player.MVP = (player.MVP || 0) + 1;
+            else if (type === 'evp') player.EVP = (player.EVP || 0) + 1;
+            else if (type === 'vp') player.VP = (player.VP || 0) + 1;
+
+            addLog(`Reward: ${pName} +$${reward} Prestige & ${type.toUpperCase()} Medal.`); updateAll();
+        }
+    }
+
     function runMonthlyCycle() {
         saveState();
         finances.forEach(team => {
@@ -670,43 +792,11 @@
         if (team && confirm(`Apply Bailout to ${tName}?`)) { saveState(); team.CurrentBank = 25000; team.sponsorshipBoost = true; addLog(`Bailout applied for ${tName}.`); updateAll(); }
     }
 
-    function distributeTourneyPrize() {
-        const amount = parseFloat(document.getElementById('prize-amount').value);
-        const tName = document.getElementById('tourney-team-select').value;
-        const team = finances.find(t => t.TeamName === tName);
-        if (!amount || !team) return;
-        saveState(); team.CurrentBank += (amount * 0.6);
-        const playerShare = (amount * 0.4) / 5;
-        players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5).forEach(p => {
-            p.MarketValue += playerShare;
-            p.Titles = (p.Titles || 0) + 1; // <--- ADDING TITLE TO PROFILE
-        });
-        addLog(`Tourney split: ${tName} Bank +${formatMoney(amount*0.6)}.`); updateAll();
-    }
-
-    function applyIndividualPerformance() {
-        const pName = document.getElementById('perf-player-select').value;
-        const player = players.find(p => String(p.PlayerName) === pName);
-        if (player) {
-            saveState();
-            const type = document.getElementById('perf-type').value;
-            const reward = { region: { mvp: 4000, evp: 3500, vp: 2500 }, global: { mvp: 10000, evp: 6000, vp: 4000 }, major: { mvp: 30000, evp: 12500, vp: 7500 } }[document.getElementById('perf-tier').value][type];
-            player.Prestige = (player.Prestige || 0) + reward;
-            
-            // <--- ADDING MEDAL TO PROFILE
-            if (type === 'mvp') player.MVP = (player.MVP || 0) + 1;
-            else if (type === 'evp') player.EVP = (player.EVP || 0) + 1;
-            else if (type === 'vp') player.VP = (player.VP || 0) + 1;
-
-            addLog(`Reward: ${pName} +$${reward} Prestige & ${type.toUpperCase()} Medal.`); updateAll();
-        }
-    }
-
     function checkContracts() {
         const container = document.getElementById('contract-alerts'); container.innerHTML = '';
         players.filter(p => p.TeamName !== 'none' && p.ContractMonths <= 2).forEach(p => {
             const div = document.createElement('div'); div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
-            div.innerHTML = `<span>${String(p.PlayerName)} (${p.TeamName}): ${p.ContractMonths}m left</span> <button onclick="renewContractAlerts('${String(p.PlayerName).replace(/'/g, "\\'")}')">Renew</button>`;
+            div.innerHTML = `<span>${String(p.PlayerName)} (${p.TeamName}): ${p.ContractMonths}m left</span> <button onclick="renewContractAlerts('${String(p.PlayerName).replace(/'/g, "\\'")}')" style="width: auto; margin:0;">Renew</button>`;
             container.appendChild(div);
         });
     }
@@ -742,13 +832,8 @@
     function applySeasonReset() { 
         if(confirm("Apply Season Reset?\n\n- Cuts 30% Market Value of all players.\n- Wipes all Medals and Titles (MVP, EVP, VP, Titles).")) { 
             saveState(); 
-            players.forEach(p => {
-                p.MarketValue *= 0.7;
-                // Wipe the trophy cabinet
-                p.MVP = 0; p.EVP = 0; p.VP = 0; p.Titles = 0;
-            }); 
-            addLog("Season Reset Applied.");
-            updateAll(); 
+            players.forEach(p => { p.MarketValue *= 0.7; p.MVP = 0; p.EVP = 0; p.VP = 0; p.Titles = 0; }); 
+            addLog("Season Reset Applied."); updateAll(); 
         } 
     }
 
