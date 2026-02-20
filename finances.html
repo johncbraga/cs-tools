@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager</title>
+    <title>Ultimate eSports Manager v4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -11,35 +11,28 @@
         .section { background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333; }
         h1, h2, h3 { color: #4caf50; margin-top: 0; }
         
-        /* Inputs & Buttons */
         input, select { background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 5px; margin: 5px 0; width: calc(100% - 22px); }
         button { cursor: pointer; padding: 10px 15px; border: none; border-radius: 5px; background: #4caf50; color: white; font-weight: bold; transition: 0.2s; margin-top: 5px; }
         button:hover { background: #45a049; }
         .btn-blue { background: #2196f3; } .btn-red { background: #f44336; } .btn-orange { background: #ff9800; }
         
-        /* Lists & Logs */
         .list-container { height: 250px; overflow-y: auto; background: #111; padding: 10px; border-radius: 5px; border: 1px solid #333; }
         .item-card { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #222; font-size: 0.9em; }
         .log { background: #000; padding: 15px; height: 150px; overflow-y: auto; font-family: 'Courier New', monospace; color: #00ff00; border-radius: 5px; font-size: 12px; }
         .warning { color: #ff9800; } .expired { color: #f44336; font-weight: bold; }
         
         .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .bank-info { color: #4caf50; font-weight: bold; font-size: 0.9em; margin-bottom: 5px; display: block; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="section full-width" style="border-bottom: 4px solid #4caf50;">
+    <div class="section full-width">
         <h1>🎮 Ultimate eSports Management System</h1>
         <div class="tab-grid">
-            <div>
-                <label>Team Finances (finances.xlsx):</label>
-                <input type="file" id="upload-finances" accept=".xlsx">
-            </div>
-            <div>
-                <label>Players Data (players.xlsx):</label>
-                <input type="file" id="upload-players" accept=".xlsx">
-            </div>
+            <div><label>Finances:</label><input type="file" id="upload-finances" accept=".xlsx"></div>
+            <div><label>Players:</label><input type="file" id="upload-players" accept=".xlsx"></div>
         </div>
     </div>
 
@@ -49,11 +42,11 @@
             <div>
                 <h3>Tournament Win</h3>
                 <select id="tourney-team-select"></select>
-                <input type="number" id="prize-amount" placeholder="Total Prize Money ($)">
-                <button onclick="distributeTourneyPrize()">Distribute (60/40 Split)</button>
+                <input type="number" id="prize-amount" placeholder="Total Prize ($)">
+                <button onclick="distributeTourneyPrize()">Distribute (60% Team / 40% Starters)</button>
             </div>
             <div>
-                <h3>Individual Reward</h3>
+                <h3>Individual Performance</h3>
                 <input type="text" id="perf-player-name" placeholder="Player Name">
                 <select id="perf-tier">
                     <option value="region">Region (10k)</option>
@@ -61,9 +54,9 @@
                     <option value="major">Major (50k)</option>
                 </select>
                 <select id="perf-type">
-                    <option value="mvp">MVP (Winner)</option>
-                    <option value="evp">EVP (Runner-up)</option>
-                    <option value="vp">VP (Playoffs)</option>
+                    <option value="mvp">MVP</option>
+                    <option value="evp">EVP</option>
+                    <option value="vp">VP</option>
                 </select>
                 <button onclick="applyIndividualPerformance()" class="btn-blue">Apply Reward</button>
             </div>
@@ -78,7 +71,8 @@
             <option value="Starter">Active Starters</option>
         </select>
         <label>Buying Team:</label>
-        <select id="buying-team-select"></select>
+        <span id="buying-team-bank" class="bank-info">Balance: $0.00</span>
+        <select id="buying-team-select" onchange="updateBankDisplay()"></select>
         <div id="market-list" class="list-container"></div>
     </div>
 
@@ -92,11 +86,11 @@
         <div class="tab-grid">
             <div>
                 <button onclick="runMonthlyCycle()" class="btn-blue" style="width: 100%; height: 50px;">RUN MONTHLY CYCLE</button>
-                <p><small>* Pays Salaries + 20.5k Fixed Costs + Contracts -1 month</small></p>
             </div>
             <div>
-                <button onclick="applySeasonReset()" class="btn-orange" style="width: 100%;">Season Reset (-30% MV)</button>
-                <button onclick="resetBankrupt()" class="btn-red" style="width: 100%;">Bankrupt Reset (0 Bank)</button>
+                <select id="reset-team-select" title="Target for Reset"></select>
+                <button onclick="resetBankrupt()" class="btn-red" style="width: 100%;">Reset Target Bankrupt (0 Bank)</button>
+                <button onclick="applySeasonReset()" class="btn-orange" style="width: 100%; margin-top: 10px;">Season Reset (-30% MV)</button>
             </div>
         </div>
     </div>
@@ -105,11 +99,11 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h3>📋 Activity Log</h3>
             <div>
-                <button onclick="undo()" class="btn-red">Undo (Last 3)</button>
+                <button onclick="undo()" class="btn-red">Undo</button>
                 <button onclick="exportExcels()" class="btn-blue">📥 Export Updated Excels</button>
             </div>
         </div>
-        <div id="action-log" class="log">> System ready. Please upload your files.</div>
+        <div id="action-log" class="log">> Ready. Upload files to begin.</div>
     </div>
 </div>
 
@@ -146,6 +140,17 @@
         const options = finances.map(t => `<option value="${t.TeamName}">${t.TeamName}</option>`).join('');
         document.getElementById('tourney-team-select').innerHTML = options;
         document.getElementById('buying-team-select').innerHTML = options;
+        document.getElementById('reset-team-select').innerHTML = options;
+        updateBankDisplay();
+    }
+
+    function updateBankDisplay() {
+        const tName = document.getElementById('buying-team-select').value;
+        const team = finances.find(t => t.TeamName === tName);
+        const display = document.getElementById('buying-team-bank');
+        if (team) {
+            display.innerText = `Balance: $${Number(team.CurrentBank).toLocaleString()}`;
+        }
     }
 
     // --- Core Logic ---
@@ -155,17 +160,11 @@
         finances.forEach(team => {
             const teamPlayers = players.filter(p => p.TeamName === team.TeamName);
             const salaryTotal = teamPlayers.reduce((sum, p) => sum + (p.MarketValue * 0.10), 0);
-            const totalExp = salaryTotal + 20500;
-            team.CurrentBank -= totalExp;
+            team.CurrentBank -= (salaryTotal + 20500);
         });
-
-        players.forEach(p => {
-            if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1;
-        });
-
-        addLog("Monthly Cycle: Salaries paid, fixed costs (20.5k) deducted, and contracts -1 month.");
-        checkContracts();
-        refreshMarket();
+        players.forEach(p => { if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1; });
+        addLog("Month Passed: Salaries/Fixed Costs deducted. Contracts -1 month.");
+        checkContracts(); refreshMarket(); updateBankDisplay();
     }
 
     function distributeTourneyPrize() {
@@ -175,103 +174,95 @@
         if (!amount || !team) return;
 
         saveState();
-        const teamCut = amount * 0.6;
-        const playerCut = (amount * 0.4) / 5;
+        team.CurrentBank += (amount * 0.6);
+        const playerShare = (amount * 0.4) / 5;
+        let starters = players.filter(p => p.TeamName === tName && p.Role === 'Starter').slice(0, 5);
+        starters.forEach(p => p.MarketValue += playerShare);
         
-        team.CurrentBank += teamCut;
-        let count = 0;
-        players.filter(p => p.TeamName === tName && p.Role === 'Starter').forEach(p => {
-            if(count < 5) { p.MarketValue += playerCut; count++; }
-        });
-
-        addLog(`Tourney Win (${tName}): Team +$${teamCut.toFixed(2)} | Players MV +$${playerCut.toFixed(2)}`);
+        addLog(`Prize Distributed (${tName}): +$${(amount*0.6).toFixed(2)} to Team. $${playerShare.toFixed(2)} to each of the 5 Starters.`);
+        updateBankDisplay();
     }
 
     function applyIndividualPerformance() {
         const pName = document.getElementById('perf-player-name').value;
         const tier = document.getElementById('perf-tier').value;
         const type = document.getElementById('perf-type').value;
-        
         const rates = {
             region: { mvp: 4000, evp: 3500, vp: 2500 },
             global: { mvp: 10000, evp: 6000, vp: 4000 },
             major: { mvp: 30000, evp: 12500, vp: 7500 }
         };
-
         const player = players.find(p => p.PlayerName === pName);
         if (player) {
             saveState();
             const reward = rates[tier][type];
             player.Prestige = (player.Prestige || 0) + reward;
-            addLog(`Performance: ${pName} gained $${reward} Prestige (${type} @ ${tier})`);
-        } else { alert("Player not found!"); }
+            addLog(`Prestige Award: ${pName} +$${reward} for ${type} @ ${tier}`);
+        }
     }
 
-    // --- Market & Contracts ---
+    // --- Market ---
 
     function refreshMarket() {
         const filter = document.getElementById('market-filter').value;
         const container = document.getElementById('market-list');
         container.innerHTML = '';
-
         players.filter(p => filter === 'none' ? p.TeamName === 'none' : p.Role === filter).forEach(p => {
-            const buyout = (p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5).toFixed(0);
+            const buyout = (p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5);
             const div = document.createElement('div');
             div.className = 'item-card';
             div.innerHTML = `
-                <span><b>${p.PlayerName}</b> (${p.TeamName}) | MV: $${p.MarketValue}</span>
-                <span>Cost: $${p.TeamName === 'none' ? '0' : buyout}</span>
-                <button onclick="buyPlayer('${p.PlayerName}')" class="btn-blue">Buy</button>
+                <span><b>${p.PlayerName}</b> | MV: $${p.MarketValue}</span>
+                <span>Buyout: $${p.TeamName === 'none' ? '0' : buyout.toFixed(0)}</span>
+                <button onclick="buyPlayer('${p.PlayerName}', ${buyout})" class="btn-blue">Buy</button>
             `;
             container.appendChild(div);
         });
     }
 
-    function buyPlayer(name) {
+    function buyPlayer(name, cost) {
         const buyerName = document.getElementById('buying-team-select').value;
         const buyer = finances.find(t => t.TeamName === buyerName);
         const player = players.find(p => p.PlayerName === name);
         if (!buyer || !player) return;
 
-        const cost = player.TeamName === 'none' ? 0 : (player.MarketValue * 0.10 * player.ContractMonths * 1.5);
+        const finalCost = player.TeamName === 'none' ? 0 : cost;
         
-        if (buyer.CurrentBank >= cost) {
-            saveState();
-            buyer.CurrentBank -= cost;
-            player.TeamName = buyerName;
-            player.Role = 'Bench';
-            player.ContractMonths = 12;
-            addLog(`Transfer: ${name} moved to ${buyerName}. Buyout: $${cost.toFixed(2)}`);
-            refreshMarket();
-            checkContracts();
-        } else { alert("Insufficient funds!"); }
+        if (confirm(`Confirm purchase of ${name} for $${finalCost.toFixed(2)}? (Player will move to Bench)`)) {
+            if (buyer.CurrentBank >= finalCost) {
+                saveState();
+                buyer.CurrentBank -= finalCost;
+                player.TeamName = buyerName;
+                player.Role = 'Bench';
+                player.ContractMonths = 12;
+                addLog(`${name} joined ${buyerName} Bench. Cost: $${finalCost.toFixed(2)}`);
+                refreshMarket(); checkContracts(); updateBankDisplay();
+            } else { alert("Insufficient Team Bank!"); }
+        }
     }
 
     function checkContracts() {
         const container = document.getElementById('contract-alerts');
         container.innerHTML = '';
-        players.filter(p => p.TeamName !== 'none').forEach(p => {
-            if (p.ContractMonths <= 2) {
-                const div = document.createElement('div');
-                div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
-                div.innerHTML = `
-                    <span>${p.PlayerName} (${p.TeamName}) - ${p.ContractMonths}m left</span>
-                    <button onclick="renewContract('${p.PlayerName}')">Renew 12m</button>
-                `;
-                container.appendChild(div);
-            }
+        players.filter(p => p.TeamName !== 'none' && p.ContractMonths <= 2).forEach(p => {
+            const div = document.createElement('div');
+            div.className = `item-card ${p.ContractMonths <= 0 ? 'expired' : 'warning'}`;
+            div.innerHTML = `<span>${p.PlayerName} (${p.TeamName}): ${p.ContractMonths}m left</span>
+                             <button onclick="renewContract('${p.PlayerName}')">Renew 12m</button>`;
+            container.appendChild(div);
         });
     }
 
     function renewContract(name) {
         const p = players.find(p => p.PlayerName === name);
         const team = finances.find(t => t.TeamName === p.TeamName);
-        if (!p || !team) return;
-        saveState();
-        team.CurrentBank -= (p.MarketValue * 0.10); // Renewal fee
-        p.ContractMonths = (p.ContractMonths || 0) + 12;
-        addLog(`Renewed: ${name} for 12 months. Fee: 10% of MV.`);
-        checkContracts();
+        if (p && team) {
+            saveState();
+            team.CurrentBank -= (p.MarketValue * 0.10);
+            p.ContractMonths += 12;
+            addLog(`Renewed: ${name} (12m). Fee: 10% MV.`);
+            checkContracts(); updateBankDisplay();
+        }
     }
 
     // --- Helpers ---
@@ -285,24 +276,25 @@
         if (history.length > 0) {
             const last = history.pop();
             finances = last.f; players = last.p;
-            addLog("Undo performed.");
-            refreshMarket(); checkContracts();
+            addLog("Undo successful.");
+            refreshMarket(); checkContracts(); updateBankDisplay();
+        }
+    }
+
+    function resetBankrupt() {
+        const tName = document.getElementById('reset-team-select').value;
+        const team = finances.find(t => t.TeamName === tName);
+        if (team && confirm(`Are you sure you want to reset ${tName}'s bank to 0?`)) {
+            saveState(); team.CurrentBank = 0;
+            addLog(`Bankrupt Reset applied to ${tName}.`);
+            updateBankDisplay();
         }
     }
 
     function applySeasonReset() {
-        saveState();
-        players.forEach(p => p.MarketValue = p.MarketValue * 0.7);
-        addLog("Season Reset: All Market Values decreased by 30%.");
-    }
-
-    function resetBankrupt() {
-        const tName = document.getElementById('tourney-team-select').value;
-        const team = finances.find(t => t.TeamName === tName);
-        if (team) {
-            saveState();
-            team.CurrentBank = 0;
-            addLog(`Bankrupt Reset: ${tName}'s bank is now 0.`);
+        if(confirm("Decrease all Market Values by 30%?")) {
+            saveState(); players.forEach(p => p.MarketValue *= 0.7);
+            addLog("Season Reset applied."); refreshMarket();
         }
     }
 
@@ -315,7 +307,6 @@
         const wb1 = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb1, XLSX.utils.json_to_sheet(finances), "Finances");
         XLSX.writeFile(wb1, "finances_updated.xlsx");
-        
         const wb2 = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb2, XLSX.utils.json_to_sheet(players), "Players");
         XLSX.writeFile(wb2, "players_updated.xlsx");
