@@ -1,0 +1,78 @@
+📊 VRS Rating System — Official Overview
+1. Objetivo do sistema
+O VRS Rating System foi criado para:
+
+Medir a força real dos times ao longo do tempo
+Recompensar consistência, não apenas vitórias isoladas
+Evitar inflação de pontos e snowball irreversível
+Manter histórico permanente entre temporadas
+Permitir simulações confiáveis de resultados futuros
+
+O sistema é baseado em Elo, com extensões controladas para:
+
+Streak (sequência de vitórias)
+Bônus temporários de torneio
+Reset sazonal com compressão e prestige
+
+
+2. Estrutura base do ranking
+Cada time possui, no mínimo, os seguintes atributos:
+
+Points → valor principal do ranking (base Elo)
+Victories / Loses → estatísticas da temporada
+Streak → sequência atual de vitórias
+Tier → classificação visual derivada dos pontos
+Region → região competitiva
+Majors / Trophies → conquistas permanentes
+Prestige → histórico acumulado entre temporadas
+
+⚠️ Importante:
+Tier, posição e status visual nunca influenciam os cálculos.
+Eles são apenas consequência dos pontos.
+
+
+
+10. Prestige (histórico permanente)
+Prestige representa:
+
+Tudo que o time construiu ao longo da história
+Independente de resets
+
+Ele não influencia partidas
+Serve como:
+
+Registro histórico
+Critério secundário de legado
+Diferencial visual e narrativo
+
+
+11. Match Predictor (simulação)
+O Match Predictor usa exatamente a mesma lógica real do sistema para:
+
+Calcular expectativa Elo
+Aplicar K dinâmico (streak + bônus)
+Simular vitória ou derrota
+Mostrar:
+
+Δ de pontos
+Nova posição
+Subida, queda ou manutenção no ranking
+
+
+
+✅ Não é estimativa arbitrária
+✅ É uma simulação fiel do sistema real
+
+12. Filosofia geral do sistema
+O VRS foi desenhado para:
+
+✅ Premiar constância, não sorte
+✅ Manter risco sempre presente
+✅ Evitar inflação de pontos
+✅ Permitir resets sem apagar história
+✅ Ser previsível, auditável e justo
+
+
+13. Resumo em uma frase
+
+O VRS Rating System é um Elo avançado, com K dinâmico controlado por streak e bônus temporários, resets sazonais com compressão e um histórico permanente via prestige — equilibrando competitividade, longevidade e justiça.
