@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager v6.9.1</title>
+    <title>Ultimate eSports Manager v7.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -26,7 +26,7 @@
         .info-badge { color: #aaa; font-size: 0.9em; margin-left: 5px; border-left: 1px solid #444; padding-left: 5px; }
         
         .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .tab-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+        .tab-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
         .control-group { margin-bottom: 10px; }
         .flex-inputs { display: flex; gap: 5px; }
         
@@ -100,36 +100,58 @@
     <div class="section full-width">
         <h2>🛒 Transfer Market & Scouting</h2>
         
-        <div class="tab-grid-4" style="background: #252525; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <div class="control-group">
-                <label>Target Role:</label>
-                <select id="market-filter" onchange="refreshMarket()">
-                    <option value="all">All Roles</option>
-                    <option value="none">Free Agents (none)</option>
-                    <option value="Bench">Benched Players</option>
-                    <option value="Starter">Active Starters</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Target Team:</label>
-                <select id="market-team-filter" onchange="refreshMarket()">
-                    <option value="all">All Teams</option>
-                    <option value="my_roster">🛡️ My Roster</option>
-                    <option value="offers">🌟 Special Offers</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Market Value ($):</label>
-                <div class="flex-inputs">
-                    <input type="number" id="filter-mv-min" placeholder="Min" onkeyup="refreshMarket()">
-                    <input type="number" id="filter-mv-max" placeholder="Max" onkeyup="refreshMarket()">
+        <div style="background: #252525; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <div class="tab-grid-3">
+                <div class="control-group">
+                    <label>Target Role:</label>
+                    <select id="market-filter" onchange="refreshMarket()">
+                        <option value="all">All Roles</option>
+                        <option value="none">Free Agents (none)</option>
+                        <option value="Bench">Benched Players</option>
+                        <option value="Starter">Active Starters</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Target Team:</label>
+                    <select id="market-team-filter" onchange="refreshMarket()">
+                        <option value="all">All Teams</option>
+                        <option value="my_roster">🛡️ My Roster</option>
+                        <option value="offers">🌟 Special Offers</option>
+                        </select>
+                </div>
+                <div class="control-group">
+                    <label>Sort By:</label>
+                    <select id="market-sort" onchange="refreshMarket()">
+                        <option value="mv-desc">Highest Market Value</option>
+                        <option value="mv-asc">Lowest Market Value</option>
+                        <option value="buy-desc">Highest Buyout</option>
+                        <option value="buy-asc">Lowest Buyout</option>
+                        <option value="sal-desc">Highest Salary</option>
+                        <option value="sal-asc">Lowest Salary</option>
+                    </select>
                 </div>
             </div>
-            <div class="control-group">
-                <label>Contract Left (Months):</label>
-                <div class="flex-inputs">
-                    <input type="number" id="filter-con-min" placeholder="Min" onkeyup="refreshMarket()">
-                    <input type="number" id="filter-con-max" placeholder="Max" onkeyup="refreshMarket()">
+            <div class="tab-grid-3">
+                <div class="control-group">
+                    <label>Market Value ($):</label>
+                    <div class="flex-inputs">
+                        <input type="number" id="filter-mv-min" placeholder="Min" onkeyup="refreshMarket()">
+                        <input type="number" id="filter-mv-max" placeholder="Max" onkeyup="refreshMarket()">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Buyout Cost ($):</label>
+                    <div class="flex-inputs">
+                        <input type="number" id="filter-buy-min" placeholder="Min" onkeyup="refreshMarket()">
+                        <input type="number" id="filter-buy-max" placeholder="Max" onkeyup="refreshMarket()">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Contract Left (Months):</label>
+                    <div class="flex-inputs">
+                        <input type="number" id="filter-con-min" placeholder="Min" onkeyup="refreshMarket()">
+                        <input type="number" id="filter-con-max" placeholder="Max" onkeyup="refreshMarket()">
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,7 +161,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>Scouting List</h3>
                     <div style="font-size:0.9em;">
-                        <b>New Contract:</b>
+                        <b>New Contract (1-24m):</b>
                         <input type="number" id="market-duration" min="1" max="24" value="12" style="width: 60px; padding: 5px; margin-left: 5px;">
                     </div>
                 </div>
@@ -168,7 +190,7 @@
             </div>
             <div>
                 <select id="reset-team-select"></select>
-                <button onclick="resetBankrupt()" class="btn-red" style="width: 100%;">Reset Target Bank (0)</button>
+                <button onclick="applyBailout()" class="btn-red" style="width: 100%;">Bankrupt Bailout (25k + 50% Boost)</button>
                 <button onclick="applySeasonReset()" class="btn-orange" style="width: 100%; margin-top: 10px;">Season Reset (-30% MV)</button>
             </div>
         </div>
@@ -191,12 +213,11 @@
     let players = [];
     let history = [];
     let temporaryOffers = {}; 
-    let pendingTransfers = []; // Aguardando aprovação inimiga
-    let transferHistory = [];  // Histórico de ofertas enviadas (Accept/Reject)
+    let pendingTransfers = []; 
+    let transferHistory = [];  
 
     const formatMoney = (val) => '$' + Number(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-    // Helper: Verifica se o time pode receber mais um bench
     function canAddBenchPlayer(teamName) {
         const benchCount = players.filter(p => p.TeamName === teamName && p.Role === 'Bench').length;
         return benchCount < 3;
@@ -272,6 +293,10 @@
         else if (tier === "tier 2") sponsor = 40000;
         else if (tier === "tier 3") sponsor = 30000;
 
+        if (team.sponsorshipBoost) {
+            sponsor *= 1.5;
+        }
+
         const fixed = Number(team.Coach || 0) + Number(team.Analyst || 0) + 
                       Number(team.HealthTeam || 0) + Number(team.PhysicalTeam || 0) + 
                       Number(team.Maintenance || 0) + Number(team.Marketing || 0);
@@ -317,21 +342,22 @@
         const { sponsor, fixed, salaries, net } = getTeamFinances(team);
         const netClass = net >= 0 ? 'text-green' : 'text-red';
         const netSign = net >= 0 ? '+' : '';
+        const boostBadge = team.sponsorshipBoost ? `<span class="discount-badge" style="margin-left:10px;">50% BAILOUT BOOST</span>` : '';
 
         document.getElementById('dash-content').innerHTML = `
             <div>
-                <h3 style="margin-top:0;">🏦 Current Bank: <span class="text-blue">$${Number(team.CurrentBank || 0).toLocaleString()}</span></h3>
-                <div class="dash-row"><span>Tier Income (${team.Tier}):</span> <span class="text-green">+$${sponsor.toLocaleString()}</span></div>
-                <div class="dash-row"><span>Fixed Costs (Excel):</span> <span class="text-red">-$${fixed.toLocaleString()}</span></div>
-                <div class="dash-row"><span>Player Salaries (10% MV):</span> <span class="text-red">-$${salaries.toLocaleString()}</span></div>
-                <div class="dash-row total"><span>Monthly Net Result:</span> <span class="${netClass}">${netSign}$${net.toLocaleString()}</span></div>
+                <h3 style="margin-top:0;">🏦 Current Bank: <span class="text-blue">${formatMoney(team.CurrentBank || 0)}</span></h3>
+                <div class="dash-row"><span>Tier Income (${team.Tier}):</span> <span class="text-green">+${formatMoney(sponsor)} ${boostBadge}</span></div>
+                <div class="dash-row"><span>Fixed Costs (Excel):</span> <span class="text-red">-${formatMoney(fixed)}</span></div>
+                <div class="dash-row"><span>Player Salaries (10% MV):</span> <span class="text-red">-${formatMoney(salaries)}</span></div>
+                <div class="dash-row total"><span>Monthly Net Result:</span> <span class="${netClass}">${netSign}${formatMoney(net)}</span></div>
             </div>
             <div>
                 <h3 style="margin-top:0;">👥 Roster Overview</h3>
                 <div class="list-container" style="height: 120px; padding: 5px;">
                     ${players.filter(p => p.TeamName === tName).map(p => `
                         <div style="font-size: 0.85em; padding: 3px; border-bottom: 1px solid #222;">
-                            <b>${String(p.PlayerName)}</b> (${p.Role}) | Contract: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: $${(p.MarketValue * 0.10).toFixed(0)}
+                            <b>${String(p.PlayerName)}</b> (${p.Role}) | Contract: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: ${formatMoney(p.MarketValue * 0.10)}
                         </div>
                     `).join('')}
                 </div>
@@ -358,7 +384,9 @@
         let totalFee = 0;
         targetPlayers.forEach(p => totalFee += (p.MarketValue * 0.10));
 
-        const confirmMsg = target === 'all' ? `Renew ALL players for +${additionalMonths} months?\nTotal Fee: ${formatMoney(totalFee)}` : `Renew ${target} for +${additionalMonths} months?\nFee: ${formatMoney(totalFee)}`;
+        const confirmMsg = target === 'all' 
+            ? `Renew ALL players for +${additionalMonths} months?\nTotal Fee: ${formatMoney(totalFee)}` 
+            : `Renew ${target} for +${additionalMonths} months?\nFee: ${formatMoney(totalFee)}`;
 
         if (confirm(confirmMsg)) {
             saveState();
@@ -375,7 +403,6 @@
         const container = document.getElementById('outbound-offers');
         container.innerHTML = '';
         
-        // Combine pending and history
         const myOutbounds = [
             ...pendingTransfers.filter(o => o.buyer === activeTeam).map(o => ({...o, status: '⏳ Pending'})),
             ...transferHistory.filter(o => o.buyer === activeTeam)
@@ -407,57 +434,85 @@
     function refreshMarket() {
         const roleFilter = document.getElementById('market-filter').value;
         const teamFilter = document.getElementById('market-team-filter').value;
+        const sortBy = document.getElementById('market-sort').value;
         const activeTeam = document.getElementById('dash-team-select').value; 
         
         const mvMin = parseFloat(document.getElementById('filter-mv-min').value) || 0;
         const mvMax = parseFloat(document.getElementById('filter-mv-max').value) || Infinity;
         const conMin = parseInt(document.getElementById('filter-con-min').value) || 0;
         const conMax = parseInt(document.getElementById('filter-con-max').value) || Infinity;
+        const buyMin = parseFloat(document.getElementById('filter-buy-min').value) || 0;
+        const buyMax = parseFloat(document.getElementById('filter-buy-max').value) || Infinity;
 
         const container = document.getElementById('market-list');
         container.innerHTML = '';
         
-        players.filter(p => {
-            const passRole = roleFilter === 'all' || (roleFilter === 'none' ? p.TeamName === 'none' : p.Role === roleFilter);
-            
-            let passTeam = false;
-            if (teamFilter === 'all') passTeam = true;
-            else if (teamFilter === 'my_roster') passTeam = (p.TeamName === activeTeam);
-            else if (teamFilter === 'offers') passTeam = (temporaryOffers[String(p.PlayerName)] !== undefined);
-            else passTeam = (p.TeamName === teamFilter);
-
-            const mv = p.MarketValue || 0;
-            const con = p.ContractMonths || 0;
-            const passNumerical = (mv >= mvMin && mv <= mvMax) && (con >= conMin && con <= conMax);
-
-            return passRole && passTeam && passNumerical;
-        }).forEach(p => {
+        // Map data to calculate buyouts beforehand for accurate filtering and sorting
+        let marketData = players.map(p => {
             const standardBuyout = (p.MarketValue * 0.10 * (p.ContractMonths || 0) * 1.5);
             const playerNameStr = String(p.PlayerName);
             const isDiscounted = temporaryOffers[playerNameStr] !== undefined;
             const currentBuyout = isDiscounted ? temporaryOffers[playerNameStr] : standardBuyout;
-            const monthlyCost = (p.MarketValue * 0.10).toFixed(0);
+            const monthlyCost = p.MarketValue * 0.10;
+            return { ...p, standardBuyout, isDiscounted, currentBuyout, monthlyCost, playerNameStr };
+        });
+
+        // 1. FILTERING
+        marketData = marketData.filter(p => {
+            const passRole = roleFilter === 'all' || (roleFilter === 'none' ? p.TeamName === 'none' : p.Role === roleFilter);
             
+            // MAGIC RULE: Hide own roster from general view unless explicitly looking for it
+            if (teamFilter !== 'my_roster' && p.TeamName === activeTeam) return false;
+
+            let passTeam = false;
+            if (teamFilter === 'all') passTeam = true;
+            else if (teamFilter === 'my_roster') passTeam = (p.TeamName === activeTeam);
+            else if (teamFilter === 'offers') passTeam = p.isDiscounted;
+            else passTeam = (p.TeamName === teamFilter);
+
+            const passMV = (p.MarketValue >= mvMin && p.MarketValue <= mvMax);
+            const passCon = ((p.ContractMonths || 0) >= conMin && (p.ContractMonths || 0) <= conMax);
+            const passBuy = (p.currentBuyout >= buyMin && p.currentBuyout <= buyMax);
+
+            return passRole && passTeam && passMV && passCon && passBuy;
+        });
+
+        // 2. SORTING
+        marketData.sort((a, b) => {
+            if (sortBy === 'mv-desc') return b.MarketValue - a.MarketValue;
+            if (sortBy === 'mv-asc') return a.MarketValue - b.MarketValue;
+            if (sortBy === 'buy-desc') return b.currentBuyout - a.currentBuyout;
+            if (sortBy === 'buy-asc') return a.currentBuyout - b.currentBuyout;
+            if (sortBy === 'sal-desc') return b.monthlyCost - a.monthlyCost;
+            if (sortBy === 'sal-asc') return a.monthlyCost - b.monthlyCost;
+            return 0;
+        });
+
+        // 3. RENDERING
+        marketData.forEach(p => {
             const div = document.createElement('div');
             div.className = 'item-card';
             
             let buttonsHtml = '';
             
             if (p.TeamName === 'none') {
-                buttonsHtml = `<button onclick="buyFreeAgent('${playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue">Buy (Free Agent)</button>`;
+                buttonsHtml = `<button onclick="buyFreeAgent('${p.playerNameStr.replace(/'/g, "\\'")}')" class="btn-blue">Buy (Free Agent)</button>`;
             } else if (p.TeamName === activeTeam) {
-                buttonsHtml = `<button onclick="createInternalOffer('${playerNameStr.replace(/'/g, "\\'")}', ${standardBuyout})" class="btn-purple">Put on Sale</button>`;
+                buttonsHtml = `<button onclick="createInternalOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.standardBuyout})" class="btn-purple">Put on Sale</button>`;
+            } else if (p.isDiscounted) {
+                // Instantly buy an offered player
+                buttonsHtml = `<button onclick="buyOffer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-green">Buy Offer</button>`;
             } else {
-                buttonsHtml = `<button onclick="proposeTransfer('${playerNameStr.replace(/'/g, "\\'")}', ${currentBuyout})" class="btn-blue">Propose Transfer</button>`;
+                buttonsHtml = `<button onclick="proposeTransfer('${p.playerNameStr.replace(/'/g, "\\'")}', ${p.currentBuyout})" class="btn-blue">Propose Transfer</button>`;
             }
 
             div.innerHTML = `
-                <span><b>${playerNameStr}</b> [${p.TeamName}] | MV: $${p.MarketValue} 
-                    <span class="info-badge">Sal: $${monthlyCost}/mo</span>
+                <span><b>${p.playerNameStr}</b> [${p.TeamName}] | MV: ${formatMoney(p.MarketValue)} 
+                    <span class="info-badge">Sal: ${formatMoney(p.monthlyCost)}/mo</span>
                     <span class="info-badge">Contract: ${p.ContractMonths}m</span>
-                    ${isDiscounted ? '<span class="discount-badge">ON SALE</span>' : ''}
+                    ${p.isDiscounted ? '<span class="discount-badge">ON SALE</span>' : ''}
                 </span>
-                <span>Buyout: ${p.TeamName === 'none' ? '$0' : formatMoney(currentBuyout)}</span>
+                <span>Buyout: ${p.TeamName === 'none' ? '$0' : formatMoney(p.currentBuyout)}</span>
                 ${buttonsHtml}
             `;
             container.appendChild(div);
@@ -495,6 +550,40 @@
         }
     }
 
+    function buyOffer(name, cost) {
+        const buyerName = document.getElementById('dash-team-select').value; 
+        const months = parseInt(document.getElementById('market-duration').value);
+        if (isNaN(months) || months < 1 || months > 24) return alert("Invalid duration.");
+
+        if (!canAddBenchPlayer(buyerName)) return alert(`Cannot buy ${name}. Your bench is full (Max 3).`);
+
+        const buyer = finances.find(t => t.TeamName === buyerName);
+        const player = players.find(p => String(p.PlayerName) === name);
+        if (!buyer || !player) return;
+        const sellerName = player.TeamName;
+        const seller = finances.find(t => t.TeamName === sellerName);
+
+        if (confirm(`Instantly buy ${name} for ${formatMoney(cost)} (Special Offer)?\nNew Contract: ${months}m`)) {
+            if (buyer.CurrentBank >= cost) {
+                saveState();
+                buyer.CurrentBank -= cost;
+                if (seller) seller.CurrentBank += cost;
+
+                player.TeamName = buyerName;
+                player.Role = 'Bench';
+                player.ContractMonths = months;
+
+                if(temporaryOffers[name]) delete temporaryOffers[name];
+                pendingTransfers = pendingTransfers.filter(o => o.playerName !== name); // clear other pending offers
+
+                addLog(`Offer Bought: ${buyerName} instantly bought ${name} from ${sellerName} for ${formatMoney(cost)}.`);
+                checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
+            } else {
+                alert(`Insufficient funds. Your bank: ${formatMoney(buyer.CurrentBank)}`);
+            }
+        }
+    }
+
     function proposeTransfer(name, defaultPrice) {
         const buyerName = document.getElementById('dash-team-select').value; 
         const months = parseInt(document.getElementById('market-duration').value);
@@ -508,12 +597,11 @@
         const player = players.find(p => String(p.PlayerName) === name);
         if (!buyer || !player) return;
 
-        // Check if offer already pending
         if(pendingTransfers.some(o => o.buyer === buyerName && o.playerName === name)) {
             return alert("You already have a pending offer for this player.");
         }
 
-        const offerStr = prompt(`Propose transfer for ${name}.\nStandard Buyout/Sale is ${formatMoney(defaultPrice)}.\nYour offer amount:`, defaultPrice.toFixed(0));
+        const offerStr = prompt(`Propose transfer for ${name}.\nStandard Buyout is ${formatMoney(defaultPrice)}.\nYour offer amount:`, defaultPrice.toFixed(0));
         if (offerStr === null) return;
         
         const offerAmount = parseFloat(offerStr);
@@ -546,7 +634,6 @@
 
         if (!buyer || !seller || !player) return;
 
-        // Secondary checks before applying
         if (buyer.CurrentBank < offer.amount) {
             alert(`${offer.buyer} no longer has enough funds for this transaction! Offer cancelled.`);
             transferHistory.unshift({...offer, status: '❌ Rejected (Buyer Broke)'});
@@ -556,7 +643,7 @@
 
         if (!canAddBenchPlayer(offer.buyer)) {
             alert(`${offer.buyer}'s bench is currently full (Max 3). They cannot receive this player right now.`);
-            return; // Don't cancel, just block acceptance until they make space
+            return; 
         }
 
         saveState();
@@ -568,7 +655,7 @@
         player.ContractMonths = offer.months;
 
         transferHistory.unshift({...offer, status: '✅ Accepted'});
-        pendingTransfers = pendingTransfers.filter(o => o.playerName !== offer.playerName); // Remove all other pending offers for this player
+        pendingTransfers = pendingTransfers.filter(o => o.playerName !== offer.playerName); 
         if(temporaryOffers[offer.playerName]) delete temporaryOffers[offer.playerName];
 
         addLog(`Transfer Accepted! ${offer.playerName} moved to ${offer.buyer}. ${offer.seller} got ${formatMoney(offer.amount)}.`);
@@ -593,10 +680,26 @@
         finances.forEach(team => {
             const { net } = getTeamFinances(team);
             team.CurrentBank = (team.CurrentBank || 0) + net;
+            if (team.sponsorshipBoost) {
+                addLog(`${team.TeamName} consumed their 50% Bailout Boost.`);
+                team.sponsorshipBoost = false; 
+            }
         });
         players.forEach(p => { if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1; });
         addLog("Monthly Cycle completed. Contracts reduced by 1 month.");
         checkContracts(); updateDashboardAndMarket();
+    }
+
+    function applyBailout() {
+        const tName = document.getElementById('reset-team-select').value;
+        const team = finances.find(t => t.TeamName === tName);
+        if (team && confirm(`Apply Bailout to ${tName}?\n\n- Bank resets to $25,000\n- Next Sponsor Income receives +50% Boost`)) {
+            saveState(); 
+            team.CurrentBank = 25000;
+            team.sponsorshipBoost = true;
+            addLog(`Bailout applied for ${tName}. Bank set to $25k with a 50% sponsor boost for next month.`);
+            updateDashboardAndMarket();
+        }
     }
 
     function checkContracts() {
@@ -634,7 +737,6 @@
 
     // --- Others ---
     function distributeTourneyPrize() {
-        // Omited logic from previous chunk (kept identical in actual code block above)
         const amount = parseFloat(document.getElementById('prize-amount').value);
         const tName = document.getElementById('tourney-team-select').value;
         const team = finances.find(t => t.TeamName === tName);
@@ -681,15 +783,6 @@
             if(last.th) transferHistory = last.th;
             addLog("Undo successful.");
             checkContracts(); updateDashboardAndMarket(); populatePlayerDropdown();
-        }
-    }
-
-    function resetBankrupt() {
-        const tName = document.getElementById('reset-team-select').value;
-        const team = finances.find(t => t.TeamName === tName);
-        if (team && confirm(`Set ${tName}'s bank to 0?`)) {
-            saveState(); team.CurrentBank = 0;
-            updateDashboardAndMarket();
         }
     }
 
