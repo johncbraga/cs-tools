@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate eSports Manager v7.4</title>
+    <title>Ultimate eSports Manager v8.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f0f; color: #f0f0f0; margin: 0; padding: 20px; }
@@ -82,7 +82,7 @@
 
         <div class="tab-grid-3">
             <div id="dash-content-finances" style="background: #111; padding: 15px; border-radius: 5px;"></div>
-            <div id="dash-content-roster" style="background: #111; padding: 15px; border-radius: 5px;"></div>
+            <div id="dash-content-roster" style="background: #111; padding: 15px; border-radius: 5px; position: relative;"></div>
             <div id="dash-ai-advisor" style="background: #1a1100; padding: 15px; border-radius: 5px; border: 1px solid #ff9800;">
                 <h3 style="color: #ff9800; margin-top: 0;">🧠 AI Financial Scout</h3>
                 <div id="ai-advisor-content" style="font-size: 0.9em; line-height: 1.4;"></div>
@@ -308,7 +308,7 @@
         updateDashboardAndMarket();
         checkContracts();
         updateGlobalAnalytics();
-        renderTravelList(); // Refresh travel pane
+        renderTravelList();
     }
 
     function populateTeamDropdowns() {
@@ -406,12 +406,17 @@
             <div class="dash-row total"><span>Net Result:</span> <span class="${netClass}">${net >= 0 ? '+' : ''}${formatMoney(net)}</span></div>
         `;
 
+        // ROSTER PANEL (WITH ROLE TOGGLE BUTTON)
         document.getElementById('dash-content-roster').innerHTML = `
-            <h3 style="margin-top:0;">👥 Roster</h3>
+            <h3 style="margin-top:0;">👥 Active Roster</h3>
             <div class="list-container" style="height: 120px; padding: 5px;">
                 ${players.filter(p => p.TeamName === tName).map(p => `
                     <div style="font-size: 0.85em; padding: 3px; border-bottom: 1px solid #222; display:flex; justify-content:space-between; align-items:center;">
-                        <span><b>${String(p.PlayerName)}</b> (${p.Role}) ${getMedalsHtml(p)}</span>
+                        <span style="display:flex; align-items:center;">
+                            <b>${String(p.PlayerName)}</b> (${p.Role}) 
+                            <button onclick="toggleRole('${String(p.PlayerName).replace(/'/g, "\\'")}')" class="btn-blue" style="padding: 2px 5px; margin: 0 5px; width: auto; font-size: 0.8em; border-radius: 3px;" title="Promote/Demote">🔄</button>
+                            ${getMedalsHtml(p)}
+                        </span>
                         <span>C: <b style="color:${p.ContractMonths <= 2 ? '#ff9800' : '#4caf50'}">${p.ContractMonths}m</b> | Sal: ${formatMoney(p.MarketValue * 0.10)}</span>
                     </div>
                 `).join('')}
@@ -446,6 +451,23 @@
         renderInboundOffers(tName);
         refreshMarket(); 
         renderOutboundOffers();
+    }
+
+    // --- Roster Role Management ---
+    function toggleRole(playerName) {
+        const p = players.find(x => String(x.PlayerName) === playerName);
+        if (!p) return;
+        const team = p.TeamName;
+        
+        if (p.Role === 'Starter') {
+            const benchCount = players.filter(x => x.TeamName === team && x.Role === 'Bench').length;
+            if (benchCount >= 3) return alert("❌ Bench is full (Max 3). You cannot demote another player without releasing someone first.");
+            saveState(); p.Role = 'Bench'; addLog(`🔄 ${p.PlayerName} was moved to the Bench.`); updateAll();
+        } else {
+            const starterCount = players.filter(x => x.TeamName === team && x.Role === 'Starter').length;
+            if (starterCount >= 5) return alert("❌ Starters roster is full (Max 5). Demote someone to the bench first.");
+            saveState(); p.Role = 'Starter'; addLog(`🔄 ${p.PlayerName} was promoted to Starter.`); updateAll();
+        }
     }
 
     function renderInboundOffers(tName) {
@@ -551,6 +573,7 @@
         });
     }
 
+    // --- AI Player Agents (Renewal) ---
     function applyDashboardRenewal() {
         const activeTeam = document.getElementById('dash-team-select').value;
         const target = document.getElementById('dash-renew-target').value;
@@ -563,12 +586,30 @@
 
         if (targetPlayers.find(p => (p.ContractMonths || 0) + additionalMonths > 24)) return alert(`Exceeds 24-month cap.`);
 
-        let totalFee = 0; targetPlayers.forEach(p => totalFee += (p.MarketValue * 0.10));
-        if (confirm(target === 'all' ? `Renew ALL players for +${additionalMonths}m?\nFee: ${formatMoney(totalFee)}` : `Renew ${target} for +${additionalMonths}m?\nFee: ${formatMoney(totalFee)}`)) {
+        let totalFee = 0; 
+        let agentBonus = 0;
+        
+        targetPlayers.forEach(p => {
+            totalFee += (p.MarketValue * 0.10);
+            if (target !== 'all') { // Agent only negotiates specific renewals
+                agentBonus += (getFormScore(p) * 1000); // $1,000 extra per hype point
+            }
+        });
+
+        let confirmMsg = target === 'all' ? `Renew ALL players for +${additionalMonths}m?\nFee: ${formatMoney(totalFee)}` : `Renew ${target} for +${additionalMonths}m?\nStandard Fee: ${formatMoney(totalFee)}`;
+        
+        if (agentBonus > 0) {
+            confirmMsg += `\n\n🤖 AGENT DEMAND: Because of recent stellar performances, the player's agent is demanding a signing bonus of ${formatMoney(agentBonus)}!`;
+            confirmMsg += `\n\nTotal Cost: ${formatMoney(totalFee + agentBonus)}`;
+        }
+
+        if (confirm(confirmMsg)) {
             saveState();
-            team.CurrentBank -= totalFee;
+            team.CurrentBank -= (totalFee + agentBonus);
             targetPlayers.forEach(p => p.ContractMonths = (p.ContractMonths || 0) + additionalMonths);
-            addLog(`Renewal successful. Total Fee: -$${totalFee.toFixed(2)}.`);
+            let logMsg = `Renewal successful. Fee: -$${totalFee.toFixed(2)}.`;
+            if (agentBonus > 0) logMsg += ` Agent Bonus Paid: -$${agentBonus.toFixed(2)}.`;
+            addLog(logMsg);
             updateAll();
         }
     }
@@ -685,7 +726,6 @@
         else if (type === 'national') baseCost = 15000;
         else if (type === 'international') baseCost = 35000;
 
-        // Preserve checked states before redrawing
         const checkedTeams = Array.from(container.querySelectorAll('input.travel-cb:checked')).map(cb => cb.value);
 
         let html = '';
@@ -741,11 +781,11 @@
         });
 
         addLog(`✈️ Travel (${type}): Charged ${logTeams.join(', ')}.`);
-        document.getElementById('travel-search').value = ''; // clear search
+        document.getElementById('travel-search').value = ''; 
         updateAll();
     }
 
-    // --- Core Cycles & Actions ---
+    // --- Core Cycles & AI Board ---
     function distributeTourneyPrize() {
         const amount = parseFloat(document.getElementById('prize-amount').value);
         const tName = document.getElementById('tourney-team-select').value;
@@ -757,7 +797,7 @@
             p.MarketValue += playerShare;
             p.Titles = (p.Titles || 0) + 1; 
         });
-        addLog(`Tourney split: ${tName} Bank +${formatMoney(amount*0.6)}.`); updateAll();
+        addLog(`🏆 Tourney split: ${tName} Bank +${formatMoney(amount*0.6)}.`); updateAll();
     }
 
     function applyIndividualPerformance() {
@@ -773,7 +813,7 @@
             else if (type === 'evp') player.EVP = (player.EVP || 0) + 1;
             else if (type === 'vp') player.VP = (player.VP || 0) + 1;
 
-            addLog(`Reward: ${pName} +$${reward} Prestige & ${type.toUpperCase()} Medal.`); updateAll();
+            addLog(`⭐ Reward: ${pName} +$${reward} Prestige & ${type.toUpperCase()} Medal.`); updateAll();
         }
     }
 
@@ -782,9 +822,26 @@
         finances.forEach(team => {
             team.CurrentBank = (team.CurrentBank || 0) + getTeamFinances(team).net;
             if (team.sponsorshipBoost) team.sponsorshipBoost = false; 
+
+            // AI BOARD OF DIRECTORS: FORCED LIQUIDATION
+            if (team.CurrentBank < 0) {
+                const teamPlayers = players.filter(p => p.TeamName === team.TeamName);
+                if (teamPlayers.length > 0) {
+                    teamPlayers.sort((a, b) => b.MarketValue - a.MarketValue);
+                    const star = teamPlayers[0];
+                    const starName = String(star.PlayerName);
+                    
+                    if (temporaryOffers[starName] === undefined) {
+                        const stdBuyout = star.MarketValue * 0.10 * (star.ContractMonths || 0) * 1.5;
+                        const fireSalePrice = stdBuyout * 0.40; // 60% OFF 
+                        temporaryOffers[starName] = fireSalePrice;
+                        addLog(`🚨 [BOARD AI] ${team.TeamName} is bankrupt! Forced liquidation: ${starName} put ON SALE for ${formatMoney(fireSalePrice)} (60% OFF)!`);
+                    }
+                }
+            }
         });
         players.forEach(p => { if (p.TeamName !== 'none' && p.ContractMonths > 0) p.ContractMonths -= 1; });
-        addLog("Monthly Cycle completed."); updateAll();
+        addLog("⏭️ Monthly Cycle completed."); updateAll();
     }
 
     function applyBailout() {
@@ -808,10 +865,16 @@
         if (isNaN(addMonths) || addMonths < 1 || addMonths > 24) return alert("Invalid duration.");
         if (p && team) {
             if ((p.ContractMonths || 0) + addMonths > 24) return alert("Exceeds 24m cap.");
+            
             const fee = p.MarketValue * 0.10;
-            if (confirm(`Renew ${name} for +${addMonths}m?\nFee: ${formatMoney(fee)}`)) {
-                saveState(); team.CurrentBank -= fee; p.ContractMonths = (p.ContractMonths || 0) + addMonths;
-                addLog(`Renewed ${name}.`); updateAll();
+            const agentBonus = getFormScore(p) * 1000;
+            
+            let confirmMsg = `Renew ${name} for +${addMonths}m?\nStandard Fee: ${formatMoney(fee)}`;
+            if (agentBonus > 0) confirmMsg += `\n🤖 AGENT DEMAND: Bonus of ${formatMoney(agentBonus)}!\nTotal Cost: ${formatMoney(fee + agentBonus)}`;
+
+            if (confirm(confirmMsg)) {
+                saveState(); team.CurrentBank -= (fee + agentBonus); p.ContractMonths = (p.ContractMonths || 0) + addMonths;
+                addLog(`Renewed ${name}. Total Fee: -$${(fee + agentBonus).toFixed(2)}`); updateAll();
             }
         }
     }
