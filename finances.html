@@ -765,7 +765,6 @@ body::before {
 @media (max-width: 900px) { .g3 { grid-template-columns: 1fr 1fr; } .g-sidebar { grid-template-columns: 1fr; } }
 
 .upload-scan {
-  margin-top: 16px;
   padding: 10px 32px;
   background: transparent;
   border: 1px solid var(--cyan);
@@ -818,9 +817,11 @@ body::before {
     </div>
   </div>
 
-  <button class="upload-scan" id="scan-btn" onclick="scanFiles()">⟳ SCAN FILES/</button>
-  <div class="scan-status" id="scan-status"></div>
-  <button class="upload-launch" id="launch-btn" onclick="launchApp()">INITIALIZE NEXUS</button>
+  <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+    <button class="upload-scan" id="scan-btn" onclick="scanFiles()">⟳ SCAN FILES/</button>
+    <div class="scan-status" id="scan-status"></div>
+    <button class="upload-launch" id="launch-btn" onclick="launchApp()">INITIALIZE NEXUS</button>
+  </div>
 </div>
 
 <!-- TOP BAR -->
