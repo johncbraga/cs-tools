@@ -220,7 +220,7 @@ body::before {
 }
 
 .boot-file-card.loading { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
-.boot-file-card.done { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.15); }
+.boot-file-card.done { border-color: var(--green) !important; box-shadow: 0 0 20px rgba(0,255,136,0.15) !important; }
 .boot-file-card.error { border-color: var(--red); box-shadow: 0 0 20px rgba(255,23,68,0.15); }
 .boot-file-card.manual { border-color: var(--orange); box-shadow: 0 0 12px rgba(255,107,0,0.1); }
 
@@ -235,6 +235,21 @@ body::before {
 
 .boot-file-card.loading .scan-line {
   animation: scan 1.2s ease-in-out infinite;
+}
+
+/* Done card: subtle green pulse on border */
+.boot-file-card.done::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--green);
+  pointer-events: none;
+  animation: done-pulse 3s ease-in-out infinite;
+}
+
+@keyframes done-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(0,255,136,0.3); }
+  50% { opacity: 0.6; box-shadow: 0 0 20px rgba(0,255,136,0.5); }
 }
 
 @keyframes scan {
@@ -1291,6 +1306,27 @@ const fmtK = v => { const a = Math.abs(v); const s = v < 0 ? '-' : ''; return s 
 const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+/* ═══ AUTO-LOAD from file/ folder ═══ */
+async function tryAutoLoad() {
+  const tryFetch = async (path) => {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) return null;
+      const buf = await res.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
+      return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    } catch (e) { return null; }
+  };
+
+  const [fin, ply] = await Promise.all([
+    tryFetch('file/finances_updated.xlsx'),
+    tryFetch('file/players_updated.xlsx')
+  ]);
+
+  if (fin) { finances = fin; finLoaded = true; }
+  if (ply) { players = ply; plyLoaded = true; }
+}
+
 /* ═══════════════════════════════════════════════
    BOOT SEQUENCE
 ═══════════════════════════════════════════════ */
@@ -1342,6 +1378,9 @@ async function animateProgress(cardId, fromPct, toPct, durationMs) {
 }
 
 async function runBootSequence() {
+  // Step 0: Try to auto-load files from file/ folder
+  await tryAutoLoad();
+
   // Step 1: Cards appear
   await sleep(400);
   $('bfc-fin').classList.add('visible');
@@ -1356,9 +1395,9 @@ async function runBootSequence() {
   setCardStatus('bfc-fin', 'READING...', 'loading-txt');
   setCardLog('bfc-fin', [
     {text: '▶ Mounting data source...', cls: 'active'},
-    {text: 'finances.xlsx', cls: ''},
+    {text: 'file/finances_updated.xlsx', cls: ''},
   ]);
-  bootLog('Mounting FINANCES.XLSX data source...');
+  bootLog('Mounting FINANCES_UPDATED.XLSX data source...');
 
   await animateProgress('bfc-fin', 0, 35, 600);
   setCardLog('bfc-fin', [
@@ -1398,7 +1437,7 @@ async function runBootSequence() {
     setCardState('bfc-fin', 'error');
     setCardStatus('bfc-fin', 'NO FILE FOUND', 'error-txt');
     setCardLog('bfc-fin', [
-      {text: '✗ finances.xlsx not found in path', cls: 'err'},
+      {text: '✗ file/finances_updated.xlsx not found', cls: 'err'},
       {text: '✗ Auto-load failed', cls: 'err'},
       {text: 'Manual upload required ↓', cls: ''},
     ]);
@@ -1413,9 +1452,9 @@ async function runBootSequence() {
   setCardStatus('bfc-ply', 'READING...', 'loading-txt');
   setCardLog('bfc-ply', [
     {text: '▶ Mounting data source...', cls: 'active'},
-    {text: 'players.xlsx', cls: ''},
+    {text: 'file/players_updated.xlsx', cls: ''},
   ]);
-  bootLog('Mounting PLAYERS.XLSX data source...');
+  bootLog('Mounting PLAYERS_UPDATED.XLSX data source...');
 
   await animateProgress('bfc-ply', 0, 40, 500);
   setCardLog('bfc-ply', [
@@ -1454,7 +1493,7 @@ async function runBootSequence() {
     setCardState('bfc-ply', 'error');
     setCardStatus('bfc-ply', 'NO FILE FOUND', 'error-txt');
     setCardLog('bfc-ply', [
-      {text: '✗ players.xlsx not found in path', cls: 'err'},
+      {text: '✗ file/players_updated.xlsx not found', cls: 'err'},
       {text: '✗ Auto-load failed', cls: 'err'},
       {text: 'Manual upload required ↓', cls: ''},
     ]);
