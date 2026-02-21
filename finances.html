@@ -827,6 +827,21 @@ body::before {
 .intel-diag-item { background:var(--bg3); padding:10px; text-align:center; }
 .intel-diag-item .d-val { font-family:var(--font-data); font-size:18px; font-weight:700; }
 .intel-diag-item .d-lbl { font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; }
+
+.topbar-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  font-size: 14px;
+  color: var(--text-dim);
+  text-decoration: none;
+  opacity: 0.15;
+  transition: opacity 0.3s, color 0.3s;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.topbar-back:hover { opacity: 1; color: var(--cyan); }
 </style>
 <body>
 
@@ -865,6 +880,7 @@ body::before {
 
 <!-- TOP BAR -->
 <div id="topbar">
+  <a href="index.html" class="topbar-back" title="Back to Portal">‹</a>
   <div class="topbar-logo">NEXUS</div>
   <div id="topbar-ticker">
     <div class="ticker-inner" id="ticker-content">SYSTEM INITIALIZING...</div>
@@ -882,12 +898,12 @@ body::before {
 
   <!-- NAV -->
   <div id="nav">
-    <button class="nav-tab active" onclick="showPanel('p-command')">⬡ COMMAND</button>
-    <button class="nav-tab" onclick="showPanel('p-market')">◈ MARKET</button>
-    <button class="nav-tab" onclick="showPanel('p-compare')">⇌ COMPARE</button>
-    <button class="nav-tab" onclick="showPanel('p-league')">◉ LEAGUE</button>
-    <button class="nav-tab" onclick="showPanel('p-ops')">⚙ OPS <span class="badge" id="alert-badge" style="display:none">!</span></button>
-    <button class="nav-tab" onclick="showPanel('p-intel'); runIntel()">🧠 INTEL</button>
+    <button class="nav-tab active" onclick="showPanel('p-command', this)">⬡ COMMAND</button>
+    <button class="nav-tab" onclick="showPanel('p-market', this)">◈ MARKET</button>
+    <button class="nav-tab" onclick="showPanel('p-compare', this)">⇌ COMPARE</button>
+    <button class="nav-tab" onclick="showPanel('p-league', this)">◉ LEAGUE</button>
+    <button class="nav-tab" onclick="showPanel('p-ops', this)">⚙ OPS <span class="badge" id="alert-badge" style="display:none">!</span></button>
+    <button class="nav-tab" onclick="showPanel('p-intel', this); runIntel()">🧠 INTEL</button>
   </div>
 
   <!-- CONTENT -->
@@ -1216,8 +1232,6 @@ body::before {
       </div>
     </div>
 
-  </div><!-- /content -->
-
     <!-- ═══ INTEL PANEL ═══ -->
     <div class="panel" id="p-intel" style="padding:16px; overflow-y:auto;">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
@@ -1255,6 +1269,8 @@ body::before {
       <div id="intel-detail" style="margin-top:16px;"></div>
 
     </div>
+
+  </div><!-- /content -->
 
 </div><!-- /app -->
 
@@ -1662,11 +1678,11 @@ function launchApp() {
   addLog('NEXUS COMMAND initialized. Intelligence online.', 'good');
 }
 
-function showPanel(id) {
+function showPanel(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   $(id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  if (btn) btn.classList.add('active');
 }
 
 /* ═══ CORE CALCULATIONS ═══ */
@@ -2321,7 +2337,7 @@ function runComparison() {
         </div>
 
         <div style="font-family:var(--font-display); font-size:10px; letter-spacing:2px; color:${w?'var(--green)':'var(--text-dim)'}; margin-bottom:8px;">
-          AI SCORE: <span style="font-size:22px;">${a.score}</span><span style="font-size:12px;">/100</span>
+          AI SCORE: <span style="font-size:22px;">${a.score.toFixed(1)}</span><span style="font-size:12px;">/100</span>
         </div>
         ${a.bd.map(b=>`
           <div style="margin-bottom:6px;">
@@ -2637,6 +2653,13 @@ function addLog(msg, type='') {
 
 // Init log
 addLog('NEXUS COMMAND — Upload your data files to begin.', 'good');
+
+// Keyboard shortcut: press 0 to go back to portal
+document.addEventListener('keydown', e => {
+  if (e.key === '0' && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) {
+    window.location.href = 'index.html';
+  }
+});
 </script>
 </body>
 </html>
