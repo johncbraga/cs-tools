@@ -763,6 +763,31 @@ body::before {
 /* Responsive tweaks */
 @media (max-width: 1200px) { .g4 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .g3 { grid-template-columns: 1fr 1fr; } .g-sidebar { grid-template-columns: 1fr; } }
+
+.upload-scan {
+  margin-top: 16px;
+  padding: 10px 32px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all .2s;
+  text-transform: uppercase;
+}
+.upload-scan:hover { background: var(--cyan-dim); box-shadow: 0 0 16px var(--cyan); }
+.upload-scan.scanning { opacity: .5; cursor: wait; }
+.scan-status {
+  margin-top: 8px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-dim);
+  min-height: 16px;
+  letter-spacing: 1px;
+}
 </style>
 </head>
 <body>
@@ -793,6 +818,8 @@ body::before {
     </div>
   </div>
 
+  <button class="upload-scan" id="scan-btn" onclick="scanFiles()">⟳ SCAN FILES/</button>
+  <div class="scan-status" id="scan-status"></div>
   <button class="upload-launch" id="launch-btn" onclick="launchApp()">INITIALIZE NEXUS</button>
 </div>
 
@@ -1202,14 +1229,22 @@ function checkLaunch() {
   if (finLoaded && plyLoaded) $('launch-btn').classList.add('ready');
 }
 
-async function autoLoadFiles() {
+async function scanFiles() {
+  const btn = $('scan-btn');
+  const status = $('scan-status');
+  btn.classList.add('scanning');
+  btn.textContent = '⟳ SCANNING...';
+  status.style.color = 'var(--cyan)';
+  status.textContent = 'Buscando arquivos em files/...';
+
   async function fetchXL(path) {
     const res = await fetch(path);
-    if (!res.ok) throw new Error('Not found: ' + path);
+    if (!res.ok) throw new Error(path);
     const buf = await res.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
     return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
   }
+
   try {
     const [finData, plyData] = await Promise.all([
       fetchXL('files/finances_updated.xlsx'),
@@ -1217,18 +1252,21 @@ async function autoLoadFiles() {
     ]);
     finances = finData; finLoaded = true;
     $('fin-box').classList.add('loaded');
-    $('fin-status').textContent = `✓ ${finData.length} RECORDS LOADED (AUTO)`;
+    $('fin-status').textContent = `✓ ${finData.length} RECORDS LOADED`;
     players = plyData; plyLoaded = true;
     $('ply-box').classList.add('loaded');
-    $('ply-status').textContent = `✓ ${plyData.length} PLAYERS LOADED (AUTO)`;
+    $('ply-status').textContent = `✓ ${plyData.length} PLAYERS LOADED`;
     $('launch-btn').classList.add('ready');
-    launchApp();
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ ARQUIVOS ENCONTRADOS — PRONTO PARA INICIALIZAR`;
+    btn.textContent = '✓ FILES LOADED';
   } catch(e) {
-    // Files not found in files/ — user will load manually
-    console.info('Auto-load: arquivos não encontrados em files/, aguardando upload manual.', e.message);
+    status.style.color = 'var(--red)';
+    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta files/`;
+    btn.classList.remove('scanning');
+    btn.textContent = '⟳ SCAN FILES/';
   }
 }
-autoLoadFiles();
 
 function launchApp() {
   if (!finLoaded || !plyLoaded) return;
