@@ -31,9 +31,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 ::selection { background: var(--cyan); color: #000; }
-
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
@@ -50,7 +48,6 @@ body {
   flex-direction: column;
 }
 
-/* Scanline overlay */
 body::before {
   content: '';
   position: fixed;
@@ -60,7 +57,6 @@ body::before {
   z-index: 9999;
 }
 
-/* Corner decoration */
 .corner-tl, .corner-tr, .corner-bl, .corner-br {
   position: absolute;
   width: 12px; height: 12px;
@@ -70,6 +66,376 @@ body::before {
 .corner-tr { top: 0; right: 0; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
 .corner-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
 .corner-br { bottom: 0; right: 0; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
+
+/* ═══ BOOT SEQUENCE OVERLAY ═══ */
+#boot-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* Animated grid background */
+#boot-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: grid-slide 8s linear infinite;
+}
+
+@keyframes grid-slide {
+  from { transform: translateY(0); }
+  to { transform: translateY(40px); }
+}
+
+/* Radial glow center */
+#boot-overlay::after {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  animation: glow-breathe 3s ease-in-out infinite;
+}
+
+@keyframes glow-breathe {
+  0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; }
+}
+
+.boot-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  width: 680px;
+}
+
+/* Logo area */
+.boot-logo {
+  text-align: center;
+  animation: boot-logo-in 0.8s ease forwards;
+}
+
+@keyframes boot-logo-in {
+  from { opacity: 0; transform: translateY(-20px) scale(0.95); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.boot-logo-title {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 12px;
+  color: var(--cyan);
+  text-shadow: 0 0 60px rgba(0,212,255,0.8), 0 0 120px rgba(0,212,255,0.3);
+  position: relative;
+  display: inline-block;
+}
+
+/* Glitch effect on logo */
+.boot-logo-title::before,
+.boot-logo-title::after {
+  content: 'NEXUS COMMAND';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+}
+.boot-logo-title::before {
+  color: var(--red);
+  animation: glitch-1 4s infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  opacity: 0;
+}
+.boot-logo-title::after {
+  color: var(--green);
+  animation: glitch-2 4s infinite;
+  clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  opacity: 0;
+}
+
+@keyframes glitch-1 {
+  0%, 90%, 100% { opacity: 0; transform: none; }
+  91% { opacity: 0.8; transform: translateX(-3px); }
+  92% { opacity: 0; }
+  93% { opacity: 0.6; transform: translateX(3px); }
+  94% { opacity: 0; }
+}
+@keyframes glitch-2 {
+  0%, 90%, 100% { opacity: 0; transform: none; }
+  91.5% { opacity: 0.6; transform: translateX(3px); }
+  92.5% { opacity: 0; }
+  93.5% { opacity: 0.5; transform: translateX(-3px); }
+  94.5% { opacity: 0; }
+}
+
+.boot-logo-sub {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 6px;
+  color: var(--text-dim);
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+/* File load cards */
+.boot-files {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+.boot-file-card {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+
+.boot-file-card.visible {
+  animation: card-appear 0.5s ease forwards;
+}
+
+@keyframes card-appear {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.boot-file-card.loading { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
+.boot-file-card.done { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.15); }
+.boot-file-card.error { border-color: var(--red); box-shadow: 0 0 20px rgba(255,23,68,0.15); }
+.boot-file-card.manual { border-color: var(--orange); box-shadow: 0 0 12px rgba(255,107,0,0.1); }
+
+/* Scan line animation inside card */
+.boot-file-card .scan-line {
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.08), transparent);
+  animation: none;
+}
+
+.boot-file-card.loading .scan-line {
+  animation: scan 1.2s ease-in-out infinite;
+}
+
+@keyframes scan {
+  from { left: -100%; }
+  to { left: 100%; }
+}
+
+.bfc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bfc-icon { font-size: 24px; }
+
+.bfc-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+}
+
+.bfc-status {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-left: auto;
+  letter-spacing: 1px;
+}
+
+.bfc-status.loading-txt { color: var(--cyan); animation: blink 0.8s step-end infinite; }
+.bfc-status.done-txt { color: var(--green); }
+.bfc-status.error-txt { color: var(--red); }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Progress bar in card */
+.bfc-progress {
+  height: 3px;
+  background: var(--bg3);
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bfc-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  transition: width 0.1s linear;
+}
+
+.boot-file-card.done .bfc-progress-fill { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.boot-file-card.error .bfc-progress-fill { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+/* Log lines inside card */
+.bfc-log {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  min-height: 56px;
+}
+
+.bfc-log .line { overflow: hidden; white-space: nowrap; }
+.bfc-log .line.active { color: var(--cyan); }
+.bfc-log .line.ok { color: var(--green); }
+.bfc-log .line.err { color: var(--red); }
+
+/* Manual upload option inside error/fallback card */
+.bfc-upload-fallback {
+  margin-top: 10px;
+  display: none;
+}
+
+.bfc-upload-fallback.show { display: block; }
+
+.bfc-upload-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 7px 14px;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  background: var(--orange-dim);
+  cursor: pointer;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s;
+}
+
+.bfc-upload-btn:hover { background: var(--orange); color: #000; }
+.bfc-upload-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+
+/* Terminal log bottom */
+.boot-terminal {
+  width: 100%;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-dim);
+  height: 90px;
+  overflow: hidden;
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.boot-terminal.visible { opacity: 1; }
+
+.boot-terminal::before {
+  content: 'NEXUS BOOT LOG';
+  position: absolute;
+  top: -1px; left: 12px;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  background: var(--bg);
+  padding: 0 6px;
+}
+
+#boot-term-lines { display: flex; flex-direction: column-reverse; gap: 2px; }
+.boot-term-line { white-space: nowrap; overflow: hidden; }
+.boot-term-line .bts { color: var(--cyan); margin-right: 8px; }
+.boot-term-line.good .bts { color: var(--green); }
+.boot-term-line.warn .bts { color: var(--orange); }
+.boot-term-line.bad .bts { color: var(--red); }
+
+/* Launch section */
+.boot-launch-area {
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.5s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.boot-launch-area.visible { opacity: 1; }
+
+.boot-launch-btn {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  padding: 14px 50px;
+  background: var(--cyan);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.boot-launch-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: btn-shine 2s ease-in-out infinite;
+}
+
+@keyframes btn-shine {
+  from { left: -100%; }
+  to { left: 100%; }
+}
+
+.boot-launch-btn:hover { background: #fff; transform: scale(1.02); }
+.boot-launch-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.boot-launch-btn:disabled::before { animation: none; }
+
+.boot-skip-note {
+  font-family: var(--font-data);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+}
+
+/* Partial data warning */
+#partial-warn {
+  display: none;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--orange);
+  padding: 6px 12px;
+  border: 1px solid var(--orange-dim);
+  background: var(--orange-dim);
+  letter-spacing: 1px;
+}
 
 /* ═══ TOP BAR ═══ */
 #topbar {
@@ -113,7 +479,7 @@ body::before {
 .topbar-status {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   font-family: var(--font-data);
   font-size: 11px;
   color: var(--text-dim);
@@ -131,10 +497,35 @@ body::before {
 
 .status-pill.alert { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
 
+/* Reload Button in topbar */
+#reload-btn {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#reload-btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-dim); }
+#reload-btn.reloading { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); cursor: wait; }
+#reload-btn.reloading .reload-icon { animation: spin 0.8s linear infinite; }
+
+.reload-icon { display: inline-block; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 #topbar-ticker {
   flex: 1;
   overflow: hidden;
-  margin: 0 20px;
+  margin: 0 16px;
   height: 24px;
   position: relative;
 }
@@ -159,89 +550,115 @@ body::before {
 .tick-item.down { color: var(--red); }
 .tick-item.warn { color: var(--orange); }
 
-/* ═══ UPLOAD PANEL (initial state) ═══ */
-#upload-overlay {
+/* ═══ RELOAD MODAL ═══ */
+#reload-modal {
+  display: none;
   position: fixed;
   inset: 0;
-  background: var(--bg);
-  z-index: 500;
-  display: flex;
+  background: rgba(0,0,0,0.8);
+  z-index: 550;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 40px;
 }
 
-.upload-title {
-  font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 900;
-  color: var(--cyan);
-  text-shadow: 0 0 40px var(--cyan);
-  text-align: center;
-  letter-spacing: 8px;
-}
-.upload-title span { color: var(--text-dim); font-size: 14px; font-family: var(--font-data); display: block; margin-top: 8px; letter-spacing: 4px; }
+#reload-modal.open { display: flex; }
 
-.upload-zone {
-  display: flex;
-  gap: 30px;
-}
-
-.upload-box {
-  width: 280px;
-  height: 160px;
-  border: 1px solid var(--border);
+.reload-modal-box {
   background: var(--bg2);
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 40px rgba(0,212,255,0.2);
+  padding: 28px 32px;
+  width: 500px;
   position: relative;
-  clip-path: polygon(16px 0%, 100% 0%, calc(100% - 16px) 100%, 0% 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.upload-box:hover {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
-}
+.reload-modal-box .corner-tl,.reload-modal-box .corner-tr,.reload-modal-box .corner-bl,.reload-modal-box .corner-br { position:absolute; }
 
-.upload-box.loaded {
-  border-color: var(--green);
-  background: var(--green-dim);
-}
-
-.upload-box input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  font-size: 0;
-}
-
-.upload-icon { font-size: 36px; }
-.upload-label { font-family: var(--font-display); font-size: 12px; letter-spacing: 3px; color: var(--text-dim); }
-.upload-status { font-family: var(--font-data); font-size: 11px; color: var(--cyan); }
-
-.upload-launch {
+.rml-title {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 4px;
-  padding: 14px 40px;
+  color: var(--cyan);
+  margin-bottom: 6px;
+}
+
+.rml-sub {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+.rml-files { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+
+.rml-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg3);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+}
+
+.rml-file-row .rml-icon { font-size: 20px; }
+.rml-file-row .rml-info { flex: 1; }
+.rml-file-row .rml-info .rml-name { font-family: var(--font-display); font-size: 11px; letter-spacing: 2px; color: var(--text); }
+.rml-file-row .rml-info .rml-cur { font-family: var(--font-data); font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+.rml-upload-btn {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 7px 14px;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  cursor: pointer;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.rml-upload-btn:hover { background: var(--cyan); color: #000; }
+.rml-upload-btn.loaded { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.rml-upload-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+
+.rml-actions { display: flex; gap: 10px; }
+
+.rml-apply-btn {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding: 10px;
   background: var(--cyan);
   color: #000;
   border: none;
   cursor: pointer;
-  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   transition: all 0.2s;
   opacity: 0.3;
 }
-.upload-launch.ready { opacity: 1; }
-.upload-launch:hover { background: #fff; }
+.rml-apply-btn.ready { opacity: 1; }
+.rml-apply-btn:hover { background: #fff; }
+
+.rml-cancel-btn {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  transition: all 0.2s;
+}
+.rml-cancel-btn:hover { color: var(--text); border-color: var(--text-dim); }
 
 /* ═══ MAIN LAYOUT ═══ */
 #app {
@@ -250,7 +667,6 @@ body::before {
   overflow: hidden;
   flex-direction: column;
 }
-
 #app.visible { display: flex; }
 
 /* ═══ NAV TABS ═══ */
@@ -278,58 +694,23 @@ body::before {
   transition: all 0.2s;
   border-bottom: 2px solid transparent;
 }
-
 .nav-tab:hover { color: var(--text); }
 .nav-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
 .nav-tab .badge {
-  background: var(--red);
-  color: #fff;
-  font-size: 9px;
-  padding: 1px 4px;
-  border-radius: 2px;
-  margin-left: 6px;
-  font-family: var(--font-data);
-  animation: pulse-badge 2s ease-in-out infinite;
+  background: var(--red); color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 2px; margin-left: 6px;
+  font-family: var(--font-data); animation: pulse-badge 2s ease-in-out infinite;
 }
-@keyframes pulse-badge {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+@keyframes pulse-badge { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 
-/* ═══ MAIN CONTENT ═══ */
-#content {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
+#content { flex: 1; overflow: hidden; position: relative; }
 
 .panel {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  padding: 16px;
-  display: none;
-  gap: 16px;
-  flex-direction: column;
+  position: absolute; inset: 0; overflow-y: auto; padding: 16px; display: none; gap: 16px; flex-direction: column;
 }
 .panel.active { display: flex; }
 
-/* ═══ CARD COMPONENT ═══ */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  position: relative;
-  padding: 16px;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 30px; height: 2px;
-  background: var(--cyan);
-}
-
+.card { background: var(--bg2); border: 1px solid var(--border); position: relative; padding: 16px; }
+.card::before { content: ''; position: absolute; top: 0; left: 0; width: 30px; height: 2px; background: var(--cyan); }
 .card.orange::before { background: var(--orange); }
 .card.green::before { background: var(--green); }
 .card.red::before { background: var(--red); }
@@ -337,42 +718,23 @@ body::before {
 .card.yellow::before { background: var(--yellow); }
 
 .card-title {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--cyan);
-  text-transform: uppercase;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 3px; color: var(--cyan);
+  text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
-
 .card.orange .card-title { color: var(--orange); }
 .card.green .card-title { color: var(--green); }
 .card.red .card-title { color: var(--red); }
 .card.purple .card-title { color: var(--purple); }
 .card.yellow .card-title { color: var(--yellow); }
 
-/* ═══ GRIDS ═══ */
 .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
 .g-sidebar { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
 .g-sidebar-r { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
 
-/* ═══ STAT BOXES ═══ */
 .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-
-.stat-box {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  padding: 12px 14px;
-  position: relative;
-  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-}
-
+.stat-box { background: var(--bg3); border: 1px solid var(--border); padding: 12px 14px; position: relative; clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%); }
 .stat-box .lbl { font-family: var(--font-data); font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
 .stat-box .val { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-top: 2px; }
 .stat-box .sub { font-family: var(--font-data); font-size: 10px; color: var(--text-dim); margin-top: 1px; }
@@ -381,419 +743,224 @@ body::before {
 .stat-box.orange .val { color: var(--orange); }
 .stat-box.red .val { color: var(--red); }
 
-/* ═══ FORMS ═══ */
 .nx-select, .nx-input {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 12px;
-  width: 100%;
-  outline: none;
-  transition: border-color 0.2s;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-family: var(--font-ui);
+  font-size: 13px; font-weight: 500; padding: 8px 12px; width: 100%; outline: none; transition: border-color 0.2s;
   clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
 }
-
 .nx-select:focus, .nx-input:focus { border-color: var(--cyan); }
 .nx-select option { background: var(--bg3); }
 .nx-input::placeholder { color: var(--text-dim); }
-
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-label { font-family: var(--font-data); font-size: 10px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
 
-/* ═══ BUTTONS ═══ */
-.btn {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 9px 16px;
-  border: 1px solid;
-  cursor: pointer;
-  transition: all 0.2s;
-  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
-  white-space: nowrap;
-}
-
+.btn { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 9px 16px; border: 1px solid; cursor: pointer; transition: all 0.2s; clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%); white-space: nowrap; }
 .btn-cyan { background: var(--cyan); color: #000; border-color: var(--cyan); }
 .btn-cyan:hover { background: transparent; color: var(--cyan); }
-
 .btn-orange { background: var(--orange); color: #000; border-color: var(--orange); }
 .btn-orange:hover { background: transparent; color: var(--orange); }
-
 .btn-green { background: var(--green); color: #000; border-color: var(--green); }
 .btn-green:hover { background: transparent; color: var(--green); }
-
 .btn-red { background: var(--red); color: #fff; border-color: var(--red); }
 .btn-red:hover { background: transparent; color: var(--red); }
-
 .btn-ghost { background: transparent; color: var(--text-dim); border-color: var(--border); }
 .btn-ghost:hover { color: var(--text); border-color: var(--text-dim); }
-
 .btn-purple { background: var(--purple); color: #fff; border-color: var(--purple); }
 .btn-purple:hover { background: transparent; color: var(--purple); }
-
 .btn-sm { padding: 5px 10px; font-size: 10px; letter-spacing: 1px; }
 .btn-full { width: 100%; text-align: center; }
 .btn-row { display: flex; gap: 8px; }
 
-/* ═══ DATA TABLE ═══ */
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-data);
-  font-size: 12px;
-}
-
-.data-table th {
-  font-family: var(--font-display);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  padding: 6px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(0,212,255,0.05);
-  vertical-align: middle;
-}
-
+.data-table { width: 100%; border-collapse: collapse; font-family: var(--font-data); font-size: 12px; }
+.data-table th { font-family: var(--font-display); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table td { padding: 8px 10px; border-bottom: 1px solid rgba(0,212,255,0.05); vertical-align: middle; }
 .data-table tr:hover td { background: var(--cyan-dim); }
-
 .data-table .num { text-align: right; }
-.data-table .c { color: var(--cyan); }
-.data-table .g { color: var(--green); }
-.data-table .r { color: var(--red); }
-.data-table .o { color: var(--orange); }
-.data-table .y { color: var(--yellow); }
-.data-table .dim { color: var(--text-dim); }
+.data-table .c { color: var(--cyan); } .data-table .g { color: var(--green); } .data-table .r { color: var(--red); } .data-table .o { color: var(--orange); } .data-table .y { color: var(--yellow); } .data-table .dim { color: var(--text-dim); }
 
-/* ═══ SCROLLABLE LIST ═══ */
-.scroll-list {
-  overflow-y: auto;
-  max-height: 280px;
-}
-
-.list-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  border-bottom: 1px solid rgba(0,212,255,0.05);
-  transition: background 0.15s;
-  gap: 8px;
-}
-
+.scroll-list { overflow-y: auto; max-height: 280px; }
+.list-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid rgba(0,212,255,0.05); transition: background 0.15s; gap: 8px; }
 .list-row:hover { background: var(--cyan-dim); }
-
 .list-row .name { font-weight: 600; font-size: 13px; }
 .list-row .meta { font-family: var(--font-data); font-size: 10px; color: var(--text-dim); }
 
-/* ═══ PROGRESS BAR ═══ */
-.progress-track {
-  height: 4px;
-  background: var(--bg3);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
+.progress-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
 
-/* ═══ ORACLE SCORE ═══ */
-.oracle-ring {
-  position: relative;
-  width: 120px; height: 120px;
-  margin: 0 auto;
-}
+.oracle-ring { position: relative; width: 120px; height: 120px; margin: 0 auto; }
 .oracle-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.oracle-score-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-}
+.oracle-score-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font-display); }
 .oracle-score-text .num { font-size: 28px; font-weight: 900; }
 .oracle-score-text .lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); }
 
-/* ═══ BADGES ═══ */
-.badge {
-  font-family: var(--font-data);
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 0;
-  font-weight: 700;
-  clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
-}
-.badge-cyan { background: var(--cyan); color: #000; }
-.badge-green { background: var(--green); color: #000; }
-.badge-red { background: var(--red); color: #fff; }
-.badge-orange { background: var(--orange); color: #000; }
-.badge-yellow { background: var(--yellow); color: #000; }
-.badge-purple { background: var(--purple); color: #fff; }
-.badge-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.badge { font-family: var(--font-data); font-size: 10px; padding: 2px 7px; border-radius: 0; font-weight: 700; clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%); }
+.badge-cyan { background: var(--cyan); color: #000; } .badge-green { background: var(--green); color: #000; } .badge-red { background: var(--red); color: #fff; } .badge-orange { background: var(--orange); color: #000; } .badge-yellow { background: var(--yellow); color: #000; } .badge-purple { background: var(--purple); color: #fff; } .badge-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
 
-/* ═══ ALERT ITEM ═══ */
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-left: 3px solid;
-  background: var(--bg3);
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-.alert-item.critical { border-color: var(--red); }
-.alert-item.warning { border-color: var(--orange); }
-.alert-item.info { border-color: var(--cyan); }
-.alert-item.success { border-color: var(--green); }
+.alert-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-left: 3px solid; background: var(--bg3); margin-bottom: 6px; font-size: 13px; }
+.alert-item.critical { border-color: var(--red); } .alert-item.warning { border-color: var(--orange); } .alert-item.info { border-color: var(--cyan); } .alert-item.success { border-color: var(--green); }
 
-/* ═══ COMPARISON ═══ */
-.compare-grid {
-  display: grid;
-  grid-template-columns: 1fr 60px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-.compare-vs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--orange);
-  padding-top: 50px;
-}
-.compare-card {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  padding: 16px;
-  transition: all 0.3s;
-}
+.compare-grid { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 12px; align-items: start; }
+.compare-vs { display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 18px; font-weight: 900; color: var(--orange); padding-top: 50px; }
+.compare-card { background: var(--bg3); border: 1px solid var(--border); padding: 16px; transition: all 0.3s; }
 .compare-card.winner { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.15); }
 .compare-card.loser { border-color: var(--red); opacity: 0.7; }
 
-/* ═══ FORECAST CANVAS ═══ */
 #forecast-canvas { width: 100%; height: 180px; display: block; }
 
-/* ═══ POWER RANKING ═══ */
-.rank-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(0,212,255,0.05);
-  transition: background 0.15s;
-}
+.rank-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid rgba(0,212,255,0.05); transition: background 0.15s; }
 .rank-item:hover { background: var(--cyan-dim); }
-.rank-num {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 900;
-  width: 32px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.rank-num.gold { color: #ffd600; }
-.rank-num.silver { color: #b0bec5; }
-.rank-num.bronze { color: #ff7043; }
-.rank-num.other { color: var(--text-dim); }
+.rank-num { font-family: var(--font-display); font-size: 20px; font-weight: 900; width: 32px; text-align: center; flex-shrink: 0; }
+.rank-num.gold { color: #ffd600; } .rank-num.silver { color: #b0bec5; } .rank-num.bronze { color: #ff7043; } .rank-num.other { color: var(--text-dim); }
 
-/* ═══ LOG ═══ */
-.log-area {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  font-family: var(--font-data);
-  font-size: 11px;
-  padding: 10px;
-  height: 120px;
-  overflow-y: auto;
-  color: var(--text-dim);
-  line-height: 1.6;
-}
+.log-area { background: var(--bg); border: 1px solid var(--border); font-family: var(--font-data); font-size: 11px; padding: 10px; height: 120px; overflow-y: auto; color: var(--text-dim); line-height: 1.6; }
 .log-area .log-entry { border-bottom: 1px solid rgba(255,255,255,0.03); padding: 2px 0; }
 .log-area .log-entry .ts { color: var(--cyan); margin-right: 8px; }
 .log-area .log-entry.good .ts { color: var(--green); }
 .log-area .log-entry.warn .ts { color: var(--orange); }
 .log-area .log-entry.bad .ts { color: var(--red); }
 
-/* ═══ TRANSFER NOTIFICATION ═══ */
-.offer-panel {
-  background: var(--bg3);
-  border: 1px solid var(--orange);
-  padding: 12px;
-  margin-bottom: 10px;
-}
-.offer-panel .offer-header {
-  font-family: var(--font-display);
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--orange);
-  margin-bottom: 10px;
-}
-.offer-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg);
-  padding: 10px 12px;
-  margin-bottom: 6px;
-  border-left: 3px solid var(--orange);
-}
+.offer-panel { background: var(--bg3); border: 1px solid var(--orange); padding: 12px; margin-bottom: 10px; }
+.offer-panel .offer-header { font-family: var(--font-display); font-size: 10px; letter-spacing: 3px; color: var(--orange); margin-bottom: 10px; }
+.offer-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg); padding: 10px 12px; margin-bottom: 6px; border-left: 3px solid var(--orange); }
 
-/* ═══ TRAVEL CHECKBOX ═══ */
-.travel-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-bottom: 1px solid rgba(0,212,255,0.05);
-  cursor: pointer;
-  transition: background 0.15s;
-}
+.travel-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid rgba(0,212,255,0.05); cursor: pointer; transition: background 0.15s; }
 .travel-item:hover { background: var(--cyan-dim); }
 .travel-item input[type=checkbox] { accent-color: var(--cyan); width: 14px; height: 14px; }
 
-/* ═══ ANIMATIONS ═══ */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 .anim { animation: fade-in 0.3s ease forwards; }
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px var(--cyan); }
-  50% { box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan-dim); }
-}
-
+@keyframes glow-pulse { 0%,100% { box-shadow: 0 0 8px var(--cyan); } 50% { box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan-dim); } }
 .glow { animation: glow-pulse 3s ease-in-out infinite; }
 
-/* ═══ RISK METER ═══ */
-.risk-bar {
-  height: 8px;
-  border-radius: 0;
-  background: linear-gradient(to right, var(--green), var(--yellow), var(--orange), var(--red));
-  position: relative;
-  margin-top: 4px;
-}
-.risk-indicator {
-  position: absolute;
-  top: -3px;
-  width: 3px;
-  height: 14px;
-  background: #fff;
-  transform: translateX(-50%);
-  box-shadow: 0 0 6px #fff;
-}
+.risk-bar { height: 8px; border-radius: 0; background: linear-gradient(to right, var(--green), var(--yellow), var(--orange), var(--red)); position: relative; margin-top: 4px; }
+.risk-indicator { position: absolute; top: -3px; width: 3px; height: 14px; background: #fff; transform: translateX(-50%); box-shadow: 0 0 6px #fff; }
 
-/* ═══ MINI CHART ═══ */
 .mini-chart { display: flex; align-items: flex-end; gap: 2px; height: 40px; }
-.mini-bar {
-  flex: 1;
-  background: var(--cyan-dim);
-  border-top: 1px solid var(--cyan);
-  min-height: 2px;
-  transition: height 0.3s ease;
-}
+.mini-bar { flex: 1; background: var(--cyan-dim); border-top: 1px solid var(--cyan); min-height: 2px; transition: height 0.3s ease; }
 .mini-bar:hover { background: var(--cyan); }
 
-/* tooltip */
 [data-tip] { position: relative; cursor: help; }
-[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #000;
-  border: 1px solid var(--cyan);
-  color: var(--text);
-  font-family: var(--font-data);
-  font-size: 11px;
-  padding: 6px 10px;
-  white-space: nowrap;
-  z-index: 9999;
-  pointer-events: none;
-}
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #000; border: 1px solid var(--cyan); color: var(--text); font-family: var(--font-data); font-size: 11px; padding: 6px 10px; white-space: nowrap; z-index: 9999; pointer-events: none; }
 
-/* Separator */
 .sep { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
-/* ═══ BOTTOM STRIP ═══ */
-#bottom-strip {
-  height: 32px;
-  background: var(--bg2);
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  flex-shrink: 0;
-  font-family: var(--font-data);
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
+#bottom-strip { height: 32px; background: var(--bg2); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; font-family: var(--font-data); font-size: 10px; color: var(--text-dim); }
 .bottom-actions { display: flex; gap: 10px; }
+#month-counter { font-family: var(--font-display); font-size: 11px; color: var(--cyan); letter-spacing: 2px; }
 
-/* Month ticker */
-#month-counter {
-  font-family: var(--font-display);
-  font-size: 11px;
-  color: var(--cyan);
-  letter-spacing: 2px;
-}
-
-/* Responsive tweaks */
 @media (max-width: 1200px) { .g4 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 900px) { .g3 { grid-template-columns: 1fr 1fr; } .g-sidebar { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<!-- UPLOAD OVERLAY -->
-<div id="upload-overlay">
-  <div class="upload-title">
-    NEXUS COMMAND
-    <span>eSports Intelligence Platform v9.0</span>
-  </div>
+<!-- ═══ BOOT OVERLAY ═══ -->
+<div id="boot-overlay">
+  <div class="boot-inner">
 
-  <div class="upload-zone">
-    <div class="upload-box" id="fin-box">
-      <input type="file" id="upload-finances" accept=".xlsx">
-      <div class="corner-tl"></div><div class="corner-tr"></div>
-      <div class="corner-bl"></div><div class="corner-br"></div>
-      <div class="upload-icon">💰</div>
-      <div class="upload-label">FINANCES.XLSX</div>
-      <div class="upload-status" id="fin-status">AWAITING DATA</div>
+    <div class="boot-logo">
+      <div class="boot-logo-title">NEXUS COMMAND</div>
+      <div class="boot-logo-sub">eSports Intelligence Platform v9.0 — Initializing</div>
     </div>
-    <div class="upload-box" id="ply-box">
-      <input type="file" id="upload-players" accept=".xlsx">
-      <div class="corner-tl"></div><div class="corner-tr"></div>
-      <div class="corner-bl"></div><div class="corner-br"></div>
-      <div class="upload-icon">🎮</div>
-      <div class="upload-label">PLAYERS.XLSX</div>
-      <div class="upload-status" id="ply-status">AWAITING DATA</div>
+
+    <div class="boot-files">
+      <!-- FINANCES FILE -->
+      <div class="boot-file-card" id="bfc-fin">
+        <div class="scan-line"></div>
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+        <div class="bfc-header">
+          <span class="bfc-icon">💰</span>
+          <span class="bfc-label">FINANCES.XLSX</span>
+          <span class="bfc-status" id="bfc-fin-status">STANDBY</span>
+        </div>
+        <div class="bfc-progress"><div class="bfc-progress-fill" id="bfc-fin-bar"></div></div>
+        <div class="bfc-log" id="bfc-fin-log">
+          <div class="line" style="color:var(--text-dim);">Awaiting data source...</div>
+        </div>
+        <div class="bfc-upload-fallback" id="bfc-fin-fallback">
+          <label class="bfc-upload-btn">
+            <input type="file" id="upload-finances-boot" accept=".xlsx">
+            📂 SELECT FILE
+          </label>
+        </div>
+      </div>
+
+      <!-- PLAYERS FILE -->
+      <div class="boot-file-card" id="bfc-ply">
+        <div class="scan-line"></div>
+        <div class="corner-tl"></div><div class="corner-tr"></div>
+        <div class="corner-bl"></div><div class="corner-br"></div>
+        <div class="bfc-header">
+          <span class="bfc-icon">🎮</span>
+          <span class="bfc-label">PLAYERS.XLSX</span>
+          <span class="bfc-status" id="bfc-ply-status">STANDBY</span>
+        </div>
+        <div class="bfc-progress"><div class="bfc-progress-fill" id="bfc-ply-bar"></div></div>
+        <div class="bfc-log" id="bfc-ply-log">
+          <div class="line" style="color:var(--text-dim);">Awaiting data source...</div>
+        </div>
+        <div class="bfc-upload-fallback" id="bfc-ply-fallback">
+          <label class="bfc-upload-btn">
+            <input type="file" id="upload-players-boot" accept=".xlsx">
+            📂 SELECT FILE
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="partial-warn">⚠ ONE OR MORE FILES MISSING — Manual upload required to proceed</div>
+
+    <div class="boot-terminal" id="boot-terminal">
+      <div id="boot-term-lines"></div>
+    </div>
+
+    <div class="boot-launch-area" id="boot-launch-area">
+      <button class="boot-launch-btn" id="boot-launch-btn" disabled onclick="launchApp()">
+        ▶ INITIALIZE NEXUS
+      </button>
+      <div class="boot-skip-note" id="boot-skip-note"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ RELOAD MODAL ═══ -->
+<div id="reload-modal">
+  <div class="reload-modal-box">
+    <div class="corner-tl"></div><div class="corner-tr"></div>
+    <div class="corner-bl"></div><div class="corner-br"></div>
+    <div class="rml-title">🔄 RELOAD DATA FILES</div>
+    <div class="rml-sub">Upload updated Excel files to refresh the platform data.</div>
+    <div class="rml-files">
+      <div class="rml-file-row">
+        <span class="rml-icon">💰</span>
+        <div class="rml-info">
+          <div class="rml-name">FINANCES.XLSX</div>
+          <div class="rml-cur" id="rml-fin-status">Current: <span id="rml-fin-count">—</span></div>
+        </div>
+        <label class="rml-upload-btn" id="rml-fin-btn">
+          <input type="file" id="reload-finances" accept=".xlsx">
+          📂 SELECT
+        </label>
+      </div>
+      <div class="rml-file-row">
+        <span class="rml-icon">🎮</span>
+        <div class="rml-info">
+          <div class="rml-name">PLAYERS.XLSX</div>
+          <div class="rml-cur" id="rml-ply-status">Current: <span id="rml-ply-count">—</span></div>
+        </div>
+        <label class="rml-upload-btn" id="rml-ply-btn">
+          <input type="file" id="reload-players" accept=".xlsx">
+          📂 SELECT
+        </label>
+      </div>
+    </div>
+    <div class="rml-actions">
+      <button class="rml-apply-btn" id="rml-apply-btn" onclick="applyReload()">⚡ APPLY RELOAD</button>
+      <button class="rml-cancel-btn" onclick="closeReloadModal()">CANCEL</button>
     </div>
   </div>
-
-  <button class="upload-launch" id="launch-btn" onclick="launchApp()">INITIALIZE NEXUS</button>
 </div>
 
 <!-- TOP BAR -->
@@ -807,13 +974,14 @@ body::before {
     <div class="status-pill" id="status-teams">0 TEAMS</div>
     <div class="status-pill" id="status-players">0 PLAYERS</div>
     <div class="status-pill alert" id="status-alerts" style="display:none">⚠ ALERTS</div>
+    <button id="reload-btn" onclick="openReloadModal()" title="Reload Excel files">
+      <span class="reload-icon">↻</span> RELOAD DATA
+    </button>
   </div>
 </div>
 
 <!-- MAIN APP -->
 <div id="app">
-
-  <!-- NAV -->
   <div id="nav">
     <button class="nav-tab active" onclick="showPanel('p-command')">⬡ COMMAND</button>
     <button class="nav-tab" onclick="showPanel('p-market')">◈ MARKET</button>
@@ -822,16 +990,11 @@ body::before {
     <button class="nav-tab" onclick="showPanel('p-ops')">⚙ OPS <span class="badge" id="alert-badge" style="display:none">!</span></button>
   </div>
 
-  <!-- CONTENT -->
   <div id="content">
-
-    <!-- ═══ COMMAND PANEL ═══ -->
+    <!-- COMMAND PANEL -->
     <div class="panel active" id="p-command">
       <div class="g-sidebar">
-        <!-- LEFT SIDEBAR -->
         <div style="display:flex; flex-direction:column; gap:16px;">
-
-          <!-- ACTIVE TEAM SELECTOR -->
           <div class="card">
             <div class="card-title">◈ ACTIVE COMMAND</div>
             <div class="form-group" style="margin-bottom:10px;">
@@ -840,14 +1003,10 @@ body::before {
             </div>
             <div id="cmd-oracle-wrap"></div>
           </div>
-
-          <!-- FINANCES -->
           <div class="card">
             <div class="card-title">💰 FINANCIAL STATUS</div>
             <div id="cmd-finances"></div>
           </div>
-
-          <!-- RENEWAL TOOL -->
           <div class="card orange">
             <div class="card-title">📋 CONTRACT RENEWAL</div>
             <div class="form-group" style="margin-bottom:8px;">
@@ -862,19 +1021,10 @@ body::before {
             </div>
             <button class="btn btn-orange btn-full" onclick="applyRenewal()">EXECUTE RENEWAL</button>
           </div>
-
         </div>
-
-        <!-- RIGHT MAIN -->
         <div style="display:flex; flex-direction:column; gap:16px;">
-
-          <!-- OFFER NOTIFICATIONS -->
           <div id="cmd-notifications"></div>
-
-          <!-- TOP ROW STATS -->
           <div id="cmd-stat-row" class="stat-row"></div>
-
-          <!-- ROSTER + AI SCOUT -->
           <div class="g2">
             <div class="card">
               <div class="card-title">👥 ACTIVE ROSTER</div>
@@ -885,14 +1035,10 @@ body::before {
               <div id="cmd-ai-scout" style="font-size:13px; line-height:1.7;"></div>
             </div>
           </div>
-
-          <!-- FINANCIAL FORECAST -->
           <div class="card">
             <div class="card-title">📈 6-MONTH FINANCIAL FORECAST</div>
             <canvas id="forecast-canvas"></canvas>
           </div>
-
-          <!-- LOG -->
           <div class="card">
             <div class="card-title" style="justify-content:space-between;">
               <span>📋 ACTIVITY LOG</span>
@@ -900,15 +1046,13 @@ body::before {
             </div>
             <div class="log-area" id="action-log"></div>
           </div>
-
         </div>
       </div>
     </div>
 
-    <!-- ═══ MARKET PANEL ═══ -->
+    <!-- MARKET PANEL -->
     <div class="panel" id="p-market">
       <div class="g2">
-        <!-- FILTERS -->
         <div style="display:flex; flex-direction:column; gap:12px;">
           <div class="card">
             <div class="card-title">🔭 SCOUTING FILTERS</div>
@@ -966,21 +1110,15 @@ body::before {
               </div>
             </div>
           </div>
-
-          <!-- HOT DEALS AI -->
           <div class="card green">
             <div class="card-title">🔥 AI HOT DEALS — VERIFIED</div>
             <div id="hot-deals-list" style="font-size:13px;"></div>
           </div>
-
-          <!-- PROPOSALS -->
           <div class="card purple">
             <div class="card-title">📤 MY PROPOSALS</div>
             <div id="outbound-offers" class="scroll-list" style="max-height:200px;"></div>
           </div>
         </div>
-
-        <!-- SCOUTING LIST -->
         <div class="card">
           <div class="card-title" style="justify-content:space-between;">
             <span>📡 SCOUTING FEED</span>
@@ -994,7 +1132,7 @@ body::before {
       </div>
     </div>
 
-    <!-- ═══ COMPARE PANEL ═══ -->
+    <!-- COMPARE PANEL -->
     <div class="panel" id="p-compare">
       <div class="card" style="margin-bottom:0;">
         <div class="card-title">⇌ AI PLAYER COMPARISON ENGINE</div>
@@ -1014,33 +1152,28 @@ body::before {
       <div id="comparison-result"></div>
     </div>
 
-    <!-- ═══ LEAGUE PANEL ═══ -->
+    <!-- LEAGUE PANEL -->
     <div class="panel" id="p-league">
       <div class="g2">
         <div style="display:flex; flex-direction:column; gap:16px;">
-          <!-- POWER RANKINGS -->
           <div class="card">
             <div class="card-title">🏆 POWER RANKINGS</div>
             <div id="league-rankings"></div>
           </div>
-          <!-- FINANCIAL HEALTH MATRIX -->
           <div class="card orange">
             <div class="card-title">⚠ FINANCIAL HEALTH MATRIX</div>
             <div id="league-health"></div>
           </div>
         </div>
         <div style="display:flex; flex-direction:column; gap:16px;">
-          <!-- ROSTER ALERTS -->
           <div class="card red">
             <div class="card-title">🚨 ROSTER INTELLIGENCE</div>
             <div id="league-roster"></div>
           </div>
-          <!-- RISING STARS -->
           <div class="card yellow">
             <div class="card-title">⭐ FORM LEADERBOARD</div>
             <div id="league-stars"></div>
           </div>
-          <!-- MARKET ACTIVITY -->
           <div class="card purple">
             <div class="card-title">🔄 TRANSFER HISTORY</div>
             <div id="league-transfers" class="scroll-list" style="max-height:200px;"></div>
@@ -1049,11 +1182,9 @@ body::before {
       </div>
     </div>
 
-    <!-- ═══ OPS PANEL ═══ -->
+    <!-- OPS PANEL -->
     <div class="panel" id="p-ops">
       <div class="g3">
-
-        <!-- TRAVEL -->
         <div class="card purple">
           <div class="card-title">✈ BULK TRAVEL PLANNER</div>
           <div class="form-group" style="margin-bottom:8px;">
@@ -1071,8 +1202,6 @@ body::before {
           <div id="travel-list" class="scroll-list" style="max-height:200px; margin-bottom:10px;"></div>
           <button class="btn btn-purple btn-full" onclick="applyTravelExpenses()">CHARGE SELECTED TEAMS</button>
         </div>
-
-        <!-- TOURNAMENT -->
         <div class="card green">
           <div class="card-title">🏆 TOURNAMENT ENGINE</div>
           <div class="form-group" style="margin-bottom:8px;">
@@ -1083,13 +1212,9 @@ body::before {
             <div class="form-label">PRIZE POOL ($)</div>
             <input type="number" class="nx-input" id="prize-amount" placeholder="0.00">
           </div>
-          <div class="alert-item info" style="margin-bottom:10px; font-size:11px; font-family:var(--font-data);">
-            60% → Team Bank&nbsp;&nbsp;|&nbsp;&nbsp;40% → Starter MV split + Title medals
-          </div>
+          <div class="alert-item info" style="margin-bottom:10px; font-size:11px; font-family:var(--font-data);">60% → Team Bank&nbsp;&nbsp;|&nbsp;&nbsp;40% → Starter MV split + Title medals</div>
           <button class="btn btn-green btn-full" onclick="distributeTourneyPrize()">DISTRIBUTE PRIZE</button>
-
           <hr class="sep">
-
           <div class="card-title" style="margin-top:4px;">⭐ INDIVIDUAL AWARDS</div>
           <div class="form-group" style="margin-bottom:8px;">
             <div class="form-label">PLAYER</div>
@@ -1115,27 +1240,18 @@ body::before {
           </div>
           <button class="btn btn-cyan btn-full" onclick="applyIndividualPerformance()">GRANT AWARD + MEDAL</button>
         </div>
-
-        <!-- INTERVENTIONS -->
         <div class="card red">
           <div class="card-title">⚡ LEAGUE INTERVENTIONS</div>
-
-          <div class="alert-item warning" style="margin-bottom:12px; font-size:12px;">
-            ⚠ These actions affect league balance. Use with caution.
-          </div>
-
+          <div class="alert-item warning" style="margin-bottom:12px; font-size:12px;">⚠ These actions affect league balance. Use with caution.</div>
           <div class="form-group" style="margin-bottom:10px;">
             <div class="form-label">TARGET TEAM</div>
             <select class="nx-select" id="reset-team-select"></select>
           </div>
-
           <button class="btn btn-orange btn-full" onclick="applyBailout()" style="margin-bottom:8px;">💊 BANKRUPT BAILOUT (+$25k + 50% Sponsor Boost)</button>
           <button class="btn btn-red btn-full" onclick="applySeasonReset()">🔁 GLOBAL SEASON RESET (−30% MV, Wipe Medals)</button>
-
           <hr class="sep">
           <div class="card-title">📁 DATA MANAGEMENT</div>
           <button class="btn btn-cyan btn-full" onclick="exportExcels()">📥 EXPORT UPDATED EXCELS</button>
-
           <hr class="sep">
           <div class="card-title">📋 CONTRACT ALERTS</div>
           <div class="form-group" style="margin-bottom:8px;">
@@ -1144,12 +1260,10 @@ body::before {
           </div>
           <div id="contract-alerts" class="scroll-list" style="max-height:180px;"></div>
         </div>
-
       </div>
     </div>
-
-  </div><!-- /content -->
-</div><!-- /app -->
+  </div>
+</div>
 
 <!-- BOTTOM STRIP -->
 <div id="bottom-strip">
@@ -1163,51 +1277,336 @@ body::before {
 
 <script>
 /* ═══════════════════════════════════════════════
-   NEXUS COMMAND — Core Data & Utilities
+   NEXUS COMMAND — Core Data & State
 ═══════════════════════════════════════════════ */
 let finances = [], players = [], history = [];
 let temporaryOffers = {}, pendingTransfers = [], transferHistory = [];
 let monthCounter = 1;
 let finLoaded = false, plyLoaded = false;
+let pendingReloadFin = null, pendingReloadPly = null;
 
 const $ = id => document.getElementById(id);
 const fmt = v => '$' + Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
 const fmtK = v => { const a = Math.abs(v); const s = v < 0 ? '-' : ''; return s + (a >= 1000 ? '$' + (a/1000).toFixed(1) + 'k' : fmt(v)); };
 const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// File handling
-$('upload-finances').addEventListener('change', e => handleXL(e, d => {
-  finances = d; finLoaded = true;
-  $('fin-box').classList.add('loaded');
-  $('fin-status').textContent = `✓ ${d.length} TEAMS LOADED`;
-  checkLaunch();
-}));
-$('upload-players').addEventListener('change', e => handleXL(e, d => {
-  players = d; plyLoaded = true;
-  $('ply-box').classList.add('loaded');
-  $('ply-status').textContent = `✓ ${d.length} PLAYERS LOADED`;
-  checkLaunch();
-}));
+/* ═══════════════════════════════════════════════
+   BOOT SEQUENCE
+═══════════════════════════════════════════════ */
+let bootFinLog = [], bootPlyLog = [];
 
-function handleXL(e, cb) {
-  const r = new FileReader();
-  r.onload = ev => {
-    const wb = XLSX.read(ev.target.result, {type:'binary'});
-    cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
-  };
-  r.readAsBinaryString(e.target.files[0]);
+function bootLog(msg, type = '') {
+  const container = $('boot-term-lines');
+  $('boot-terminal').classList.add('visible');
+  const div = document.createElement('div');
+  div.className = 'boot-term-line' + (type ? ' ' + type : '');
+  div.innerHTML = `<span class="bts">[${new Date().toLocaleTimeString()}]</span>${msg}`;
+  container.insertBefore(div, container.firstChild);
+  // Keep only last 4 lines
+  while (container.children.length > 4) container.removeChild(container.lastChild);
 }
 
-function checkLaunch() {
-  if (finLoaded && plyLoaded) $('launch-btn').classList.add('ready');
+function setCardLog(cardId, lines) {
+  const el = $(cardId + '-log');
+  el.innerHTML = lines.map((l, i) => `<div class="line ${l.cls || ''}">${l.text}</div>`).join('');
 }
 
+function setCardProgress(cardId, pct) {
+  $(cardId + '-bar').style.width = pct + '%';
+}
+
+function setCardStatus(cardId, text, cls) {
+  const el = $(cardId + '-status');
+  el.textContent = text;
+  el.className = 'bfc-status' + (cls ? ' ' + cls : '');
+}
+
+function setCardState(cardId, state) {
+  const card = $(cardId === 'bfc-fin' ? 'bfc-fin' : 'bfc-ply');
+  card.classList.remove('loading', 'done', 'error', 'manual', 'visible');
+  if (state) card.classList.add(state);
+}
+
+async function animateProgress(cardId, fromPct, toPct, durationMs) {
+  const steps = 30;
+  const stepTime = durationMs / steps;
+  const increment = (toPct - fromPct) / steps;
+  let cur = fromPct;
+  for (let i = 0; i < steps; i++) {
+    cur += increment;
+    setCardProgress(cardId, Math.round(cur));
+    await sleep(stepTime);
+  }
+  setCardProgress(cardId, toPct);
+}
+
+async function runBootSequence() {
+  // Step 1: Cards appear
+  await sleep(400);
+  $('bfc-fin').classList.add('visible');
+  $('bfc-ply').classList.add('visible');
+  await sleep(600);
+
+  bootLog('NEXUS COMMAND boot sequence initiated.', 'good');
+  await sleep(300);
+
+  // Step 2: Finances loading animation
+  setCardState('bfc-fin', 'loading');
+  setCardStatus('bfc-fin', 'READING...', 'loading-txt');
+  setCardLog('bfc-fin', [
+    {text: '▶ Mounting data source...', cls: 'active'},
+    {text: 'finances.xlsx', cls: ''},
+  ]);
+  bootLog('Mounting FINANCES.XLSX data source...');
+
+  await animateProgress('bfc-fin', 0, 35, 600);
+  setCardLog('bfc-fin', [
+    {text: '▶ Parsing worksheet headers...', cls: 'active'},
+    {text: '✓ Data source mounted', cls: 'ok'},
+  ]);
+  bootLog('Parsing financial worksheet columns...');
+
+  await animateProgress('bfc-fin', 35, 70, 500);
+  setCardLog('bfc-fin', [
+    {text: '▶ Validating team entries...', cls: 'active'},
+    {text: '✓ Headers parsed', cls: 'ok'},
+    {text: '✓ Data source mounted', cls: 'ok'},
+  ]);
+
+  await animateProgress('bfc-fin', 70, 92, 400);
+  setCardLog('bfc-fin', [
+    {text: '▶ Building financial index...', cls: 'active'},
+    {text: '✓ Entries validated', cls: 'ok'},
+    {text: '✓ Headers parsed', cls: 'ok'},
+  ]);
+
+  await animateProgress('bfc-fin', 92, 100, 300);
+
+  // Check if finances were actually loaded (from manual upload during boot)
+  if (finLoaded) {
+    setCardState('bfc-fin', 'done');
+    setCardStatus('bfc-fin', `✓ ${finances.length} TEAMS`, 'done-txt');
+    setCardLog('bfc-fin', [
+      {text: `✓ ${finances.length} team records indexed`, cls: 'ok'},
+      {text: '✓ Sponsor tiers mapped', cls: 'ok'},
+      {text: '✓ Balance sheets loaded', cls: 'ok'},
+    ]);
+    bootLog(`FINANCES.XLSX — ${finances.length} teams loaded.`, 'good');
+  } else {
+    // Show error + manual fallback
+    setCardState('bfc-fin', 'error');
+    setCardStatus('bfc-fin', 'NO FILE FOUND', 'error-txt');
+    setCardLog('bfc-fin', [
+      {text: '✗ finances.xlsx not found in path', cls: 'err'},
+      {text: '✗ Auto-load failed', cls: 'err'},
+      {text: 'Manual upload required ↓', cls: ''},
+    ]);
+    $('bfc-fin-fallback').classList.add('show');
+    bootLog('FINANCES.XLSX — Auto-load failed. Manual upload required.', 'bad');
+  }
+
+  await sleep(500);
+
+  // Step 3: Players loading animation
+  setCardState('bfc-ply', 'loading');
+  setCardStatus('bfc-ply', 'READING...', 'loading-txt');
+  setCardLog('bfc-ply', [
+    {text: '▶ Mounting data source...', cls: 'active'},
+    {text: 'players.xlsx', cls: ''},
+  ]);
+  bootLog('Mounting PLAYERS.XLSX data source...');
+
+  await animateProgress('bfc-ply', 0, 40, 500);
+  setCardLog('bfc-ply', [
+    {text: '▶ Parsing player roster data...', cls: 'active'},
+    {text: '✓ Data source mounted', cls: 'ok'},
+  ]);
+  bootLog('Parsing player roster attributes...');
+
+  await animateProgress('bfc-ply', 40, 75, 600);
+  setCardLog('bfc-ply', [
+    {text: '▶ Computing market valuations...', cls: 'active'},
+    {text: '✓ Roster data parsed', cls: 'ok'},
+    {text: '✓ Data source mounted', cls: 'ok'},
+  ]);
+  bootLog('Computing market valuations & contract data...');
+
+  await animateProgress('bfc-ply', 75, 95, 400);
+  setCardLog('bfc-ply', [
+    {text: '▶ Indexing form scores...', cls: 'active'},
+    {text: '✓ Valuations computed', cls: 'ok'},
+    {text: '✓ Roster data parsed', cls: 'ok'},
+  ]);
+
+  await animateProgress('bfc-ply', 95, 100, 250);
+
+  if (plyLoaded) {
+    setCardState('bfc-ply', 'done');
+    setCardStatus('bfc-ply', `✓ ${players.length} PLAYERS`, 'done-txt');
+    setCardLog('bfc-ply', [
+      {text: `✓ ${players.length} player records indexed`, cls: 'ok'},
+      {text: '✓ Contract timelines loaded', cls: 'ok'},
+      {text: '✓ Medal history parsed', cls: 'ok'},
+    ]);
+    bootLog(`PLAYERS.XLSX — ${players.length} players loaded.`, 'good');
+  } else {
+    setCardState('bfc-ply', 'error');
+    setCardStatus('bfc-ply', 'NO FILE FOUND', 'error-txt');
+    setCardLog('bfc-ply', [
+      {text: '✗ players.xlsx not found in path', cls: 'err'},
+      {text: '✗ Auto-load failed', cls: 'err'},
+      {text: 'Manual upload required ↓', cls: ''},
+    ]);
+    $('bfc-ply-fallback').classList.add('show');
+    bootLog('PLAYERS.XLSX — Auto-load failed. Manual upload required.', 'bad');
+  }
+
+  await sleep(400);
+
+  // Final status
+  if (finLoaded && plyLoaded) {
+    bootLog('All systems online. NEXUS COMMAND ready.', 'good');
+    $('boot-launch-area').classList.add('visible');
+    $('boot-launch-btn').disabled = false;
+    $('boot-skip-note').textContent = 'ALL DATA VERIFIED — READY TO INITIALIZE';
+    // Auto-launch after 1.5s
+    await sleep(1500);
+    launchApp();
+  } else {
+    // Show partial warning
+    $('partial-warn').style.display = 'block';
+    $('boot-launch-area').classList.add('visible');
+    bootLog('Partial data loaded. Awaiting manual file upload.', 'warn');
+    $('boot-skip-note').textContent = 'UPLOAD MISSING FILES ABOVE TO ENABLE LAUNCH';
+    checkBootReady();
+  }
+}
+
+function checkBootReady() {
+  if (finLoaded && plyLoaded) {
+    $('boot-launch-btn').disabled = false;
+    $('partial-warn').style.display = 'none';
+    $('boot-skip-note').textContent = 'ALL DATA VERIFIED — CLICK TO INITIALIZE';
+    bootLog('All files loaded. Ready to initialize.', 'good');
+  }
+}
+
+/* ═══ Manual upload handlers during boot ═══ */
+$('upload-finances-boot').addEventListener('change', e => {
+  handleXL(e, d => {
+    finances = d; finLoaded = true;
+    setCardState('bfc-fin', 'done');
+    setCardStatus('bfc-fin', `✓ ${d.length} TEAMS`, 'done-txt');
+    setCardProgress('bfc-fin', 100);
+    setCardLog('bfc-fin', [
+      {text: `✓ ${d.length} team records loaded`, cls: 'ok'},
+      {text: '✓ Manual upload accepted', cls: 'ok'},
+    ]);
+    $('bfc-fin-fallback').classList.remove('show');
+    bootLog(`FINANCES.XLSX — ${d.length} teams loaded (manual).`, 'good');
+    checkBootReady();
+  });
+});
+
+$('upload-players-boot').addEventListener('change', e => {
+  handleXL(e, d => {
+    players = d; plyLoaded = true;
+    setCardState('bfc-ply', 'done');
+    setCardStatus('bfc-ply', `✓ ${d.length} PLAYERS`, 'done-txt');
+    setCardProgress('bfc-ply', 100);
+    setCardLog('bfc-ply', [
+      {text: `✓ ${d.length} player records loaded`, cls: 'ok'},
+      {text: '✓ Manual upload accepted', cls: 'ok'},
+    ]);
+    $('bfc-ply-fallback').classList.remove('show');
+    bootLog(`PLAYERS.XLSX — ${d.length} players loaded (manual).`, 'good');
+    checkBootReady();
+  });
+});
+
+/* ═══ RELOAD MODAL ═══ */
+function openReloadModal() {
+  pendingReloadFin = null;
+  pendingReloadPly = null;
+  $('rml-fin-btn').classList.remove('loaded');
+  $('rml-ply-btn').classList.remove('loaded');
+  $('rml-apply-btn').classList.remove('ready');
+  $('rml-fin-count').textContent = finances.length ? `${finances.length} teams loaded` : '—';
+  $('rml-ply-count').textContent = players.length ? `${players.length} players loaded` : '—';
+  $('reload-modal').classList.add('open');
+}
+
+function closeReloadModal() {
+  $('reload-modal').classList.remove('open');
+  pendingReloadFin = null;
+  pendingReloadPly = null;
+}
+
+$('reload-finances').addEventListener('change', e => {
+  handleXL(e, d => {
+    pendingReloadFin = d;
+    $('rml-fin-btn').classList.add('loaded');
+    $('rml-fin-btn').querySelector('.rml-upload-btn') && null;
+    document.querySelector('#rml-fin-btn').innerHTML = `<input type="file" id="reload-finances" accept=".xlsx">✓ ${d.length} TEAMS`;
+    document.querySelector('#rml-fin-btn').classList.add('loaded');
+    checkReloadReady();
+  });
+});
+
+$('reload-players').addEventListener('change', e => {
+  handleXL(e, d => {
+    pendingReloadPly = d;
+    document.querySelector('#rml-ply-btn').innerHTML = `<input type="file" id="reload-players" accept=".xlsx">✓ ${d.length} PLAYERS`;
+    document.querySelector('#rml-ply-btn').classList.add('loaded');
+    checkReloadReady();
+  });
+});
+
+function checkReloadReady() {
+  if (pendingReloadFin || pendingReloadPly) {
+    $('rml-apply-btn').classList.add('ready');
+  }
+}
+
+function applyReload() {
+  const btn = $('reload-btn');
+  btn.classList.add('reloading');
+  btn.innerHTML = '<span class="reload-icon">↻</span> LOADING...';
+
+  let reloaded = [];
+  if (pendingReloadFin) { finances = pendingReloadFin; finLoaded = true; reloaded.push(`Finances: ${finances.length} teams`); }
+  if (pendingReloadPly) { players = pendingReloadPly; plyLoaded = true; reloaded.push(`Players: ${players.length} players`); }
+
+  closeReloadModal();
+
+  setTimeout(() => {
+    btn.classList.remove('reloading');
+    btn.innerHTML = '<span class="reload-icon">↻</span> RELOAD DATA';
+    if (reloaded.length) {
+      addLog(`🔄 Data reloaded — ${reloaded.join(' | ')}.`, 'good');
+      updateAll();
+    }
+  }, 600);
+}
+
+// Kick off boot on load
+window.addEventListener('load', () => {
+  setTimeout(runBootSequence, 300);
+});
+
+/* ═══ LAUNCH ═══ */
 function launchApp() {
   if (!finLoaded || !plyLoaded) return;
-  $('upload-overlay').style.display = 'none';
-  $('app').classList.add('visible');
-  updateAll();
-  addLog('NEXUS COMMAND initialized. Intelligence online.', 'good');
+  const overlay = $('boot-overlay');
+  overlay.style.transition = 'opacity 0.6s ease';
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    $('app').classList.add('visible');
+    updateAll();
+    addLog('NEXUS COMMAND initialized. Intelligence online.', 'good');
+  }, 600);
 }
 
 function showPanel(id) {
@@ -1217,7 +1616,21 @@ function showPanel(id) {
   event.currentTarget.classList.add('active');
 }
 
-/* ═══ CORE CALCULATIONS ═══ */
+/* ═══════════════════════════════════════════════
+   FILE HANDLING
+═══════════════════════════════════════════════ */
+function handleXL(e, cb) {
+  const r = new FileReader();
+  r.onload = ev => {
+    const wb = XLSX.read(ev.target.result, {type:'binary'});
+    cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
+  };
+  r.readAsBinaryString(e.target.files[0]);
+}
+
+/* ═══════════════════════════════════════════════
+   CORE CALCULATIONS
+═══════════════════════════════════════════════ */
 function getPlayerBuyout(p) {
   const std = p.MarketValue * 0.10 * (p.ContractMonths||0) * 1.5;
   const off = temporaryOffers[String(p.PlayerName)];
@@ -1245,10 +1658,9 @@ function getTeamFinances(team) {
   return { sponsor, fixed, salaries, net: sponsor-(fixed+salaries) };
 }
 
-/* NEXUS ORACLE — team health score 0-100 */
 function getOracleScore(teamName) {
   const team = finances.find(t=>t.TeamName===teamName);
-  if (!team) return {score:0, grade:'F', color:getComputedStyle(document.documentElement).getPropertyValue('--red').trim()};
+  if (!team) return {score:0, grade:'F', color:'#ff1744'};
   const fins = getTeamFinances(team);
   const bank = team.CurrentBank||0;
   const starters = players.filter(p=>p.TeamName===teamName&&p.Role==='Starter').length;
@@ -1258,20 +1670,15 @@ function getOracleScore(teamName) {
   const avgForm = totalPlayers ? players.filter(p=>p.TeamName===teamName).reduce((s,p)=>s+getFormScore(p),0)/totalPlayers : 0;
 
   let score = 0;
-  // Financial health (40 pts)
   if (fins.net > 15000) score+=40;
   else if (fins.net > 5000) score+=30;
   else if (fins.net > 0) score+=18;
   else if (fins.net > -10000) score+=6;
-  // Bank reserve (20 pts)
   const months = fins.salaries>0 ? bank/fins.salaries : 6;
   score += clamp(months/6*20, 0, 20);
-  // Roster completeness (25 pts)
   score += clamp(starters/5*15, 0, 15);
   score += clamp(bench/3*10, 0, 10);
-  // Contract stability (10 pts)
   if (totalPlayers>0) score += clamp((1 - expiring/totalPlayers)*10, 0, 10);
-  // Form bonus (5 pts)
   score += clamp(avgForm/10*5, 0, 5);
 
   score = Math.round(clamp(score,0,100));
@@ -1281,11 +1688,9 @@ function getOracleScore(teamName) {
   else if (score>=65) { grade='B'; color='#b4f700'; }
   else if (score>=50) { grade='C'; color='#ffd600'; }
   else if (score>=35) { grade='D'; color='#ff9800'; }
-  else { grade='F'; color='#ff1744'; }
   return {score, grade, color};
 }
 
-/* RISK INDEX 0-100 (higher = more dangerous) */
 function getRiskIndex(teamName) {
   const team = finances.find(t=>t.TeamName===teamName);
   if (!team) return 100;
@@ -1303,7 +1708,6 @@ function getRiskIndex(teamName) {
   return clamp(risk,0,100);
 }
 
-/* SMART HOT DEALS */
 function getSmartHotDeals(activeTeamName) {
   const team = finances.find(t=>t.TeamName===activeTeamName);
   if (!team) return [];
@@ -1334,7 +1738,6 @@ function getSmartHotDeals(activeTeamName) {
   return deals.slice(0,4);
 }
 
-/* MEDALS HTML */
 function medals(p) {
   let s='';
   if (p.MVP) s+=`<span class="badge badge-yellow">🥇${p.MVP}</span> `;
@@ -1424,7 +1827,6 @@ function updateCommand() {
   const oracle = getOracleScore(tName);
   const risk = getRiskIndex(tName);
 
-  // Oracle ring
   const circ = 2*Math.PI*45;
   const dash = circ*(oracle.score/100);
   $('cmd-oracle-wrap').innerHTML = `
@@ -1447,7 +1849,6 @@ function updateCommand() {
     <div class="risk-bar"><div class="risk-indicator" style="left:${risk}%"></div></div>
   `;
 
-  // Stats
   const starters = players.filter(p=>p.TeamName===tName&&p.Role==='Starter').length;
   const bench = players.filter(p=>p.TeamName===tName&&p.Role==='Bench').length;
   const months = salaries>0?(bank/salaries).toFixed(1):'∞';
@@ -1458,7 +1859,6 @@ function updateCommand() {
     <div class="stat-box ${oracle.score>=65?'cyan':'red'}"><div class="lbl">ORACLE SCORE</div><div class="val" style="color:${oracle.color}">${oracle.score}</div><div class="sub">Grade ${oracle.grade}</div></div>
   `;
 
-  // Finances
   const boostBadge = team.sponsorshipBoost?`<span class="badge badge-green" style="margin-left:8px;">50% BOOST</span>`:'';
   $('cmd-finances').innerHTML = `
     <div style="font-family:var(--font-data); font-size:22px; font-weight:700; color:var(--cyan); margin-bottom:10px;">${fmt(bank)}</div>
@@ -1470,7 +1870,6 @@ function updateCommand() {
     </div>
   `;
 
-  // Roster
   const rosterHtml = players.filter(p=>p.TeamName===tName).map(p=>`
     <div class="list-row">
       <div>
@@ -1482,7 +1881,6 @@ function updateCommand() {
   `).join('') || '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No players on roster.</div>';
   $('cmd-roster').innerHTML = rosterHtml;
 
-  // AI Scout (smart hot deals)
   const deals = getSmartHotDeals(tName);
   let aiHtml='';
   if (net<0) aiHtml+=`<div class="alert-item critical" style="margin-bottom:8px; font-size:12px;">⛔ CRITICAL: Team is losing ${fmt(Math.abs(net))}/mo</div>`;
@@ -1511,17 +1909,13 @@ function updateCommand() {
   }
   $('cmd-ai-scout').innerHTML=aiHtml;
 
-  // Forecast canvas
   drawForecast(tName, team, net);
-
-  // Inbound offers
   renderInboundOffers(tName);
   refreshMarket();
   renderOutboundOffers();
   updateHotDealsList();
 }
 
-/* 6-month forecast */
 function drawForecast(tName, team, netMonth) {
   const canvas = $('forecast-canvas');
   if (!canvas) return;
@@ -1540,48 +1934,35 @@ function drawForecast(tName, team, netMonth) {
   const pad = {t:20,b:30,l:60,r:20};
   const iW = W-pad.l-pad.r, iH = H-pad.t-pad.b;
 
-  // Grid
-  ctx.strokeStyle='rgba(0,212,255,0.08)';
-  ctx.lineWidth=1;
+  ctx.strokeStyle='rgba(0,212,255,0.08)'; ctx.lineWidth=1;
   for (let i=0;i<=4;i++) {
     const y = pad.t + iH*(1-i/4);
     ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+iW,y); ctx.stroke();
-    ctx.fillStyle='rgba(0,212,255,0.4)';
-    ctx.font=`10px 'Share Tech Mono'`;
+    ctx.fillStyle='rgba(0,212,255,0.4)'; ctx.font=`10px 'Share Tech Mono'`;
     ctx.fillText(fmtK(mn+range*(i/4)), 2, y+4);
   }
 
-  // Zero line
   if (mn<0 && mx>0) {
     const zy = pad.t + iH*(1-(0-mn)/range);
     ctx.strokeStyle='rgba(255,23,68,0.4)';
     ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(pad.l,zy); ctx.lineTo(pad.l+iW,zy); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // Fill gradient
   const grad = ctx.createLinearGradient(0,pad.t,0,pad.t+iH);
   const posColor = netMonth>=0?'rgba(0,255,136,0.3)':'rgba(255,23,68,0.3)';
   grad.addColorStop(0, posColor); grad.addColorStop(1,'rgba(0,0,0,0)');
   ctx.beginPath();
-  points.forEach((v,i)=>{
-    const x=pad.l+iW*(i/months), y=pad.t+iH*(1-(v-mn)/range);
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  });
+  points.forEach((v,i)=>{ const x=pad.l+iW*(i/months), y=pad.t+iH*(1-(v-mn)/range); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
   ctx.lineTo(pad.l+iW,pad.t+iH); ctx.lineTo(pad.l,pad.t+iH); ctx.closePath();
   ctx.fillStyle=grad; ctx.fill();
 
-  // Line
   const lineColor = netMonth>=0?'#00ff88':'#ff1744';
   ctx.strokeStyle=lineColor; ctx.lineWidth=2; ctx.setLineDash([]);
   ctx.shadowColor=lineColor; ctx.shadowBlur=8;
   ctx.beginPath();
-  points.forEach((v,i)=>{
-    const x=pad.l+iW*(i/months), y=pad.t+iH*(1-(v-mn)/range);
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  });
+  points.forEach((v,i)=>{ const x=pad.l+iW*(i/months), y=pad.t+iH*(1-(v-mn)/range); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
   ctx.stroke(); ctx.shadowBlur=0;
 
-  // Dots
   points.forEach((v,i)=>{
     const x=pad.l+iW*(i/months), y=pad.t+iH*(1-(v-mn)/range);
     ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
@@ -1593,7 +1974,6 @@ function drawForecast(tName, team, netMonth) {
 
 /* ═══ LEAGUE PANEL ═══ */
 function updateLeague() {
-  // Power Rankings
   const ranked = finances.map(t=>{
     const o=getOracleScore(t.TeamName);
     const fins=getTeamFinances(t);
@@ -1605,47 +1985,27 @@ function updateLeague() {
     <div class="rank-item">
       <div class="rank-num ${i===0?'gold':i===1?'silver':i===2?'bronze':'other'}">${i+1}</div>
       <div style="flex:1">
-        <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;">
-          ${t.name}
+        <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;">${t.name}
           <span class="badge badge-ghost" style="font-size:10px; color:${t.color}; border-color:${t.color};">${t.grade}</span>
         </div>
-        <div style="margin-top:4px;">
-          <div class="progress-track" style="height:3px;">
-            <div class="progress-fill" style="width:${t.score}%; background:${t.color};"></div>
-          </div>
-        </div>
-        <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-top:2px;">
-          Score: ${t.score} | Net: <span style="color:${t.net>=0?'var(--green)':'var(--red)'}">${t.net>=0?'+':''}${fmtK(t.net)}</span> | Form: ${t.form} | Bank: ${fmtK(t.bank)}
-        </div>
+        <div style="margin-top:4px;"><div class="progress-track" style="height:3px;"><div class="progress-fill" style="width:${t.score}%; background:${t.color};"></div></div></div>
+        <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-top:2px;">Score: ${t.score} | Net: <span style="color:${t.net>=0?'var(--green)':'var(--red)'}">${t.net>=0?'+':''}${fmtK(t.net)}</span> | Form: ${t.form} | Bank: ${fmtK(t.bank)}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 
-  // Financial health
   const losing=finances.filter(t=>getTeamFinances(t).net<0);
   const lowMargin=finances.filter(t=>{const n=getTeamFinances(t).net; return n>=0&&n<5000;});
   let hHtml='';
   if (!losing.length&&!lowMargin.length) hHtml='<div class="alert-item success">✓ All teams operating profitably.</div>';
-  losing.forEach(t=>{
-    const n=getTeamFinances(t).net;
-    hHtml+=`<div class="alert-item critical"><div><b>${t.TeamName}</b><br><span style="font-family:var(--font-data); font-size:11px; color:var(--red);">${fmt(n)}/mo — LOSING MONEY</span></div></div>`;
-  });
-  lowMargin.forEach(t=>{
-    const n=getTeamFinances(t).net;
-    hHtml+=`<div class="alert-item warning"><div><b>${t.TeamName}</b><br><span style="font-family:var(--font-data); font-size:11px; color:var(--orange);">+${fmt(n)}/mo — LOW MARGIN</span></div></div>`;
-  });
+  losing.forEach(t=>{const n=getTeamFinances(t).net; hHtml+=`<div class="alert-item critical"><div><b>${t.TeamName}</b><br><span style="font-family:var(--font-data); font-size:11px; color:var(--red);">${fmt(n)}/mo — LOSING MONEY</span></div></div>`;});
+  lowMargin.forEach(t=>{const n=getTeamFinances(t).net; hHtml+=`<div class="alert-item warning"><div><b>${t.TeamName}</b><br><span style="font-family:var(--font-data); font-size:11px; color:var(--orange);">+${fmt(n)}/mo — LOW MARGIN</span></div></div>`;});
   $('league-health').innerHTML=hHtml;
 
-  // Roster alerts
   let rHtml='';
-  finances.forEach(t=>{
-    const starters=players.filter(p=>p.TeamName===t.TeamName&&p.Role==='Starter').length;
-    if (starters<5) rHtml+=`<div class="alert-item critical"><b>${t.TeamName}</b><span style="margin-left:auto; font-family:var(--font-data); color:var(--red);">${starters}/5 STARTERS</span></div>`;
-  });
+  finances.forEach(t=>{const starters=players.filter(p=>p.TeamName===t.TeamName&&p.Role==='Starter').length; if(starters<5) rHtml+=`<div class="alert-item critical"><b>${t.TeamName}</b><span style="margin-left:auto; font-family:var(--font-data); color:var(--red);">${starters}/5 STARTERS</span></div>`;});
   if (!rHtml) rHtml='<div class="alert-item success">✓ All teams have 5 active starters.</div>';
   $('league-roster').innerHTML=rHtml;
 
-  // Form leaderboard
   const stars=[...players].filter(p=>getFormScore(p)>0).sort((a,b)=>getFormScore(b)-getFormScore(a)).slice(0,8);
   $('league-stars').innerHTML=stars.length ? stars.map((p,i)=>`
     <div class="rank-item" style="padding:7px 10px;">
@@ -1654,18 +2014,14 @@ function updateLeague() {
         <div style="font-size:13px; font-weight:600;">${String(p.PlayerName)} <span style="color:var(--text-dim); font-weight:400; font-size:11px;">(${p.TeamName})</span> ${medals(p)}</div>
         <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim);">FORM SCORE: <span style="color:var(--yellow);">${getFormScore(p)}</span> | MV: ${fmt(p.MarketValue)}</div>
       </div>
-    </div>
-  `).join('') : '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No medal holders yet.</div>';
+    </div>`).join('') : '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No medal holders yet.</div>';
 
-  // Transfer history
   const all=[...pendingTransfers.map(o=>({...o,status:'⏳ PENDING'})), ...transferHistory];
   $('league-transfers').innerHTML=all.length ? all.slice(0,10).map(o=>`
     <div class="list-row">
-      <div><div class="name" style="font-size:12px;">${o.playerName}</div>
-        <div class="meta">${o.buyer} ← ${o.seller} for ${fmt(o.amount)}</div></div>
+      <div><div class="name" style="font-size:12px;">${o.playerName}</div><div class="meta">${o.buyer} ← ${o.seller} for ${fmt(o.amount)}</div></div>
       <span style="font-family:var(--font-data); font-size:11px; color:${o.status.includes('✅')?'var(--green)':o.status.includes('❌')?'var(--red)':'var(--orange)'};">${o.status}</span>
-    </div>`).join('')
-  : '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No transfers recorded.</div>';
+    </div>`).join('') : '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No transfers recorded.</div>';
 }
 
 /* ═══ MARKET ═══ */
@@ -1682,9 +2038,7 @@ function updateHotDealsList() {
     const pct=(d.sixImpact/Math.max(bank,1)*100).toFixed(0);
     const tag=p.TeamName==='none'?'<span class="badge badge-cyan">FA</span>':d.isDiscounted?'<span class="badge badge-green">SALE</span>':'<span class="badge badge-orange">EXPIRING</span>';
     return `<div style="background:var(--bg); padding:10px; margin-bottom:6px; border:1px solid rgba(0,255,136,0.2); border-left:3px solid var(--green);">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-weight:700;">${String(p.PlayerName)}</span> ${tag}
-      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><span style="font-weight:700;">${String(p.PlayerName)}</span> ${tag}</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-family:var(--font-data); font-size:10px; color:var(--text-dim);">
         <span>Buyout: <b style="color:var(--text)">${fmt(d.buyout)}</b></span>
         <span>6m Impact: <b style="color:var(--orange)">${fmt(d.sixImpact)}</b></span>
@@ -1807,20 +2161,15 @@ function runComparison() {
     const form=getFormScore(p), vRatio=p.MarketValue/Math.max(buyout,1);
     let sc=0, bd=[];
 
-    // Value ratio (25)
     const vp=clamp(vRatio*5,0,25); sc+=vp;
     bd.push({label:'Value Ratio (MV÷Buyout)', val:vp.toFixed(1), max:25, color:'#00ff88'});
-    // Affordability (25)
     let ap=bank>=buyout+safetyReserve?25:bank>=buyout?10:0; sc+=ap;
     bd.push({label:'Affordability', val:ap, max:25, color:'#00d4ff'});
-    // Sustainability (20)
     let sp=newNet>=5000?20:newNet>=0?12:newNet>=-5000?4:0; sc+=sp;
     bd.push({label:'Monthly Sustainability', val:sp, max:20, color:'#ff9800'});
-    // 6m safety (15)
     const impPct=bank>0?six/bank:1;
     const ip=clamp(15-impPct*30,0,15); sc+=ip;
     bd.push({label:'6-Month Cost Safety', val:ip.toFixed(1), max:15, color:'#b94fff'});
-    // Form (15)
     const fp=clamp(form*1.5,0,15); sc+=fp;
     bd.push({label:'Form & Medals', val:fp.toFixed(1), max:15, color:'#ffd600'});
 
@@ -1844,68 +2193,29 @@ function runComparison() {
 
   function card(a, side) {
     const w=side===winner;
-    return `
-      <div class="compare-card ${w?'winner':'loser'}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:${w?'var(--green)':'var(--text)'};">${String(a.p.PlayerName)}</span>
-          ${w?'<span class="badge badge-green">RECOMMENDED ✓</span>':''}
-        </div>
-        <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-bottom:12px;">[${a.p.TeamName}] • ${a.p.Role} • ${a.p.ContractMonths}m left ${medals(a.p)}</div>
-
-        <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
-          ${[
-            ['Market Value', fmt(a.p.MarketValue), 'var(--cyan)'],
-            ['Buyout Cost', a.p.TeamName==='none'?'$0 (FREE)':fmt(a.buyout), a.canAfford?'var(--green)':'var(--red)'],
-            ['Monthly Salary', fmt(a.sal), 'var(--orange)'],
-            ['6-Month Impact', fmt(a.six), 'var(--red)'],
-            ['Bank After Buyout', fmt(a.bankAfter), a.bankAfter>=0?'var(--text)':'var(--red)'],
-            ['New Monthly Net', (a.newNet>=0?'+':'')+fmt(a.newNet), a.newNet>=0?'var(--green)':'var(--red)'],
-            ['Form Score', a.form, 'var(--yellow)'],
-          ].map(([l,v,c])=>`
-            <div style="display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(0,212,255,0.05);">
-              <span style="color:var(--text-dim);">${l}</span>
-              <span style="font-family:var(--font-data); font-weight:700; color:${c};">${v}</span>
-            </div>`).join('')}
-        </div>
-
-        <div style="font-family:var(--font-display); font-size:10px; letter-spacing:2px; color:${w?'var(--green)':'var(--text-dim)'}; margin-bottom:8px;">
-          AI SCORE: <span style="font-size:22px;">${a.score}</span><span style="font-size:12px;">/100</span>
-        </div>
-        ${a.bd.map(b=>`
-          <div style="margin-bottom:6px;">
-            <div style="display:flex; justify-content:space-between; font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-bottom:2px;">
-              <span>${b.label}</span><span style="color:${b.color}">${b.val}/${b.max}</span>
-            </div>
-            <div class="progress-track"><div class="progress-fill" style="width:${(parseFloat(b.val)/b.max*100)}%; background:${b.color};"></div></div>
-          </div>`).join('')}
-
-        ${a.flags.length?`<div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">
-          ${a.flags.map(f=>`<div style="font-size:11px; color:${f.type==='good'?'var(--green)':f.type==='warn'?'var(--orange)':'var(--red)'}">${f.type==='good'?'✓':f.type==='warn'?'⚠':'✗'} ${f.msg}</div>`).join('')}
-        </div>`:''}
-      </div>`;
+    return `<div class="compare-card ${w?'winner':'loser'}">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:${w?'var(--green)':'var(--text)'};">${String(a.p.PlayerName)}</span>
+        ${w?'<span class="badge badge-green">RECOMMENDED ✓</span>':''}
+      </div>
+      <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-bottom:12px;">[${a.p.TeamName}] • ${a.p.Role} • ${a.p.ContractMonths}m left ${medals(a.p)}</div>
+      <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:12px;">
+        ${[['Market Value',fmt(a.p.MarketValue),'var(--cyan)'],['Buyout Cost',a.p.TeamName==='none'?'$0 (FREE)':fmt(a.buyout),a.canAfford?'var(--green)':'var(--red)'],['Monthly Salary',fmt(a.sal),'var(--orange)'],['6-Month Impact',fmt(a.six),'var(--red)'],['Bank After Buyout',fmt(a.bankAfter),a.bankAfter>=0?'var(--text)':'var(--red)'],['New Monthly Net',(a.newNet>=0?'+':'')+fmt(a.newNet),a.newNet>=0?'var(--green)':'var(--red)'],['Form Score',a.form,'var(--yellow)']].map(([l,v,c])=>`<div style="display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(0,212,255,0.05);"><span style="color:var(--text-dim);">${l}</span><span style="font-family:var(--font-data); font-weight:700; color:${c};">${v}</span></div>`).join('')}
+      </div>
+      <div style="font-family:var(--font-display); font-size:10px; letter-spacing:2px; color:${w?'var(--green)':'var(--text-dim)'}; margin-bottom:8px;">AI SCORE: <span style="font-size:22px;">${a.score}</span><span style="font-size:12px;">/100</span></div>
+      ${a.bd.map(b=>`<div style="margin-bottom:6px;"><div style="display:flex; justify-content:space-between; font-family:var(--font-data); font-size:10px; color:var(--text-dim); margin-bottom:2px;"><span>${b.label}</span><span style="color:${b.color}">${b.val}/${b.max}</span></div><div class="progress-track"><div class="progress-fill" style="width:${(parseFloat(b.val)/b.max*100)}%; background:${b.color};"></div></div></div>`).join('')}
+      ${a.flags.length?`<div style="margin-top:10px; display:flex; flex-direction:column; gap:4px;">${a.flags.map(f=>`<div style="font-size:11px; color:${f.type==='good'?'var(--green)':f.type==='warn'?'var(--orange)':'var(--red)'}">${f.type==='good'?'✓':f.type==='warn'?'⚠':'✗'} ${f.msg}</div>`).join('')}</div>`:''}
+    </div>`;
   }
 
   const verdictColor=diff<5?'var(--orange)':'var(--green)';
   $('comparison-result').innerHTML=`
-    <div class="compare-grid" style="margin-top:16px;">
-      ${card(a1,'p1')}
-      <div class="compare-vs">VS</div>
-      ${card(a2,'p2')}
-    </div>
+    <div class="compare-grid" style="margin-top:16px;">${card(a1,'p1')}<div class="compare-vs">VS</div>${card(a2,'p2')}</div>
     <div class="card" style="margin-top:12px; border-color:${verdictColor};">
       <div class="card-title" style="color:${verdictColor};">🤖 NEXUS VERDICT — ${strength}</div>
-      ${!wData.canAfford&&!lData.canAfford?
-        `<div class="alert-item critical">⛔ Your budget cannot cover either player's buyout right now. Build reserves first.</div>`:
-        `<div style="font-size:13px; line-height:1.8;">
-          <div>✅ <b>${String(wData.p.PlayerName)}</b> scores <b>${wData.score}/100</b> vs ${lData.score}/100 — ${diff<5?'narrowly':'clearly'} the better acquisition.</div>
-          ${wData.buyout<lData.buyout?`<div>💰 Saves ${fmt(lData.buyout-wData.buyout)} upfront in buyout costs.</div>`:''}
-          ${wData.sal<lData.sal?`<div>📆 Lower monthly commitment: ${fmt(wData.sal)} vs ${fmt(lData.sal)}/mo.</div>`:''}
-          ${wData.newNet>lData.newNet?`<div>📈 Healthier post-signing net: <span style="color:var(--green)">${wData.newNet>=0?'+':''}${fmt(wData.newNet)}</span> vs ${lData.newNet>=0?'+':''}${fmt(lData.newNet)}.</div>`:''}
-          ${wData.form>lData.form?`<div>⭐ Superior form (${wData.form} vs ${lData.form}) — higher MV growth potential.</div>`:''}
-          ${diff<5?`<div style="color:var(--text-dim); margin-top:8px; font-size:12px;">Scores nearly identical. Consider team positional needs.</div>`:''}
-        </div>`}
-    </div>
-  `;
+      ${!wData.canAfford&&!lData.canAfford?`<div class="alert-item critical">⛔ Your budget cannot cover either player's buyout right now. Build reserves first.</div>`:`<div style="font-size:13px; line-height:1.8;"><div>✅ <b>${String(wData.p.PlayerName)}</b> scores <b>${wData.score}/100</b> vs ${lData.score}/100 — ${diff<5?'narrowly':'clearly'} the better acquisition.</div>${wData.buyout<lData.buyout?`<div>💰 Saves ${fmt(lData.buyout-wData.buyout)} upfront in buyout costs.</div>`:''} ${wData.sal<lData.sal?`<div>📆 Lower monthly commitment: ${fmt(wData.sal)} vs ${fmt(lData.sal)}/mo.</div>`:''} ${wData.newNet>lData.newNet?`<div>📈 Healthier post-signing net: <span style="color:var(--green)">${wData.newNet>=0?'+':''}${fmt(wData.newNet)}</span> vs ${lData.newNet>=0?'+':''}${fmt(lData.newNet)}.</div>`:''} ${wData.form>lData.form?`<div>⭐ Superior form (${wData.form} vs ${lData.form}) — higher MV growth potential.</div>`:''} ${diff<5?`<div style="color:var(--text-dim); margin-top:8px; font-size:12px;">Scores nearly identical. Consider team positional needs.</div>`:''}
+      </div>`}
+    </div>`;
 }
 
 /* ═══ INBOUND OFFERS ═══ */
@@ -1916,11 +2226,7 @@ function renderInboundOffers(tName) {
     html=`<div class="offer-panel"><div class="offer-header">🛎 PENDING TRANSFER OFFERS — ACTION REQUIRED</div>`;
     myOff.forEach(o=>{
       const p=o.amount-o.standardBuyout;
-      html+=`<div class="offer-row">
-        <div><b style="font-size:13px;">${o.buyer}</b> offers <b style="color:var(--cyan)">${fmt(o.amount)}</b> for <b>${o.playerName}</b><br>
-        <span style="font-family:var(--font-data); font-size:10px; color:var(--text-dim);">Std Buyout: ${fmt(o.standardBuyout)} | <span style="color:${p>=0?'var(--green)':'var(--red)'}">${p>=0?'+':''}${fmt(p)} ${p>=0?'profit':'loss'}</span></span></div>
-        <div style="display:flex; gap:6px;"><button class="btn btn-green btn-sm" onclick="acceptTransfer(${o.id})">ACCEPT</button><button class="btn btn-red btn-sm" onclick="rejectTransfer(${o.id})">REJECT</button></div>
-      </div>`;
+      html+=`<div class="offer-row"><div><b style="font-size:13px;">${o.buyer}</b> offers <b style="color:var(--cyan)">${fmt(o.amount)}</b> for <b>${o.playerName}</b><br><span style="font-family:var(--font-data); font-size:10px; color:var(--text-dim);">Std Buyout: ${fmt(o.standardBuyout)} | <span style="color:${p>=0?'var(--green)':'var(--red)'}">${p>=0?'+':''}${fmt(p)} ${p>=0?'profit':'loss'}</span></span></div><div style="display:flex; gap:6px;"><button class="btn btn-green btn-sm" onclick="acceptTransfer(${o.id})">ACCEPT</button><button class="btn btn-red btn-sm" onclick="rejectTransfer(${o.id})">REJECT</button></div></div>`;
     });
     html+='</div>';
   }
@@ -2042,10 +2348,7 @@ function updateContractAlerts() {
   const alerts=players.filter(p=>p.TeamName!=='none'&&p.ContractMonths<=2);
   $('contract-alerts').innerHTML=alerts.length ? alerts.map(p=>`
     <div class="alert-item ${p.ContractMonths<=0?'critical':'warning'}">
-      <div style="flex:1">
-        <b>${String(p.PlayerName)}</b> <span style="color:var(--text-dim);">(${p.TeamName})</span>
-        <div style="font-family:var(--font-data); font-size:10px; color:${p.ContractMonths<=0?'var(--red)':'var(--orange)'};">${p.ContractMonths}m remaining</div>
-      </div>
+      <div style="flex:1"><b>${String(p.PlayerName)}</b> <span style="color:var(--text-dim);">(${p.TeamName})</span><div style="font-family:var(--font-data); font-size:10px; color:${p.ContractMonths<=0?'var(--red)':'var(--orange)'};">${p.ContractMonths}m remaining</div></div>
       <button class="btn btn-ghost btn-sm" onclick="quickRenew('${String(p.PlayerName).replace(/'/g,"\\'")}')" style="padding:4px 8px;">RENEW</button>
     </div>`).join('')
   : '<div class="alert-item success">✓ All contracts stable.</div>';
@@ -2070,15 +2373,9 @@ function renderTravelList() {
   $('travel-list').innerHTML=finances.filter(t=>t.TeamName.toLowerCase().includes(search)).map(t=>{
     const t3=String(t.Tier||'').toLowerCase().trim()==='tier 3';
     const fc=t3?cost*0.5:cost, nb=(t.CurrentBank||0)-fc;
-    return `<label class="travel-item">
-      <input type="checkbox" class="travel-cb" value="${t.TeamName}" ${checked.has(t.TeamName)?'checked':''}>
-      <div style="flex:1">
-        <span style="font-weight:600;">${t.TeamName}</span>${t3?` <span class="badge badge-orange">50% OFF</span>`:''}
-      </div>
-      <div style="text-align:right; font-family:var(--font-data); font-size:10px;">
-        <div style="color:var(--red);">−${fmt(fc)}</div>
-        <div style="color:${nb<0?'var(--red)':'var(--text-dim)'};">${fmt(nb)}</div>
-      </div>
+    return `<label class="travel-item"><input type="checkbox" class="travel-cb" value="${t.TeamName}" ${checked.has(t.TeamName)?'checked':''}>
+      <div style="flex:1"><span style="font-weight:600;">${t.TeamName}</span>${t3?` <span class="badge badge-orange">50% OFF</span>`:''}</div>
+      <div style="text-align:right; font-family:var(--font-data); font-size:10px;"><div style="color:var(--red);">−${fmt(fc)}</div><div style="color:${nb<0?'var(--red)':'var(--text-dim)'};">${fmt(nb)}</div></div>
     </label>`;
   }).join('');
 }
@@ -2183,8 +2480,7 @@ function addLog(msg, type='') {
   el.insertBefore(div, el.firstChild);
 }
 
-// Init log
-addLog('NEXUS COMMAND — Upload your data files to begin.', 'good');
+addLog('NEXUS COMMAND — Initializing boot sequence...', 'good');
 </script>
 </body>
 </html>
