@@ -980,7 +980,12 @@ body::before {
 
 <!-- TOP BAR -->
 <div id="topbar">
-  <div class="topbar-logo">NEXUS</div>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <button id="back-btn" onclick="goBack()" title="Voltar ao Menu (0)" style="font-family:var(--font-display); font-size:10px; font-weight:700; letter-spacing:2px; padding:5px 12px; border:1px solid var(--border); background:transparent; color:var(--text-dim); cursor:pointer; clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%); transition:all 0.2s; display:flex; align-items:center; gap:5px;">
+      <span style="font-size:9px; background:var(--bg3); border:1px solid var(--border); padding:1px 5px; color:var(--cyan);">0</span> MENU
+    </button>
+    <div class="topbar-logo">NEXUS</div>
+  </div>
   <div id="topbar-ticker">
     <div class="ticker-inner" id="ticker-content">SYSTEM INITIALIZING...</div>
   </div>
@@ -1685,16 +1690,19 @@ function canAddBench(team) {
 }
 
 function getTeamFinances(team) {
-  let sponsor = 0;
-  const tier = String(team.Tier||'').toLowerCase().trim();
-  if (tier==='tier s') sponsor=70000;
-  else if (tier==='tier 1'||tier==='top 1') sponsor=55000;
-  else if (tier==='tier 2') sponsor=40000;
-  else if (tier==='tier 3') sponsor=30000;
+  // Use Sponsorship column directly from Excel (not derived from Tier)
+  let sponsor = Number(team.Sponsorship || 0);
   if (team.sponsorshipBoost) sponsor *= 1.5;
-  const fixed = ['Coach','Analyst','HealthTeam','PhysicalTeam','Maintenance','Marketing'].reduce((s,k)=>s+Number(team[k]||0),0);
+  // Fixed costs: numeric columns only. Coach = name string (not a cost).
+  // Support both 'HeathTeam' (Excel typo) and 'HealthTeam'
+  const fixedKeys = ['Analyst', 'HeathTeam', 'HealthTeam', 'PhysicalTeam', 'Maintenance', 'Marketing'];
+  const fixed = fixedKeys.reduce((s, k) => {
+    const v = Number(team[k]);
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
   const salaries = players.filter(p=>p.TeamName===team.TeamName).reduce((s,p)=>s+(p.MarketValue||0)*0.10,0);
   return { sponsor, fixed, salaries, net: sponsor-(fixed+salaries) };
+};
 }
 
 function getOracleScore(teamName) {
@@ -2520,6 +2528,18 @@ function addLog(msg, type='') {
 }
 
 addLog('NEXUS COMMAND — Initializing boot sequence...', 'good');
+
+/* ═══ BACK TO INDEX ═══ */
+function goBack() {
+  window.location.href = 'index.html';
+}
+
+document.addEventListener('keydown', e => {
+  // Key 0 = back to index (only when app is visible, not during inputs)
+  if (e.key === '0' && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) {
+    goBack();
+  }
+});
 </script>
 </body>
 </html>
