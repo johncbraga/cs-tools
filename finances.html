@@ -787,8 +787,47 @@ body::before {
   min-height: 16px;
   letter-spacing: 1px;
 }
+/* ═══ INTEL PANEL ═══ */
+.intel-team-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.intel-team-card:hover { border-color: var(--cyan); background: var(--bg3); }
+.intel-team-card.rising { border-left: 3px solid var(--green); }
+.intel-team-card.falling { border-left: 3px solid var(--red); }
+.intel-team-card.selected { border-color: var(--cyan); background: var(--bg3); }
+.intel-team-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.intel-team-name { font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:2px; }
+.intel-score-badge { font-family:var(--font-data); font-size:11px; padding:3px 8px; border-radius:2px; }
+.intel-metrics { display:flex; gap:12px; flex-wrap:wrap; }
+.intel-metric { font-family:var(--font-data); font-size:10px; color:var(--text-dim); }
+.intel-metric span { color:var(--text); }
+.intel-expand-hint { font-family:var(--font-data); font-size:9px; color:var(--text-dim); margin-top:6px; letter-spacing:1px; }
+
+.intel-detail-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+.intel-detail-title { font-family:var(--font-display); font-size:16px; font-weight:900; letter-spacing:3px; margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+.intel-section { margin-bottom:18px; }
+.intel-section-title { font-family:var(--font-display); font-size:10px; letter-spacing:3px; color:var(--text-dim); margin-bottom:10px; padding-bottom:5px; border-bottom:1px solid var(--border); }
+.intel-tip { background:var(--bg3); border-left:3px solid var(--cyan); padding:10px 14px; margin-bottom:8px; font-size:13px; line-height:1.7; }
+.intel-tip.good { border-left-color:var(--green); }
+.intel-tip.warn { border-left-color:var(--orange); }
+.intel-tip.bad { border-left-color:var(--red); }
+.intel-tip .tip-label { font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-bottom:4px; }
+.intel-tip .tip-text { font-size:12px; line-height:1.8; }
+.intel-diag-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.intel-diag-item { background:var(--bg3); padding:10px; text-align:center; }
+.intel-diag-item .d-val { font-family:var(--font-data); font-size:18px; font-weight:700; }
+.intel-diag-item .d-lbl { font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; }
 </style>
-</head>
 <body>
 
 <!-- UPLOAD OVERLAY -->
@@ -848,6 +887,7 @@ body::before {
     <button class="nav-tab" onclick="showPanel('p-compare')">⇌ COMPARE</button>
     <button class="nav-tab" onclick="showPanel('p-league')">◉ LEAGUE</button>
     <button class="nav-tab" onclick="showPanel('p-ops')">⚙ OPS <span class="badge" id="alert-badge" style="display:none">!</span></button>
+    <button class="nav-tab" onclick="showPanel('p-intel'); runIntel()">🧠 INTEL</button>
   </div>
 
   <!-- CONTENT -->
@@ -1177,6 +1217,45 @@ body::before {
     </div>
 
   </div><!-- /content -->
+
+    <!-- ═══ INTEL PANEL ═══ -->
+    <div class="panel" id="p-intel" style="padding:16px; overflow-y:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div style="font-family:var(--font-display); font-size:18px; font-weight:900; color:var(--cyan); letter-spacing:4px; text-shadow:0 0 20px var(--cyan);">
+          🧠 NEXUS INTEL — ANÁLISE DE DESEMPENHO
+        </div>
+        <button class="btn btn-cyan" onclick="runIntel()" style="padding:8px 24px; letter-spacing:2px; font-size:11px;">⟳ ATUALIZAR ANÁLISE</button>
+      </div>
+
+      <!-- SUMMARY BAR -->
+      <div id="intel-summary-bar" class="g4" style="margin-bottom:16px; gap:12px;"></div>
+
+      <!-- MAIN GRID -->
+      <div class="g2" style="gap:16px; align-items:start;">
+
+        <!-- RISING TEAMS -->
+        <div>
+          <div style="font-family:var(--font-display); font-size:11px; letter-spacing:3px; color:var(--green); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">📈</span> TIMES EM ASCENSÃO
+          </div>
+          <div id="intel-rising"></div>
+        </div>
+
+        <!-- FALLING TEAMS -->
+        <div>
+          <div style="font-family:var(--font-display); font-size:11px; letter-spacing:3px; color:var(--red); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;">📉</span> TIMES EM COLAPSO
+          </div>
+          <div id="intel-falling"></div>
+        </div>
+
+      </div>
+
+      <!-- DETAIL REPORT (expanded) -->
+      <div id="intel-detail" style="margin-top:16px;"></div>
+
+    </div>
+
 </div><!-- /app -->
 
 <!-- BOTTOM STRIP -->
@@ -1248,8 +1327,8 @@ async function scanFiles() {
 
   try {
     const [finData, plyData] = await Promise.all([
-      fetchXL('file/finances_updated.xlsx'),
-      fetchXL('file/players_updated.xlsx')
+      fetchXL('files/finances_updated.xlsx'),
+      fetchXL('files/players_updated.xlsx')
     ]);
     finances = finData; finLoaded = true;
     $('fin-box').classList.add('loaded');
@@ -1263,10 +1342,318 @@ async function scanFiles() {
     btn.textContent = '✓ FILES LOADED';
   } catch(e) {
     status.style.color = 'var(--red)';
-    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta file/`;
+    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta files/`;
     btn.classList.remove('scanning');
     btn.textContent = '⟳ SCAN FILES/';
   }
+}
+
+}
+
+/* ═══════════════════════════════════════════════
+   NEXUS INTEL ENGINE
+═══════════════════════════════════════════════ */
+let intelSelectedTeam = null;
+
+function runIntel() {
+  // Build full profile for every team
+  const profiles = finances.map(team => {
+    const tName = team.TeamName;
+    const oracle = getOracleScore(tName);
+    const risk = getRiskIndex(tName);
+    const fins = getTeamFinances(team);
+    const bank = team.CurrentBank || 0;
+    const teamPlayers = players.filter(p => p.TeamName === tName);
+    const starters = teamPlayers.filter(p => p.Role === 'Starter').length;
+    const bench = teamPlayers.filter(p => p.Role === 'Bench').length;
+    const expiring = teamPlayers.filter(p => p.ContractMonths <= 2).length;
+    const avgForm = teamPlayers.length ? teamPlayers.reduce((s,p) => s + getFormScore(p), 0) / teamPlayers.length : 0;
+    const topPlayer = [...teamPlayers].sort((a,b) => getFormScore(b) - getFormScore(a))[0];
+    const runway = fins.salaries > 0 ? bank / fins.salaries : 99;
+    const tier = String(team.Tier || '').toLowerCase().trim();
+
+    // Trend score: positive = ascending, negative = falling
+    let trend = 0;
+    if (oracle.score >= 75) trend += 3;
+    else if (oracle.score >= 55) trend += 1;
+    else if (oracle.score < 35) trend -= 3;
+    else if (oracle.score < 50) trend -= 1;
+
+    if (fins.net > 15000) trend += 2;
+    else if (fins.net > 5000) trend += 1;
+    else if (fins.net < 0) trend -= 2;
+    else if (fins.net < 3000) trend -= 1;
+
+    if (starters >= 5) trend += 1;
+    else if (starters <= 2) trend -= 2;
+    else if (starters <= 3) trend -= 1;
+
+    if (expiring >= 3) trend -= 2;
+    else if (expiring >= 2) trend -= 1;
+
+    if (avgForm >= 8) trend += 2;
+    else if (avgForm >= 4) trend += 1;
+    else if (avgForm < 1) trend -= 1;
+
+    if (risk > 65) trend -= 2;
+    if (bank < 0) trend -= 2;
+
+    return { team, tName, oracle, risk, fins, bank, teamPlayers, starters, bench, expiring, avgForm, topPlayer, runway, tier, trend };
+  });
+
+  profiles.sort((a,b) => b.oracle.score - a.oracle.score);
+
+  const rising = profiles.filter(p => p.trend >= 2).sort((a,b) => b.trend - a.trend);
+  const falling = profiles.filter(p => p.trend <= -2).sort((a,b) => a.trend - b.trend);
+  const stable = profiles.filter(p => p.trend > -2 && p.trend < 2);
+
+  // Summary bar
+  $('intel-summary-bar').innerHTML = `
+    <div class="stat-box green"><div class="lbl">EM ASCENSÃO</div><div class="val">${rising.length}</div><div class="sub">times sólidos</div></div>
+    <div class="stat-box cyan"><div class="lbl">ESTÁVEIS</div><div class="val">${stable.length}</div><div class="sub">monitorando</div></div>
+    <div class="stat-box red"><div class="lbl">EM COLAPSO</div><div class="val">${falling.length}</div><div class="sub">precisam de ação</div></div>
+    <div class="stat-box ${falling.length > rising.length ? 'red' : 'green'}"><div class="lbl">LIGA HEALTH</div><div class="val">${Math.round(profiles.reduce((s,p)=>s+p.oracle.score,0)/Math.max(profiles.length,1))}</div><div class="sub">avg oracle</div></div>
+  `;
+
+  function renderTeamCard(prof, type) {
+    const netColor = prof.fins.net >= 0 ? 'var(--green)' : 'var(--red)';
+    const trendIcon = type === 'rising' ? '▲' : '▼';
+    const trendColor = type === 'rising' ? 'var(--green)' : 'var(--red)';
+    const bgBadge = `background:${prof.oracle.color}22; color:${prof.oracle.color};`;
+    return `
+      <div class="intel-team-card ${type} ${intelSelectedTeam===prof.tName?'selected':''}" onclick="selectIntelTeam('${prof.tName.replace(/'/g,"\\'")}')">
+        <div class="intel-team-header">
+          <div class="intel-team-name" style="color:${prof.oracle.color}">${prof.tName}</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span style="font-family:var(--font-data); font-size:11px; color:${trendColor};">${trendIcon} ${Math.abs(prof.trend)} pts</span>
+            <span class="intel-score-badge" style="${bgBadge}">ORACLE ${prof.oracle.score} — ${prof.oracle.grade}</span>
+          </div>
+        </div>
+        <div class="intel-metrics">
+          <div class="intel-metric">NET <span style="color:${netColor}">${fmtK(prof.fins.net)}/mo</span></div>
+          <div class="intel-metric">BANK <span>${fmtK(prof.bank)}</span></div>
+          <div class="intel-metric">STARTERS <span style="color:${prof.starters>=5?'var(--green)':'var(--orange)'}">${prof.starters}/5</span></div>
+          <div class="intel-metric">EXPIRING <span style="color:${prof.expiring>=3?'var(--red)':prof.expiring>=1?'var(--orange)':'var(--green)'}">${prof.expiring}</span></div>
+          <div class="intel-metric">AVG FORM <span>${prof.avgForm.toFixed(1)}</span></div>
+          ${prof.topPlayer ? `<div class="intel-metric">STAR <span style="color:var(--yellow)">⭐ ${String(prof.topPlayer.PlayerName)}</span></div>` : ''}
+        </div>
+        <div class="intel-expand-hint">▸ CLIQUE PARA ANÁLISE COMPLETA</div>
+      </div>
+    `;
+  }
+
+  $('intel-rising').innerHTML = rising.length
+    ? rising.map(p => renderTeamCard(p, 'rising')).join('')
+    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">Nenhum time em ascensão detectado.</div>`;
+
+  $('intel-falling').innerHTML = falling.length
+    ? falling.map(p => renderTeamCard(p, 'falling')).join('')
+    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">Nenhum time crítico detectado.</div>`;
+
+  // Auto-select worst team on first run
+  if (!intelSelectedTeam && falling.length > 0) {
+    intelSelectedTeam = falling[0].tName;
+  } else if (!intelSelectedTeam && profiles.length > 0) {
+    intelSelectedTeam = profiles[0].tName;
+  }
+  if (intelSelectedTeam) renderIntelDetail(profiles);
+}
+
+function selectIntelTeam(name) {
+  intelSelectedTeam = name;
+  // Re-run to refresh selection highlight + detail
+  document.querySelectorAll('.intel-team-card').forEach(c => c.classList.remove('selected'));
+  const profiles = finances.map(team => {
+    const tName = team.TeamName;
+    const oracle = getOracleScore(tName);
+    const risk = getRiskIndex(tName);
+    const fins = getTeamFinances(team);
+    const bank = team.CurrentBank || 0;
+    const teamPlayers = players.filter(p => p.TeamName === tName);
+    const starters = teamPlayers.filter(p => p.Role === 'Starter').length;
+    const bench = teamPlayers.filter(p => p.Role === 'Bench').length;
+    const expiring = teamPlayers.filter(p => p.ContractMonths <= 2).length;
+    const avgForm = teamPlayers.length ? teamPlayers.reduce((s,p) => s + getFormScore(p), 0) / teamPlayers.length : 0;
+    const topPlayer = [...teamPlayers].sort((a,b) => getFormScore(b) - getFormScore(a))[0];
+    const runway = fins.salaries > 0 ? bank / fins.salaries : 99;
+    const tier = String(team.Tier || '').toLowerCase().trim();
+    let trend = 0;
+    if (oracle.score >= 75) trend += 3; else if (oracle.score >= 55) trend += 1; else if (oracle.score < 35) trend -= 3; else if (oracle.score < 50) trend -= 1;
+    if (fins.net > 15000) trend += 2; else if (fins.net > 5000) trend += 1; else if (fins.net < 0) trend -= 2; else if (fins.net < 3000) trend -= 1;
+    if (starters >= 5) trend += 1; else if (starters <= 2) trend -= 2; else if (starters <= 3) trend -= 1;
+    if (expiring >= 3) trend -= 2; else if (expiring >= 2) trend -= 1;
+    if (avgForm >= 8) trend += 2; else if (avgForm >= 4) trend += 1; else if (avgForm < 1) trend -= 1;
+    if (risk > 65) trend -= 2;
+    if (bank < 0) trend -= 2;
+    return { team, tName, oracle, risk, fins, bank, teamPlayers, starters, bench, expiring, avgForm, topPlayer, runway, tier, trend };
+  });
+  renderIntelDetail(profiles);
+}
+
+function renderIntelDetail(profiles) {
+  const prof = profiles.find(p => p.tName === intelSelectedTeam);
+  if (!prof) return;
+
+  const { team, tName, oracle, risk, fins, bank, teamPlayers, starters, bench, expiring, avgForm, topPlayer, runway, tier } = prof;
+  const isFalling = prof.trend <= -2;
+  const isRising = prof.trend >= 2;
+
+  // Generate diagnostic items
+  const issues = [];
+  const strengths = [];
+  const actions = [];
+
+  // ── FINANCES ──
+  if (fins.net < 0) {
+    issues.push({ label: 'FLUXO NEGATIVO', text: `O time está perdendo <b style="color:var(--red)">${fmt(Math.abs(fins.net))}/mês</b>. Com o banco atual de ${fmt(bank)}, isso é insustentável por mais de ${Math.max(0,(bank/Math.abs(fins.net))).toFixed(1)} meses.` });
+    actions.push({ type: 'bad', label: 'AÇÃO URGENTE — FINANÇAS', text: `Reduza custos fixos ou libere jogadores com salário alto para equilibrar o fluxo. Considere dispensar bench players com MarketValue alto que não contribuem com títulos. O objetivo mínimo é zerar o NET/mês antes de qualquer contratação.` });
+  } else if (fins.net < 5000) {
+    issues.push({ label: 'MARGEM APERTADA', text: `Lucro mensal de apenas ${fmt(fins.net)}. Qualquer nova contratação pode virar o saldo negativo.` });
+    actions.push({ type: 'warn', label: 'CAUTELA — FINANÇAS', text: `Evite contratações que custam mais de ${fmt(fins.net * 0.6)}/mês. Priorize free agents (sem taxa de buyout). Foque em renovar contratos com duração curta antes de ficarem a zero.` });
+  } else {
+    strengths.push({ label: 'FINANCEIRO SÓLIDO', text: `Lucro de ${fmt(fins.net)}/mês. Capacidade de aquisição confirmada sem comprometer estabilidade.` });
+  }
+
+  if (bank < 0) {
+    issues.push({ label: 'BANCO NEGATIVO', text: `Saldo atual: <b style="color:var(--red)">${fmt(bank)}</b>. O time está tecnicamente insolvente.` });
+    actions.push({ type: 'bad', label: 'EMERGÊNCIA — BANCO NEGATIVO', text: `Interrompa TODAS as contratações imediatamente. Venda jogadores bench via transfer market para recuperar caixa. Prioridade máxima: trazer o banco para positivo antes de qualquer outra ação.` });
+  } else if (runway < 2) {
+    issues.push({ label: 'RESERVA BAIXA', text: `Banco cobre apenas ${runway.toFixed(1)} meses de salários. Qualquer crise financeira seria fatal.` });
+    actions.push({ type: 'warn', label: 'RESERVA DE EMERGÊNCIA', text: `Mantenha sempre no mínimo 3 meses de salários em banco (≈ ${fmt(fins.salaries * 3)}). Corte gastos não essenciais até atingir esse colchão.` });
+  } else if (runway >= 5) {
+    strengths.push({ label: 'RESERVA EXCELENTE', text: `${runway.toFixed(1)} meses de runway. Equipe tem segurança para absorver variações e investir oportunisticamente.` });
+  }
+
+  // ── ROSTER ──
+  if (starters < 5) {
+    const missing = 5 - starters;
+    issues.push({ label: `ROSTER INCOMPLETO (${starters}/5)`, text: `Faltam ${missing} starter(s). Time está competindo abaixo da capacidade máxima.` });
+    if (fins.net > 0 && bank > fins.salaries * 2) {
+      actions.push({ type: 'bad', label: 'CONTRATAÇÃO PRIORITÁRIA', text: `Com ${missing} vaga(s) em aberto e finanças estáveis, busque no mercado free agents com MarketValue compatível ao seu budget (salário ≈ MV × 10%). Priorize jogadores com Form Score > 5 para impacto imediato. Use o painel ◈ MARKET com filtro "Free Agents" para identificar opções.` });
+    } else {
+      actions.push({ type: 'warn', label: 'ROSTER INCOMPLETO — SEM BUDGET', text: `Corrija as finanças primeiro (zere o NET negativo), depois busque contratar. Roster vazio com banco negativo é a pior combinação possível.` });
+    }
+  } else {
+    strengths.push({ label: 'ROSTER COMPLETO', text: `5/5 starters ativos${bench > 0 ? ` e ${bench} bench player(s) de reserva` : ''}. Escalação máxima disponível.` });
+  }
+
+  if (bench === 0) {
+    issues.push({ label: 'SEM BANCO DE RESERVAS', text: `Nenhum bench player. Se um starter sair ou expirar, o time fica com gap imediato no roster.` });
+    actions.push({ type: 'warn', label: 'MONTE BANCO DE RESERVAS', text: `Contrate ao menos 1–2 bench players com salário baixo (MV abaixo de 50k) para cobrir emergências. Bench players custam menos e oferecem segurança estratégica quando contratos expiram.` });
+  }
+
+  // ── CONTRACTS ──
+  if (expiring >= 3) {
+    const expiringPlayers = teamPlayers.filter(p => p.ContractMonths <= 2).map(p => String(p.PlayerName)).join(', ');
+    issues.push({ label: `${expiring} CONTRATOS EXPIRANDO`, text: `Jogadores com contratos críticos (≤2 meses): <b style="color:var(--orange)">${expiringPlayers}</b>. Risco alto de perda gratuita.` });
+    actions.push({ type: 'bad', label: 'RENOVAÇÃO URGENTE', text: `Renove contratos dos jogadores com maior Form Score primeiro. Use a ferramenta de renovação no painel ⬡ COMMAND. Contratos de 12+ meses são ideais para estabilidade. Jogadores com Form Score 0 e contrato expirando podem ser dispensados para liberar verba.` });
+  } else if (expiring >= 1) {
+    const expiringPlayers = teamPlayers.filter(p => p.ContractMonths <= 2).map(p => String(p.PlayerName)).join(', ');
+    issues.push({ label: `${expiring} CONTRATO(S) EXPIRANDO`, text: `Atenção para: <b style="color:var(--orange)">${expiringPlayers}</b>. Renove antes do próximo ciclo.` });
+    actions.push({ type: 'warn', label: 'RENOVAÇÃO PREVENTIVA', text: `Renove os contratos expirando antes de rodar o próximo ciclo mensal. Perder jogadores gratuitamente desperdiça o investimento em buyout já feito.` });
+  } else if (teamPlayers.length > 0) {
+    strengths.push({ label: 'CONTRATOS ESTÁVEIS', text: `Nenhum contrato crítico. Time tem estabilidade de roster garantida no curto prazo.` });
+  }
+
+  // ── FORM / PERFORMANCE ──
+  if (avgForm < 2 && teamPlayers.length > 0) {
+    issues.push({ label: 'PERFORMANCE FRACA', text: `Form Score médio de ${avgForm.toFixed(1)}. Jogadores não estão acumulando títulos, MVPs ou premiações.` });
+    actions.push({ type: 'warn', label: 'RENOVAÇÃO DE PLANTEL', text: `Considere substituir jogadores com Form Score 0 e contratos longos por opções com histórico de MVPs ou Títulos. Use o painel ⇌ COMPARE para identificar upgrades com custo-benefício favorável. Jogadores com Form Score alto valorizam o Oracle Score e a imagem do time.` });
+  } else if (avgForm >= 7) {
+    strengths.push({ label: 'ALTA PERFORMANCE', text: `Form Score médio de ${avgForm.toFixed(1)}. Plantel está rendendo acima da média da liga.` });
+    if (isRising) actions.push({ type: 'good', label: 'MANTER O RITMO', text: `Com performance elevada, foco agora é renovar contratos dos jogadores estrela antes que expirem e despertem interesse de outros times. Não deixe jogadores com Form Score > 8 chegarem a menos de 3 meses de contrato.` });
+  }
+
+  // ── RISK ──
+  if (risk > 65) {
+    issues.push({ label: `RISCO ALTO (${risk}/100)`, text: `Índice de risco elevado. Múltiplos fatores críticos simultâneos.` });
+  } else if (risk < 25) {
+    strengths.push({ label: `RISCO BAIXO (${risk}/100)`, text: `Operação estável e segura. Poucas vulnerabilidades detectadas.` });
+  }
+
+  // ── TIER ──
+  if (tier === 'tier s' || tier === 'top 1') {
+    strengths.push({ label: 'TIER S — SPONSOR MÁXIMO', text: `Recebendo ${fmt(fins.sponsor)}/mês de patrocínio. Status de elite mantém o time competitivo financeiramente.` });
+    if (isRising) actions.push({ type: 'good', label: 'CONSOLIDAR DOMÍNIO', text: `Time de elite com finanças saudáveis tem condições de contratar os melhores free agents disponíveis. Mantenha o Oracle Score acima de 80 e foque em renovar contratos de jogadores com MVP para não perder vantagem competitiva.` });
+  }
+
+  // ── SPECIFIC RISING TIPS ──
+  if (isRising && issues.length === 0) {
+    actions.push({ type: 'good', label: 'ESTRATÉGIA DE MANUTENÇÃO', text: `Time em ascensão sem problemas críticos. Prioridades: (1) renovar contratos de jogadores com Form Score alto, (2) manter banco acima de ${fmt(fins.salaries * 4)}, (3) usar Hot Deals oportunisticamente para elevar o teto do plantel sem comprometer o fluxo positivo.` });
+    actions.push({ type: 'good', label: 'EXPANSÃO INTELIGENTE', text: `Se o banco ultrapassar ${fmt(fins.salaries * 6)}, considere contratar um 2º bench player de alto valor ou buscar upgrade em posição de starter com Form Score baixo. Equipes de elite mantêm 2–3 bench players para rotação e proteção contra imprevistos.` });
+  }
+
+  // ── BUILD HTML ──
+  const statusColor = isFalling ? 'var(--red)' : isRising ? 'var(--green)' : 'var(--cyan)';
+  const statusLabel = isFalling ? '⚠ REQUER INTERVENÇÃO' : isRising ? '✓ EM ASCENSÃO' : '◈ ESTÁVEL';
+
+  let html = `
+    <div class="intel-detail-card">
+      <div class="intel-detail-title">
+        <span style="color:${oracle.color}">${tName}</span>
+        <span style="font-family:var(--font-data); font-size:11px; padding:4px 12px; background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}44;">${statusLabel}</span>
+        <span style="font-family:var(--font-data); font-size:11px; color:var(--text-dim); margin-left:auto;">ORACLE ${oracle.score} — GRADE ${oracle.grade}</span>
+      </div>
+
+      <!-- DIAGNOSTICS GRID -->
+      <div class="intel-section">
+        <div class="intel-section-title">DIAGNÓSTICO ATUAL</div>
+        <div class="intel-diag-grid">
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${fins.net>=0?'var(--green)':'var(--red)'}">${fins.net>=0?'+':''}${fmtK(fins.net)}</div>
+            <div class="d-lbl">NET / MÊS</div>
+          </div>
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${bank>=0?'var(--cyan)':'var(--red)'}">${fmtK(bank)}</div>
+            <div class="d-lbl">BANCO ATUAL</div>
+          </div>
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${starters>=5?'var(--green)':'var(--orange)'}">${starters}/5</div>
+            <div class="d-lbl">STARTERS</div>
+          </div>
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${expiring>=3?'var(--red)':expiring>=1?'var(--orange)':'var(--green)'}">${expiring}</div>
+            <div class="d-lbl">EXPIRANDO</div>
+          </div>
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${avgForm>=5?'var(--green)':avgForm>=2?'var(--yellow)':'var(--orange)'}">${avgForm.toFixed(1)}</div>
+            <div class="d-lbl">FORM MÉDIO</div>
+          </div>
+          <div class="intel-diag-item">
+            <div class="d-val" style="color:${risk>65?'var(--red)':risk>35?'var(--orange)':'var(--green)'}">${risk}</div>
+            <div class="d-lbl">RISK INDEX</div>
+          </div>
+        </div>
+      </div>
+  `;
+
+  if (strengths.length > 0) {
+    html += `<div class="intel-section"><div class="intel-section-title">PONTOS FORTES (${strengths.length})</div>`;
+    strengths.forEach(s => {
+      html += `<div class="intel-tip good"><div class="tip-label">✓ ${s.label}</div><div class="tip-text">${s.text}</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (issues.length > 0) {
+    html += `<div class="intel-section"><div class="intel-section-title">PROBLEMAS DETECTADOS (${issues.length})</div>`;
+    issues.forEach(s => {
+      html += `<div class="intel-tip bad"><div class="tip-label">✗ ${s.label}</div><div class="tip-text">${s.text}</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (actions.length > 0) {
+    html += `<div class="intel-section"><div class="intel-section-title">PLANO DE AÇÃO — ${actions.length} RECOMENDAÇÃO(ÕES)</div>`;
+    actions.forEach((a,i) => {
+      html += `<div class="intel-tip ${a.type}"><div class="tip-label">${i+1}. ${a.label}</div><div class="tip-text">${a.text}</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  $('intel-detail').innerHTML = html;
+  $('intel-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function launchApp() {
