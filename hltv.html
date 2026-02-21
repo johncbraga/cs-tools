@@ -1,463 +1,762 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <!-- ================================
-       Metadados e Título
-  =================================== -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HLTV</title>
+  <title>HLTV · Team Ranking Terminal</title>
 
-  <!-- ================================
-       Bibliotecas (XLSX + Chart.js)
-  =================================== -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- ================================
-       Fonte
-  =================================== -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- ================================
-       Estilos (UI/UX refinado)
-  =================================== -->
   <style>
-    /* ---------------------------------
-       Design Tokens (Cores, Raio, Sombras)
-    ---------------------------------- */
-    :root{
-      /* Tons base e gradientes de fundo */
-      --bg:#0a0f1e;
-      --bg-2:#0f172a;
-      --bg-gradient-1: radial-gradient(1200px 1200px at 10% -20%, rgba(56,189,248,0.13), transparent 40%);
-      --bg-gradient-2: radial-gradient(1200px 1200px at 110% 10%, rgba(167,139,250,0.13), transparent 40%);
-      --bg-gradient-3: linear-gradient(180deg, #070b17, var(--bg));
+    /* ============================================================
+       DESIGN TOKENS
+    ============================================================ */
+    :root {
+      --bg:          #050810;
+      --bg-panel:    #080c18;
+      --bg-card:     rgba(8, 13, 28, 0.88);
+      --bg-row-even: rgba(255,255,255,0.018);
 
-      /* Superfícies / vidro */
-      --glass: rgba(17,24,39,0.60);
-      --glass-2: rgba(17,24,39,0.45);
-      --card: rgba(11,19,40,0.80);
+      --neon-cyan:   #00f5ff;
+      --neon-green:  #00ff88;
+      --neon-orange: #ff6b35;
+      --neon-purple: #bf5fff;
+      --neon-gold:   #ffd700;
 
-      /* Bordas e sombras */
-      --border: rgba(148,163,184,0.18);
-      --border-strong: rgba(148,163,184,0.28);
-      --shadow-lg: 0 18px 40px rgba(2,6,23,0.55);
-      --shadow-md: 0 10px 26px rgba(2,6,23,0.45);
-      --ring: 0 0 0 2px rgba(56,189,248,0.35);
+      --border:      rgba(0,245,255,0.14);
+      --border-hard: rgba(0,245,255,0.38);
+      --border-glow: 0 0 12px rgba(0,245,255,0.22);
 
-      /* Texto */
-      --text:#e5e7eb;
-      --muted:#a7b0c0;
-      --muted-2:#94a3b8;
+      --text:        #c9d8e8;
+      --text-dim:    #5a7a96;
+      --text-bright: #e8f4ff;
 
-      /* Acentos */
-      --accent:#60a5fa;
-      --accent-2:#38bdf8;
-      --accent-3:#a78bfa;
-      --success:#22c55e;
-      --warn:#f59e0b;
-      --danger:#ef4444;
+      --radius:      6px;
+      --radius-sm:   4px;
+      --radius-lg:   10px;
 
-      /* Metais */
-      --gold:#facc15;
-      --silver:#cbd5e1;
-      --bronze:#d97706;
+      --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+      --font-display:'Syne', system-ui, sans-serif;
 
-      /* Raio e transições */
-      --radius:14px;
-      --radius-sm:10px;
-      --radius-lg:18px;
-      --transition: .22s ease;
+      --trans: 0.18s ease;
     }
 
-    /* ---------------------------------
-       Reset e Base
-    ---------------------------------- */
-    *{ box-sizing: border-box }
-    html,body{ height:100% }
-    body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: var(--bg-gradient-1), var(--bg-gradient-2), var(--bg-gradient-3);
-      color:var(--text);
-      padding:24px;
-      line-height: 1.45;
+    /* ============================================================
+       RESET + BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font-mono);
+      background-color: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      cursor: crosshair;
     }
 
-    /* ---------------------------------
-       Header
-    ---------------------------------- */
-    .header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:22px;
-    }
-    .title{ display:flex; align-items:center; gap:14px }
-    .logo{
-      width:42px; height:42px; border-radius:12px;
-      background: radial-gradient(circle at 30% 30%, #93c5fd, #3b82f6 60%, #1d4ed8);
-      box-shadow: 0 10px 24px rgba(59,130,246,0.45), inset 0 0 18px rgba(255,255,255,0.10);
-    }
-    h1{
-      margin:0;
-      font-size: clamp(22px, 3vw, 30px);
-      letter-spacing:.2px;
-      font-weight: 800;
-    }
-    .subtitle{
-      color:var(--muted);
-      font-size:13px;
-      margin-top:4px;
-    }
-    .hstack{ display:flex; align-items:center; gap:12px; flex-wrap:wrap }
-
-    /* ---------------------------------
-       Cards e Grid Principal
-    ---------------------------------- */
-    .grid{
-      display:grid;
-      grid-template-columns: 2.1fr 1.2fr;
-      gap:18px;
-    }
-    @media (max-width: 1100px){
-      .grid{ grid-template-columns:1fr }
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.10) 2px,
+        rgba(0, 0, 0, 0.10) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
     }
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.00)), var(--glass);
+    /* Ambient glow blobs */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 900px; height: 900px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,245,255,0.045) 0%, transparent 70%);
+      top: -300px; left: -300px;
+      pointer-events: none;
+      z-index: 0;
+      animation: driftGlow 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes driftGlow {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(200px, 100px) scale(1.3); }
+    }
+
+    /* ============================================================
+       LAYOUT WRAPPER
+    ============================================================ */
+    .terminal-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 20px 24px 32px;
+    }
+
+    /* ============================================================
+       HEADER / TOPBAR
+    ============================================================ */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: var(--shadow-md);
-      backdrop-filter: blur(8px);
-      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-    }
-    .card:hover{
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--border-strong);
+      border-top: 2px solid var(--neon-cyan);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      margin-bottom: 22px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 0 40px rgba(0,245,255,0.08), 0 2px 20px rgba(0,0,0,0.5);
+      animation: slideDown 0.5s ease;
     }
 
-    .card-header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:12px;
-      padding-bottom:6px;
-      border-bottom: 1px dashed rgba(148,163,184,0.15);
-    }
-    .card h3{
-      margin:0;
-      font-size:16px;
-      letter-spacing:.2px;
-      font-weight:700;
+    @keyframes slideDown {
+      from { opacity:0; transform: translateY(-16px); }
+      to   { opacity:1; transform: translateY(0); }
     }
 
-    /* ---------------------------------
-       Controles (Filtros)
-    ---------------------------------- */
-    .controls{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin: 12px 0 16px 0;
-    }
-    .input, select{
-      background: rgba(2,6,23,0.66);
-      color:var(--text);
-      border:1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding:10px 12px;
-      outline:none;
-      transition: var(--transition);
-      font-size:14px;
-      min-height: 38px;
-    }
-    .input:hover, select:hover{
-      border-color: var(--border-strong);
-      background: rgba(2,6,23,0.72);
-    }
-    .input:focus, select:focus{
-      box-shadow: var(--ring);
-      border-color:#38bdf8;
-      background: rgba(2,6,23,0.78);
-    }
-    input[type="file"]{
-      background:rgba(2,6,23,0.35);
-      border:1px dashed var(--border);
-      padding:10px 12px;
-      border-radius: var(--radius-sm);
-      cursor:pointer;
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
 
-    /* ---------------------------------
-       Canvas (Tamanho padrão)
-    ---------------------------------- */
-    canvas{
-      width:100% !important;
-      height:300px !important;
+    .logo-mark {
+      width: 38px; height: 38px;
+      border: 1px solid var(--neon-cyan);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 14px rgba(0,245,255,0.4), inset 0 0 10px rgba(0,245,255,0.08);
+      animation: pulse-border 3s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    .logo-mark svg { width: 22px; height: 22px; }
+
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 14px rgba(0,245,255,0.4), inset 0 0 10px rgba(0,245,255,0.08); }
+      50%       { box-shadow: 0 0 26px rgba(0,245,255,0.7), inset 0 0 16px rgba(0,245,255,0.14); }
     }
 
-    /* Mini-grid para os gráficos fixos por região */
-    .mini-grid{
-      display:grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap:14px;
-    }
-    @media (max-width: 900px){
-      .mini-grid{ grid-template-columns: 1fr; }
-    }
-    .mini-card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00)), var(--glass-2);
-      border:1px solid rgba(148,163,184,0.14);
-      border-radius:12px;
-      padding:12px;
-      transition: var(--transition);
-    }
-    .mini-card:hover{
-      border-color: var(--border-strong);
-    }
-    .mini-card h4{
-      margin:0 0 10px;
-      font-size:14px;
-      color:#cbd5e1;
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-    .mini-card canvas{
-      height:260px !important;
-    }
-
-    /* ---------------------------------
-       Tabela
-    ---------------------------------- */
-    .table-container{
-      max-height:460px;
-      overflow:auto;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,0.15);
-      background: rgba(2,6,23,0.35);
-    }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      background:rgba(2,6,23,0.40);
-    }
-    thead th{
-      position:sticky; top:0; z-index:2;
-      background: linear-gradient(180deg, rgba(2,6,23,0.90), rgba(2,6,23,0.75));
-      border-bottom:1px solid rgba(148,163,184,0.25);
-      color:#cbd5e1;
-      font-weight:700;
-      font-size:12.5px;
-      letter-spacing:.25px;
+    .brand-block h1 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--text-bright);
       text-transform: uppercase;
     }
-    th,td{
-      padding:10px 12px;
-      font-size:13px;
-      text-align:center;
-      white-space:nowrap;
-    }
-    tbody tr:nth-child(even):not(.legend-gold):not(.legend-silver):not(.legend-bronze):not(.legend-other){
-      background: rgba(255,255,255,0.02);
-    }
-    tbody tr:hover{
-      background: rgba(56,189,248,0.10);
-      transition:.15s ease;
-    }
-    .table-bordered td{
-      border-top:1px solid rgba(148,163,184,0.10);
+    .brand-block .tagline {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-top: 1px;
     }
 
-    /* Badges para Region na tabela */
-    .badge{
-      padding:4px 8px;
-      border-radius:999px;
-      font-weight:700;
-      font-size:11px;
-      letter-spacing:.3px;
-      display:inline-block;
+    /* Status ticker */
+    .status-ticker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-transform: uppercase;
     }
-    .badge-am{
-      background: rgba(34,197,94,0.18);
-      color:#86efac;
-      border:1px solid rgba(34,197,94,0.40);
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+      animation: blinkDot 2s ease-in-out infinite;
     }
-    .badge-eu{
-      background: rgba(56,189,248,0.18);
-      color:#7dd3fc;
-      border:1px solid rgba(56,189,248,0.40);
-    }
-    .badge-as{
-      background: rgba(167,139,250,0.18);
-      color:#c4b5fd;
-      border:1px solid rgba(167,139,250,0.40);
+    @keyframes blinkDot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
     }
 
-    /* Legends table */
-    .legend-gold   { background: var(--gold) !important; color:#1f2937; border:2px solid #ef4444 }
-    .legend-silver { background: var(--silver) !important; color:#111827; border:2px solid #ef4444 }
-    .legend-bronze { background: var(--bronze) !important; color:#111827; border:2px solid #ef4444 }
-    .legend-other  { background: #7f1d1d !important; color:#f3f4f6; border:2px solid #ef4444 }
+    .topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-    /* ---------------------------------
-       Estados (Empty/Loading)
-    ---------------------------------- */
-    .state{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:var(--muted);
-      padding:22px;
-      font-size:14px;
-      border:1px dashed rgba(148,163,184,0.25);
-      border-radius:12px;
-      background: rgba(2,6,23,0.35);
-      gap:8px;
-    }
-    .spinner{
-      width:16px; height:16px;
-      border:3px solid rgba(148,163,184,0.35);
-      border-top-color:#38bdf8;
-      border-radius:50%;
-      display:inline-block;
-      animation: spin .75s linear infinite;
-    }
-    @keyframes spin{ to { transform: rotate(360deg) } }
-
-    /* ---------------------------------
-       Footer
-    ---------------------------------- */
-    .footer{
-      margin-top:16px;
-      color:var(--muted);
-      font-size:12px;
-      text-align:center;
-      opacity:.9;
-    }
-    .footer a{ color:#93c5fd; text-decoration:none }
-    .footer a:hover{ text-decoration:underline }
-
-    /* ---------------------------------
-       Destaques pedidos
-    ---------------------------------- */
-    .gold-name {
-      color: var(--gold) !important;
-      font-weight: 800 !important;
-      text-shadow: 0 0 6px rgba(250,204,21,0.35);
-    }
-    .metric-highlight {
-      background: rgba(250,204,21,0.12) !important;
-      color: var(--gold) !important;
+    /* ============================================================
+       BUTTONS
+    ============================================================ */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 11px;
       font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--trans);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: rgba(0,245,255,0.10);
+      border-color: var(--border-hard);
+      color: var(--neon-cyan);
+      box-shadow: 0 0 10px rgba(0,245,255,0.10);
+    }
+    .btn-primary:hover {
+      background: rgba(0,245,255,0.18);
+      box-shadow: 0 0 20px rgba(0,245,255,0.28);
+    }
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover {
+      border-color: var(--border-hard);
+      color: var(--text-bright);
+    }
+    .btn-ai {
+      background: linear-gradient(135deg, rgba(191,95,255,0.18), rgba(0,245,255,0.10));
+      border-color: rgba(191,95,255,0.5);
+      color: var(--neon-purple);
+      box-shadow: 0 0 10px rgba(191,95,255,0.15);
+    }
+    .btn-ai:hover {
+      background: linear-gradient(135deg, rgba(191,95,255,0.28), rgba(0,245,255,0.16));
+      box-shadow: 0 0 24px rgba(191,95,255,0.35);
     }
 
-    /* ---------------------------------
-       Ajustes específicos pizza
-    ---------------------------------- */
-    #teamPieChart{
-      height: 320px !important;
-    }
-    #teamPieWrap .state{
-      min-height: 320px;
-    }
-
-    .top10-bottom{
-      margin-top: 14px;
-    }
-
-    #teamCompareChart{
-      height: 360px !important;
-    }
-    #teamCompareWrap .state{
-      min-height: 360px;
+    /* ============================================================
+       FILTER BAR
+    ============================================================ */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      animation: fadeUp 0.6s ease 0.1s both;
     }
 
-    .btn-update{
-      background: rgba(2,6,23,0.66);
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .filter-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      align-self: center;
+      white-space: nowrap;
+    }
+
+    .ctrl {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(0,0,0,0.45);
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: var(--transition);
-      min-height: 38px;
-    }
-    .btn-update:hover{
-      border-color: var(--border-strong);
-      background: rgba(2,6,23,0.72);
-    }
-    .btn-update:focus{
+      padding: 8px 12px;
       outline: none;
-      box-shadow: var(--ring);
-      border-color: #38bdf8;
-      background: rgba(2,6,23,0.78);
+      transition: var(--trans);
+      min-height: 36px;
+    }
+    .ctrl:hover { border-color: var(--border-hard); }
+    .ctrl:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 0 2px rgba(0,245,255,0.15), var(--border-glow);
+    }
+    .ctrl-search { min-width: 200px; }
+
+    /* ============================================================
+       MAIN GRID
+    ============================================================ */
+    .grid-main {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 1100px) { .grid-main { grid-template-columns: 1fr; } }
+
+    .grid-full { grid-column: 1 / -1; }
+
+    /* ============================================================
+       PANEL / CARD
+    ============================================================ */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      transition: border-color var(--trans), box-shadow var(--trans);
+      animation: fadeUp 0.6s ease both;
+    }
+    .panel:hover {
+      border-color: rgba(0,245,255,0.22);
+      box-shadow: 0 0 30px rgba(0,245,255,0.06);
     }
 
-    .btn-menu{
-      background: rgba(2,6,23,0.66);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 14px;
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,245,255,0.025);
+    }
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 13px;
       font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-bright);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title-icon {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 8px var(--neon-cyan);
+      flex-shrink: 0;
+    }
+    .panel-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+    .panel-body { padding: 16px 18px; }
+
+    /* ============================================================
+       CHART CONTAINERS
+    ============================================================ */
+    .chart-wrap { position: relative; }
+    canvas {
+      width: 100% !important;
+      max-height: 310px;
+    }
+
+    /* ============================================================
+       TABLE
+    ============================================================ */
+    .table-scroll {
+      max-height: 440px;
+      overflow: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .table-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+    .table-scroll::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.25); border-radius: 3px; }
+    .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,245,255,0.5); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th {
+      position: sticky; top: 0; z-index: 2;
+      padding: 10px 12px;
+      background: rgba(5,8,16,0.95);
+      border-bottom: 1px solid var(--border-hard);
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--neon-cyan);
+      white-space: nowrap;
       cursor: pointer;
-      transition: var(--transition);
-      min-height: 38px;
-      display:inline-flex;
-      align-items:center;
-      text-decoration:none;
+      user-select: none;
+      transition: var(--trans);
     }
-    .btn-menu:hover{
-      border-color: var(--border-strong);
-      background: rgba(2,6,23,0.72);
+    thead th:hover { color: var(--text-bright); background: rgba(0,245,255,0.06); }
+    td {
+      padding: 9px 12px;
+      text-align: center;
+      white-space: nowrap;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background var(--trans);
     }
-    .btn-menu:focus{
-      outline: none;
-      box-shadow: var(--ring);
-      border-color: #38bdf8;
-      background: rgba(2,6,23,0.78);
+    tbody tr:nth-child(even) td { background: var(--bg-row-even); }
+    tbody tr:hover td { background: rgba(0,245,255,0.06); }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
+    .badge-AM { background: rgba(0,255,136,0.15); color: var(--neon-green); border: 1px solid rgba(0,255,136,0.35); }
+    .badge-EU { background: rgba(0,245,255,0.12); color: var(--neon-cyan);  border: 1px solid rgba(0,245,255,0.32); }
+    .badge-AS { background: rgba(191,95,255,0.14); color: var(--neon-purple); border: 1px solid rgba(191,95,255,0.34); }
+
+    /* Tier badges */
+    .tier-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .tier-1 { background: rgba(255,215,0,0.18); color: var(--neon-gold); border: 1px solid rgba(255,215,0,0.38); }
+    .tier-2 { background: rgba(0,245,255,0.12); color: var(--neon-cyan); border: 1px solid rgba(0,245,255,0.30); }
+    .tier-3 { background: rgba(90,122,150,0.14); color: var(--text-dim); border: 1px solid rgba(90,122,150,0.28); }
+
+    /* Metric highlight in table */
+    .metric-cell { color: var(--neon-cyan); font-weight: 700; }
+
+    /* Rank column */
+    .rank-cell { color: var(--text-dim); font-size: 11px; }
+    .rank-top { color: var(--neon-gold); font-weight: 800; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+
+    /* ============================================================
+       LEGEND TABLE
+    ============================================================ */
+    .legend-gold   td { background: rgba(255,215,0,0.14) !important; color: var(--neon-gold); border-left: 2px solid var(--neon-gold); }
+    .legend-silver td { background: rgba(203,213,225,0.08) !important; color: #cbd5e1; border-left: 2px solid #94a3b8; }
+    .legend-bronze td { background: rgba(217,119,6,0.12) !important; color: #f59e0b; border-left: 2px solid #d97706; }
+    .legend-other  td { background: rgba(239,68,68,0.06) !important; }
+
+    /* ============================================================
+       MINI GRID (region charts)
+    ============================================================ */
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    @media (max-width: 960px) { .mini-grid { grid-template-columns: 1fr; } }
+    .mini-panel {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      transition: var(--trans);
+    }
+    .mini-panel:hover { border-color: rgba(0,245,255,0.22); }
+    .mini-panel h4 {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .mini-panel canvas { max-height: 260px; }
+
+    /* ============================================================
+       STATE (loading / empty)
+    ============================================================ */
+    .state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 28px;
+      color: var(--text-dim);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      border: 1px dashed rgba(0,245,255,0.12);
+      border-radius: var(--radius);
+      background: rgba(0,0,0,0.2);
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,245,255,0.18);
+      border-top-color: var(--neon-cyan);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       AI ANALYSIS PANEL
+    ============================================================ */
+    .ai-panel {
+      background: linear-gradient(135deg, rgba(8,13,28,0.96), rgba(12,8,28,0.96));
+      border: 1px solid rgba(191,95,255,0.30);
+      border-top: 2px solid var(--neon-purple);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(191,95,255,0.08);
+    }
+    .ai-panel .panel-header {
+      background: rgba(191,95,255,0.06);
+      border-bottom-color: rgba(191,95,255,0.18);
+    }
+    .ai-panel .panel-title-icon { background: var(--neon-purple); box-shadow: 0 0 8px var(--neon-purple); }
+    .ai-panel .panel-title { color: var(--neon-purple); }
+
+    .ai-output {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.8;
+      color: var(--text);
+      min-height: 120px;
+      white-space: pre-wrap;
+      padding: 16px 18px;
+    }
+    .ai-output .ai-typing::after {
+      content: '█';
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .ai-output .ai-header-line { color: var(--neon-purple); font-weight: 700; }
+    .ai-output .ai-point { color: var(--neon-cyan); }
+    .ai-output .ai-stat  { color: var(--neon-gold); font-weight: 700; }
+    .ai-output .ai-warn  { color: var(--neon-orange); }
+
+    .ai-footer {
+      padding: 10px 18px;
+      border-top: 1px solid rgba(191,95,255,0.12);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ============================================================
+       STAT CARDS ROW
+    ============================================================ */
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+      animation: fadeUp 0.6s ease 0.05s both;
+    }
+    @media (max-width: 900px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--trans);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .stat-card.sc-cyan::before   { background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+    .stat-card.sc-green::before  { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
+    .stat-card.sc-orange::before { background: var(--neon-orange); box-shadow: 0 0 8px var(--neon-orange); }
+    .stat-card.sc-purple::before { background: var(--neon-purple); box-shadow: 0 0 8px var(--neon-purple); }
+    .stat-card:hover { border-color: var(--border-hard); transform: translateY(-2px); }
+
+    .stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-bright);
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+    .stat-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 28px;
+      opacity: 0.10;
+    }
+
+    /* ============================================================
+       COMPARE SELECTS
+    ============================================================ */
+    .compare-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    .compare-controls label { font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; }
+    .compare-controls select { min-width: 180px; }
+
+    /* ============================================================
+       PIE SELECT
+    ============================================================ */
+    .pie-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pie-controls label { font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim); text-transform: uppercase; }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      border-top: 1px dashed var(--border);
+      margin-top: 20px;
+    }
+
+    /* ============================================================
+       KEYSHORTCUT HINT
+    ============================================================ */
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      border: 1px solid var(--border-hard);
+      border-radius: 3px;
+      font-size: 10px;
+      color: var(--neon-cyan);
+      background: rgba(0,245,255,0.06);
+    }
+
+    /* ============================================================
+       FLASH ANIMATION for Update
+    ============================================================ */
+    @keyframes flashPanel {
+      0%   { border-color: var(--neon-cyan); box-shadow: 0 0 30px rgba(0,245,255,0.5); }
+      100% { border-color: var(--border); box-shadow: none; }
+    }
+    .panel.just-updated { animation: flashPanel 1.2s ease forwards; }
+
+    /* Section animations stagger */
+    .panel:nth-child(1) { animation-delay: 0.08s; }
+    .panel:nth-child(2) { animation-delay: 0.14s; }
+    .panel:nth-child(3) { animation-delay: 0.20s; }
+    .panel:nth-child(4) { animation-delay: 0.26s; }
+    .panel:nth-child(5) { animation-delay: 0.32s; }
   </style>
 </head>
 
 <body>
+<div class="terminal-wrap">
 
-  <div class="header">
-    <div class="title">
-      <div class="logo"></div>
-      <div>
-        <h1>Team's Ranking Dashboard</h1>
-        <div class="subtitle">KZ Studio • by Kilzys • amateur project</div>
+  <!-- ============================================================
+       TOPBAR
+  ============================================================ -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--neon-cyan);">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="brand-block">
+        <h1>Team Ranking Terminal</h1>
+        <div class="tagline">KZ Studio · by Kilzys · v2.0 · amateur project</div>
       </div>
     </div>
-
-    <div class="hstack">
-      <button id="updateBtn" class="btn-update" type="button">Update</button>
-      <a class="btn-menu" href="index.html">Back to Menu</a>
+    <div class="status-ticker">
+      <div class="status-dot"></div>
+      <span id="statusText">AWAITING DATA</span>
+    </div>
+    <div class="topbar-right">
+      <span style="font-size:10px;color:var(--text-dim)"><span class="kbd">0</span> → Menu</span>
+      <button id="updateBtn" class="btn btn-primary">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Update
+      </button>
+      <button id="aiAnalyzeBtn" class="btn btn-ai">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        AI Analysis
+      </button>
+      <a href="index.html" class="btn btn-ghost">← Menu</a>
     </div>
   </div>
 
-  <div class="controls">
-    <select id="regionFilter" title="Região">
+  <!-- ============================================================
+       STAT CARDS
+  ============================================================ -->
+  <div class="stat-row" id="statRow">
+    <div class="stat-card sc-cyan">
+      <div class="stat-label">Total Teams</div>
+      <div class="stat-value" id="sc-teams">—</div>
+      <div class="stat-sub" id="sc-teams-sub">across all regions</div>
+      <div class="stat-icon">⚡</div>
+    </div>
+    <div class="stat-card sc-green">
+      <div class="stat-label">Top Team</div>
+      <div class="stat-value" style="font-size:16px" id="sc-top">—</div>
+      <div class="stat-sub" id="sc-top-sub">by points</div>
+      <div class="stat-icon">🏆</div>
+    </div>
+    <div class="stat-card sc-orange">
+      <div class="stat-label">Avg Points</div>
+      <div class="stat-value" id="sc-avg">—</div>
+      <div class="stat-sub" id="sc-avg-sub">global mean</div>
+      <div class="stat-icon">📊</div>
+    </div>
+    <div class="stat-card sc-purple">
+      <div class="stat-label">Last Updated</div>
+      <div class="stat-value" style="font-size:14px" id="sc-updated">—</div>
+      <div class="stat-sub">from excel data</div>
+      <div class="stat-icon">🕐</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FILTER BAR
+  ============================================================ -->
+  <div class="filter-bar">
+    <span class="filter-label">Region</span>
+    <select id="regionFilter" class="ctrl" title="Region">
       <option value="Global">Global</option>
       <option value="EU">Europe</option>
       <option value="AS/SIS/ESEA">Asia</option>
       <option value="AM">America</option>
     </select>
 
-    <input class="input" type="text" id="teamSearch" placeholder="Search team (type to filter)">
+    <span class="filter-label">Search</span>
+    <input class="ctrl ctrl-search" type="text" id="teamSearch" placeholder="team name…">
 
-    <select id="metric" title="Métrica">
+    <span class="filter-label">Metric</span>
+    <select id="metric" class="ctrl" title="Metric">
       <option value="Points">Points</option>
       <option value="Victories">Victories</option>
       <option value="Streak">Streak</option>
@@ -468,1033 +767,981 @@
       <option value="Tier">Tier</option>
     </select>
 
-    <select id="sortOrder" title="Ordem">
-      <option value="desc">Highest → Lowest</option>
-      <option value="asc">Lowest → Highest</option>
+    <span class="filter-label">Order</span>
+    <select id="sortOrder" class="ctrl" title="Sort">
+      <option value="desc">High → Low</option>
+      <option value="asc">Low → High</option>
     </select>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="card-header">
-        <h3>Regions</h3>
-        <div style="color:var(--muted);font-size:12px">media by metric</div>
-      </div>
-      <div id="regionChartWrap">
-        <div class="state" id="regionChartState"><span class="spinner"></span>Loading…</div>
-        <canvas id="regionChart" style="display:none"></canvas>
-      </div>
+  <!-- ============================================================
+       MAIN GRID: Region Chart + Table | Top Chart + Pie
+  ============================================================ -->
+  <div class="grid-main" style="margin-bottom:16px">
 
-      <div class="card-header" style="margin-top:14px">
-        <h3>General Table</h3>
-        <div style="color:var(--muted);font-size:12px">ordr by metric</div>
-      </div>
-      <div class="table-container" id="dataTableWrap">
-        <div class="state" id="dataTableState">Load an Excel file to see the data.</div>
-        <table id="dataTable" class="table-bordered" style="display:none"></table>
-      </div>
-    </div>
+    <!-- Left column -->
+    <div style="display:flex; flex-direction:column; gap:16px">
 
-    <div class="card">
-      <div class="card-header">
-        <h3>Top Teams</h3>
-        <div style="color:var(--muted);font-size:12px">based on selected metric</div>
-      </div>
-
-      <div id="topChartWrap">
-        <div class="state" id="topChartState"><span class="spinner"></span>Loading…</div>
-        <canvas id="topChart" style="display:none"></canvas>
-      </div>
-
-      <div class="top10-bottom">
-        <div class="mini-card" id="teamPieCard" style="height:100%">
-          <div class="card-header" style="margin-bottom:8px; padding-bottom:6px">
-            <h3 style="margin:0;font-size:14px">Wins x Loses — By Team</h3>
-            <div class="hstack" style="margin-left:auto; gap:8px">
-              <label for="teamPieSelect" style="color:var(--muted);font-size:12px">Time</label>
-              <select id="teamPieSelect" title="Time para pizza" style="min-width:180px"></select>
-            </div>
+      <!-- Region bar -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon"></div>
+            Region Overview
           </div>
-
-          <div id="teamPieWrap">
-            <div class="state" id="teamPieState"><span class="spinner"></span>Loading…</div>
-            <canvas id="teamPieChart" style="display:none;"></canvas>
-          </div>
+          <div class="panel-sub">avg by metric</div>
         </div>
-      </div>
-    </div>
-
-    <div class="card" style="grid-column:1 / -1">
-      <div class="card-header">
-        <h3>Team vs Team — Comparison</h3>
-        <div class="hstack" style="gap:10px; margin-left:auto;">
-          <label for="teamCompareA" style="color:var(--muted);font-size:12px">Team A</label>
-          <select id="teamCompareA" style="min-width:200px"></select>
-
-          <label for="teamCompareB" style="color:var(--muted);font-size:12px">Team B</label>
-          <select id="teamCompareB" style="min-width:200px"></select>
+        <div class="panel-body chart-wrap">
+          <div class="state" id="regionChartState"><span class="spinner"></span>Loading…</div>
+          <canvas id="regionChart" style="display:none; max-height:220px"></canvas>
         </div>
       </div>
 
-      <div style="color:var(--muted);font-size:12px;margin:-6px 0 10px 0;">
-        Comparison • Tooltip show the real value
+      <!-- General table -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:var(--neon-green);box-shadow:0 0 8px var(--neon-green)"></div>
+            General Table
+          </div>
+          <div class="panel-sub">sorted by selected metric</div>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <div class="table-scroll" id="dataTableWrap">
+            <div class="state" id="dataTableState" style="margin:16px">Load an Excel file to see data.</div>
+            <table id="dataTable" style="display:none"></table>
+          </div>
+        </div>
       </div>
 
-      <div id="teamCompareWrap">
-        <div class="state" id="teamCompareState"><span class="spinner"></span>Loading…</div>
-        <canvas id="teamCompareChart" style="display:none"></canvas>
-      </div>
     </div>
 
-    <div class="card" style="grid-column:1 / -1">
-      <div class="card-header">
-        <h3>Graph per Region</h3>
-        <div style="color:var(--muted);font-size:12px">ignoram a busca e demais filtros</div>
+    <!-- Right column -->
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+      <!-- Top 10 Bar -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:var(--neon-gold);box-shadow:0 0 8px var(--neon-gold)"></div>
+            Top 10 Teams
+          </div>
+          <div class="panel-sub">selected metric</div>
+        </div>
+        <div class="panel-body chart-wrap">
+          <div class="state" id="topChartState"><span class="spinner"></span>Loading…</div>
+          <canvas id="topChart" style="display:none; max-height:260px"></canvas>
+        </div>
       </div>
 
+      <!-- Pie chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:var(--neon-orange);box-shadow:0 0 8px var(--neon-orange)"></div>
+            Wins vs Losses
+          </div>
+          <div class="pie-controls">
+            <label for="teamPieSelect">Team</label>
+            <select id="teamPieSelect" class="ctrl" style="min-width:160px"></select>
+          </div>
+        </div>
+        <div class="panel-body chart-wrap">
+          <div class="state" id="teamPieState">Select a team above.</div>
+          <canvas id="teamPieChart" style="display:none; max-height:280px"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================================
+       AI ANALYSIS PANEL
+  ============================================================ -->
+  <div class="ai-panel panel" id="aiPanel" style="margin-bottom:16px; display:none;">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-icon"></div>
+        AI Insights — Claude Analysis
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="panel-sub" id="aiTimestamp"></div>
+        <button class="btn btn-ghost" id="aiCloseBtn" style="font-size:10px;padding:4px 8px">✕ Close</button>
+      </div>
+    </div>
+    <div class="ai-output" id="aiOutput">
+      <span class="ai-typing"></span>
+    </div>
+    <div class="ai-footer">
+      <div class="status-dot" style="background:var(--neon-purple);box-shadow:0 0 8px var(--neon-purple)"></div>
+      Powered by Claude · Analysis based on current dataset · Auto-generated insights
+    </div>
+  </div>
+
+  <!-- ============================================================
+       TEAM VS TEAM
+  ============================================================ -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:var(--neon-purple);box-shadow:0 0 8px var(--neon-purple)"></div>
+        Team vs Team — Radar Comparison
+      </div>
+      <div class="compare-controls">
+        <label for="teamCompareA">Team A</label>
+        <select id="teamCompareA" class="ctrl"></select>
+        <label for="teamCompareB">Team B</label>
+        <select id="teamCompareB" class="ctrl"></select>
+      </div>
+    </div>
+    <div class="panel-body chart-wrap">
+      <div class="panel-sub" style="margin-bottom:10px;color:var(--text-dim);font-size:10px">Values normalized 0–100 for radar. Hover tooltips show raw values.</div>
+      <div class="state" id="teamCompareState"><span class="spinner"></span>Loading…</div>
+      <canvas id="teamCompareChart" style="display:none; max-height:380px"></canvas>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       REGION FIXED CHARTS
+  ============================================================ -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:var(--neon-green);box-shadow:0 0 8px var(--neon-green)"></div>
+        Analytics — Per Region
+      </div>
+      <div class="panel-sub">independent of filters above</div>
+    </div>
+    <div class="panel-body">
       <div class="mini-grid">
-        <div class="mini-card">
-          <h4>Streak — Top 10 (per region)</h4>
-          <div id="streakChartWrap">
-            <div class="state" id="streakChartState"><span class="spinner"></span>Loading…</div>
-            <canvas id="streakChart" style="display:none"></canvas>
-          </div>
+
+        <div class="mini-panel">
+          <h4>🔥 Streak — Top 10</h4>
+          <div class="state" id="streakChartState"><span class="spinner"></span></div>
+          <canvas id="streakChart" style="display:none"></canvas>
         </div>
 
-        <div class="mini-card">
-          <h4>Victories — Top 10 (per region)</h4>
-          <div id="victoriesChartWrap">
-            <div class="state" id="victoriesChartState"><span class="spinner"></span>Loading…</div>
-            <canvas id="victoriesChart" style="display:none"></canvas>
-          </div>
+        <div class="mini-panel">
+          <h4>🏅 Victories — Top 10</h4>
+          <div class="state" id="victoriesChartState"><span class="spinner"></span></div>
+          <canvas id="victoriesChart" style="display:none"></canvas>
         </div>
 
-        <div class="mini-card">
-          <h4>Prestige — Top 10 (per region)</h4>
-          <div id="pointsChartWrap">
-            <div class="state" id="pointsChartState"><span class="spinner"></span>Loading…</div>
-            <canvas id="pointsChart" style="display:none"></canvas>
-          </div>
+        <div class="mini-panel">
+          <h4>⭐ Prestige — Top 10</h4>
+          <div class="state" id="pointsChartState"><span class="spinner"></span></div>
+          <canvas id="pointsChart" style="display:none"></canvas>
         </div>
 
-        <div class="mini-card">
-          <h4>Comparison — Majors by Team (per region)</h4>
-          <div id="majorsChartWrap">
-            <div class="state" id="majorsChartState"><span class="spinner"></span>Loading…</div>
-            <canvas id="majorsChart" style="display:none"></canvas>
-          </div>
+        <div class="mini-panel">
+          <h4>🎯 Majors — by Team</h4>
+          <div class="state" id="majorsChartState"><span class="spinner"></span></div>
+          <canvas id="majorsChart" style="display:none"></canvas>
         </div>
 
-        <div class="mini-card" style="grid-column:1 / -1">
-          <h4>Comparison — Points by Team (per region)</h4>
-          <div id="comparisonChartWrap">
-            <div class="state" id="comparisonChartState"><span class="spinner"></span>Loading…</div>
-            <canvas id="comparisonChart" style="display:none"></canvas>
-          </div>
+        <div class="mini-panel" style="grid-column:1/-1">
+          <h4>📈 Points — Top 20 Line</h4>
+          <div class="state" id="comparisonChartState"><span class="spinner"></span></div>
+          <canvas id="comparisonChart" style="display:none; max-height:220px"></canvas>
         </div>
-      </div>
-    </div>
 
-    <div class="card" style="grid-column:1 / -1">
-      <div class="card-header">
-        <h3>Legends Elo Ranking (1700++ Points)</h3>
-        <select id="legendsRegionFilter" title="Região Legends">
-          <option value="Global">Global</option>
-          <option value="AM">Americas</option>
-          <option value="EU">Europa</option>
-          <option value="AS/SIS/ESEA">Asia</option>
-        </select>
-      </div>
-      <div class="table-container" id="legendsTableWrap">
-        <div class="state" id="legendsTableState">Load a file to see the Legend's Ranking.</div>
-        <table id="legendsTable" class="table-bordered" style="display:none"></table>
       </div>
     </div>
   </div>
 
+  <!-- ============================================================
+       LEGENDS TABLE
+  ============================================================ -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-header">
+      <div class="panel-title">
+        <div class="panel-title-icon" style="background:var(--neon-gold);box-shadow:0 0 8px var(--neon-gold)"></div>
+        Legends Elo Ranking
+        <span style="font-size:10px;color:var(--text-dim);font-weight:400;letter-spacing:0.06em">&nbsp;1700+ pts</span>
+      </div>
+      <select id="legendsRegionFilter" class="ctrl" title="Legends Region">
+        <option value="Global">Global</option>
+        <option value="AM">Americas</option>
+        <option value="EU">Europe</option>
+        <option value="AS/SIS/ESEA">Asia</option>
+      </select>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div class="table-scroll" id="legendsTableWrap">
+        <div class="state" id="legendsTableState" style="margin:16px">Load a file to see Legends.</div>
+        <table id="legendsTable" style="display:none"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
   <div class="footer">
-    Made by Kilzys. Tip: use the filter option to help you out.
+    HLTV Ranking Terminal · Made by Kilzys · KZ Studio · Press <span class="kbd">0</span> to return to menu
   </div>
 
-  <script>
-    /* ===========================
-       Estado Global
-    ============================ */
-    let headers = [];
-    let rows = [];
-    let regionChart, topChart;
+</div><!-- /terminal-wrap -->
 
-    let streakChart, victoriesChart, pointsChart, comparisonChart, majorsChart;
+<script>
+/* ================================================================
+   GLOBAL STATE
+================================================================ */
+let headers = [], rows = [];
+let regionChart, topChart, teamPieChart, teamCompareChart;
+let streakChart, victoriesChart, pointsChart, comparisonChart, majorsChart;
+let searchTimer = null;
 
-    let teamPieChart = null;
-    let teamCompareChart = null;
+/* ================================================================
+   CHART DEFAULTS (dark terminal style)
+================================================================ */
+Chart.defaults.color = '#5a7a96';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 11;
 
-    let searchTimer = null;
+function baseOpts(extra = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 350 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(5,8,16,0.97)',
+        titleColor: '#e8f4ff',
+        bodyColor: '#c9d8e8',
+        borderColor: 'rgba(0,245,255,0.25)',
+        borderWidth: 1,
+        padding: 10,
+        titleFont: { weight: '700', size: 12 },
+        bodyFont: { size: 11 }
+      }
+    },
+    layout: { padding: 4 },
+    scales: {
+      x: {
+        ticks: { color: '#5a7a96', maxRotation: 35, font: { size: 10 } },
+        grid: { color: 'rgba(0,245,255,0.05)' }
+      },
+      y: {
+        ticks: { color: '#5a7a96', font: { size: 10 }, precision: 0 },
+        grid: { color: 'rgba(0,245,255,0.06)' },
+        beginAtZero: true
+      }
+    },
+    ...extra
+  };
+}
 
-    /* ===========================
-       Eventos
-    ============================ */
-    ['regionFilter','metric','sortOrder'].forEach(id => {
-      document.getElementById(id).addEventListener('change', update);
+/* ================================================================
+   HELPERS
+================================================================ */
+const num = v => { const n = Number((v ?? '').toString().replace(',','.')); return isNaN(n) ? 0 : n; };
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const esc = v => (v ?? '').toString()
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+
+function neonGradient(ctx, color1 = '#00f5ff', color2 = '#0891b2') {
+  const g = ctx.createLinearGradient(0, 0, 0, 300);
+  g.addColorStop(0, color1);
+  g.addColorStop(1, color2 + '90');
+  return g;
+}
+
+function toggleViz(id, show, msg = '') {
+  const canvas = document.getElementById(id);
+  const state  = document.getElementById(id + 'State');
+  if (canvas) canvas.style.display = show ? 'block' : 'none';
+  if (state)  { state.style.display = show ? 'none' : 'flex'; if (!show && msg) state.innerHTML = msg; }
+}
+
+function setStatus(text) {
+  document.getElementById('statusText').textContent = text;
+}
+
+/* ================================================================
+   EVENTS
+================================================================ */
+['regionFilter','metric','sortOrder'].forEach(id =>
+  document.getElementById(id).addEventListener('change', update)
+);
+document.getElementById('teamSearch').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(update, 220);
+});
+document.getElementById('legendsRegionFilter').addEventListener('change', update);
+document.addEventListener('change', e => {
+  if (e.target.id === 'teamPieSelect') renderTeamPie();
+  if (e.target.id === 'teamCompareA' || e.target.id === 'teamCompareB') renderTeamCompare();
+});
+document.getElementById('updateBtn').addEventListener('click', () => loadExcel(true));
+document.getElementById('aiAnalyzeBtn').addEventListener('click', runAIAnalysis);
+document.getElementById('aiCloseBtn').addEventListener('click', () => {
+  document.getElementById('aiPanel').style.display = 'none';
+});
+document.addEventListener('DOMContentLoaded', () => loadExcel(false));
+
+document.addEventListener('keydown', e => {
+  if (e.key !== '0' && e.code !== 'Numpad0') return;
+  const el = document.activeElement, tag = (el?.tagName||'').toLowerCase();
+  if (['input','textarea','select'].includes(tag) || el?.isContentEditable) return;
+  window.location.href = 'index.html';
+});
+
+/* ================================================================
+   LOAD EXCEL
+================================================================ */
+async function loadExcel(force = false) {
+  setStatus('LOADING…');
+  setAllLoading();
+  try {
+    const url = `file/ranking.xlsx${force ? '?v='+Date.now() : ''}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const buf = await res.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+    headers = (data[0] || []).map(h => (h ?? '').toString().trim());
+    rows = data.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
+    setStatus('LIVE · ' + rows.length + ' TEAMS');
+    updateStatCards();
+    update();
+    if (force) flashAllPanels();
+  } catch (err) {
+    console.error(err);
+    setStatus('ERROR');
+    setAllError('Could not load <code>file/ranking.xlsx</code>. Check file path and try again.');
+  }
+}
+
+function setAllLoading() {
+  const ids = ['regionChart','topChart','dataTable','legendsTable','streakChart','victoriesChart','pointsChart','comparisonChart','majorsChart','teamPieChart','teamCompareChart'];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.style.display='none'; });
+  const stateIds = ['regionChartState','topChartState','dataTableState','legendsTableState','streakChartState','victoriesChartState','pointsChartState','comparisonChartState','majorsChartState','teamPieState','teamCompareState'];
+  stateIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = '<span class="spinner"></span>Loading…'; el.style.display='flex'; }
+  });
+}
+
+function setAllError(msg) {
+  const stateIds = ['regionChartState','topChartState','dataTableState','legendsTableState','streakChartState','victoriesChartState','pointsChartState','comparisonChartState','majorsChartState','teamPieState','teamCompareState'];
+  stateIds.forEach(id => { const el = document.getElementById(id); if(el) { el.innerHTML = msg; el.style.display='flex'; } });
+}
+
+function flashAllPanels() {
+  document.querySelectorAll('.panel').forEach(p => {
+    p.classList.remove('just-updated');
+    void p.offsetWidth;
+    p.classList.add('just-updated');
+  });
+}
+
+/* ================================================================
+   STAT CARDS
+================================================================ */
+function updateStatCards() {
+  if (!rows.length) return;
+  const idxTeam = headers.indexOf('Team');
+  const idxPts  = headers.indexOf('Points');
+  const idxUpd  = headers.indexOf('LastUpdated');
+
+  document.getElementById('sc-teams').textContent = rows.length;
+
+  if (idxPts >= 0) {
+    const sorted = [...rows].sort((a,b) => num(b[idxPts]) - num(a[idxPts]));
+    const topTeam = sorted[0];
+    document.getElementById('sc-top').textContent = idxTeam >= 0 ? (topTeam[idxTeam] || '—') : '—';
+    document.getElementById('sc-top-sub').textContent = `${num(topTeam[idxPts]).toFixed(0)} pts`;
+    const avgPts = avg(rows.map(r => num(r[idxPts])));
+    document.getElementById('sc-avg').textContent = avgPts.toFixed(0);
+  }
+
+  if (idxUpd >= 0) {
+    const dates = rows.map(r => r[idxUpd]).filter(Boolean).sort().reverse();
+    if (dates[0]) {
+      try {
+        const d = new Date(dates[0]);
+        document.getElementById('sc-updated').textContent = d.toLocaleDateString('en', {month:'short',day:'numeric'});
+        document.getElementById('sc-updated').title = dates[0];
+      } catch(e) {}
+    }
+  }
+}
+
+/* ================================================================
+   MAIN UPDATE
+================================================================ */
+function update() {
+  if (!headers.length || !rows.length) return;
+
+  const region = document.getElementById('regionFilter').value;
+  const search = (document.getElementById('teamSearch').value || '').toLowerCase().trim();
+  const metric = document.getElementById('metric').value;
+  const order  = document.getElementById('sortOrder').value;
+
+  const idxTeam   = headers.indexOf('Team');
+  const idxRegion = headers.indexOf('Region');
+  const idxMetric = headers.indexOf(metric);
+  const idxPoints = headers.indexOf('Points');
+
+  // Region averages
+  const regionBuckets = { AM: [], EU: [], 'AS/SIS/ESEA': [] };
+  rows.forEach(r => {
+    const reg = r[idxRegion];
+    if (regionBuckets[reg] !== undefined) regionBuckets[reg].push(num(r[idxMetric]));
+  });
+  renderRegionChart(
+    ['Americas','Europe','Asia'],
+    [avg(regionBuckets.AM), avg(regionBuckets.EU), avg(regionBuckets['AS/SIS/ESEA'])],
+    metric
+  );
+
+  // Filtered + sorted rows
+  let filtered = rows.filter(r => {
+    const team = (r[idxTeam]||'').toString().toLowerCase();
+    return (region === 'Global' || r[idxRegion] === region) && (!search || team.includes(search));
+  });
+  filtered.sort((a,b) => order === 'asc' ? num(a[idxMetric]) - num(b[idxMetric]) : num(b[idxMetric]) - num(a[idxMetric]));
+
+  renderTable(filtered, idxTeam, idxRegion, idxMetric);
+  renderTopChart(filtered.slice(0,10), idxTeam, idxMetric, metric);
+
+  // Legends
+  const legendRegion = document.getElementById('legendsRegionFilter').value;
+  const legends = rows
+    .filter(r => num(r[idxPoints]) > 1700 && (legendRegion === 'Global' || r[idxRegion] === legendRegion))
+    .sort((a,b) => num(b[idxPoints]) - num(a[idxPoints]));
+  renderLegendsTable(legends, idxTeam, idxPoints);
+
+  renderRegionFixedCharts();
+  populateTeamPieSelect();
+  renderTeamPie();
+  populateTeamCompareSelects();
+  renderTeamCompare();
+
+  // Toggle visibility
+  toggleViz('regionChart', true);
+  toggleViz('topChart', true);
+  toggleViz('dataTable', filtered.length > 0, 'No teams match current filters.');
+  document.getElementById('dataTableState').style.display = filtered.length ? 'none' : 'flex';
+  toggleViz('legendsTable', legends.length > 0, 'No Legends tier teams found (1700+ pts).');
+  document.getElementById('legendsTableState').style.display = legends.length ? 'none' : 'flex';
+}
+
+/* ================================================================
+   REGION CHART
+================================================================ */
+function renderRegionChart(labels, values, metric) {
+  const el = document.getElementById('regionChart');
+  const ctx = el.getContext('2d');
+  if (regionChart) regionChart.destroy();
+
+  const colors = ['rgba(0,255,136,0.75)', 'rgba(0,245,255,0.75)', 'rgba(191,95,255,0.75)'];
+  const borders = ['#00ff88','#00f5ff','#bf5fff'];
+
+  regionChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values.map(v => +v.toFixed(2)),
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1,
+        borderRadius: 4,
+        maxBarThickness: 52
+      }]
+    },
+    options: baseOpts()
+  });
+  el.style.display = 'block';
+  document.getElementById('regionChartState').style.display = 'none';
+}
+
+/* ================================================================
+   TOP 10 CHART
+================================================================ */
+function renderTopChart(data, teamIdx, valIdx, metric) {
+  const el = document.getElementById('topChart');
+  const ctx = el.getContext('2d');
+  if (topChart) topChart.destroy();
+
+  const g = neonGradient(ctx, 'rgba(255,215,0,0.95)', 'rgba(202,138,4,0.80)');
+  topChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(r => r[teamIdx] || '?'),
+      datasets: [{
+        label: metric,
+        data: data.map(r => num(r[valIdx])),
+        backgroundColor: g,
+        borderColor: 'rgba(255,215,0,0.5)',
+        borderWidth: 1,
+        borderRadius: 4,
+        maxBarThickness: 48
+      }]
+    },
+    options: {
+      ...baseOpts(),
+      scales: {
+        x: { ticks:{ color:'#5a7a96', font:{size:10}, maxRotation:35 }, grid:{display:false} },
+        y: { ticks:{ color:'#5a7a96', font:{size:10}, precision:0 }, grid:{color:'rgba(0,245,255,0.06)'}, beginAtZero:true }
+      }
+    }
+  });
+  el.style.display = 'block';
+  document.getElementById('topChartState').style.display = 'none';
+}
+
+/* ================================================================
+   GENERAL TABLE
+================================================================ */
+function renderTable(data, idxTeam, idxRegion, idxMetric) {
+  const topTeams = new Set(data.slice(0,5).map(r => r[idxTeam]?.toString()));
+  let html = '<thead><tr>';
+  html += '<th style="width:36px">#</th>';
+  headers.forEach(h => html += `<th>${esc(h)}</th>`);
+  html += '</tr></thead><tbody>';
+
+  data.forEach((r, i) => {
+    html += '<tr>';
+    // rank
+    const rankClass = i < 3 ? 'rank-top' : 'rank-cell';
+    const rankSymbol = i === 0 ? '◆' : i === 1 ? '◇' : i === 2 ? '▲' : (i+1);
+    html += `<td class="${rankClass}" style="font-size:11px">${rankSymbol}</td>`;
+    headers.forEach((h, ci) => {
+      let cell = r[ci] ?? '';
+      let cls = '';
+      if (ci === idxMetric) cls = 'metric-cell';
+      if (ci === idxTeam && topTeams.has(r[idxTeam]?.toString())) {
+        cls += ' ' + (i === 0 ? 'rank-top' : '');
+        cell = `<span style="color:var(--text-bright);font-weight:700">${esc(cell)}</span>`;
+      } else if (ci === idxRegion) {
+        const reg = (cell||'').toString();
+        const bc = reg==='AM' ? 'badge-AM' : reg==='EU' ? 'badge-EU' : reg.includes('AS') ? 'badge-AS' : '';
+        cell = bc ? `<span class="badge ${bc}">${esc(reg)}</span>` : esc(reg);
+      } else if (h === 'Tier') {
+        const tc = (cell||'').toString().replace(' ','').toLowerCase();
+        const bc = tc==='tier1' ? 'tier-1' : tc==='tier2' ? 'tier-2' : 'tier-3';
+        cell = `<span class="tier-badge ${bc}">${esc(cell)}</span>`;
+      } else if (h === 'Points' || h === 'Prestige') {
+        const n = num(cell);
+        cell = `<span style="font-variant-numeric:tabular-nums">${n > 0 ? n.toFixed(2) : '0'}</span>`;
+      } else if (h === 'BonusType' || h === 'BonusRemaining' || h === 'LastUpdated') {
+        cell = `<span style="color:var(--text-dim);font-size:10px">${esc(cell)}</span>`;
+      } else {
+        cell = esc(cell);
+      }
+      html += `<td class="${cls.trim()}">${cell}</td>`;
     });
+    html += '</tr>';
+  });
 
-    document.getElementById('teamSearch').addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(update, 250);
+  html += '</tbody>';
+  const table = document.getElementById('dataTable');
+  table.innerHTML = html;
+  table.style.display = 'table';
+  document.getElementById('dataTableState').style.display = 'none';
+}
+
+/* ================================================================
+   LEGENDS TABLE
+================================================================ */
+function renderLegendsTable(data, idxTeam, idxPoints) {
+  const idxRegion = headers.indexOf('Region');
+  let html = `<thead><tr><th>#</th><th>Team</th><th>Region</th><th>Points</th></tr></thead><tbody>`;
+  data.forEach((r, i) => {
+    const cls = i===0?'legend-gold':i===1?'legend-silver':i===2?'legend-bronze':'legend-other';
+    const reg = idxRegion >= 0 ? (r[idxRegion]||'') : '';
+    const bc = reg==='AM'?'badge-AM':reg==='EU'?'badge-EU':reg.includes('AS')?'badge-AS':'';
+    const badge = bc ? `<span class="badge ${bc}">${esc(reg)}</span>` : esc(reg);
+    const rankLabel = i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    html += `<tr class="${cls}"><td>${rankLabel}</td><td style="font-weight:700">${esc(r[idxTeam]||'')}</td><td>${badge}</td><td style="font-weight:800">${num(r[idxPoints]).toFixed(2)}</td></tr>`;
+  });
+  html += '</tbody>';
+  const table = document.getElementById('legendsTable');
+  table.innerHTML = html;
+  table.style.display = data.length ? 'table' : 'none';
+}
+
+/* ================================================================
+   REGION FIXED CHARTS
+================================================================ */
+function renderRegionFixedCharts() {
+  if (!headers.length || !rows.length) return;
+  const region    = document.getElementById('regionFilter').value;
+  const idxTeam   = headers.indexOf('Team');
+  const idxRegion = headers.indexOf('Region');
+  const idxPrestige = headers.indexOf('Prestige');
+  const idxVict   = headers.indexOf('Victories');
+  const idxStreak = headers.indexOf('Streak');
+  const idxPoints = headers.indexOf('Points');
+  const idxMajors = headers.indexOf('Majors');
+
+  const pool = rows.filter(r => region === 'Global' || r[idxRegion] === region);
+
+  if (idxStreak >= 0) {
+    const top = [...pool].sort((a,b)=>num(b[idxStreak])-num(a[idxStreak])).slice(0,10);
+    renderBar('streakChart', top.map(r=>r[idxTeam]), top.map(r=>num(r[idxStreak])), { bg:'rgba(191,95,255,0.80)', border:'#bf5fff' });
+    toggleViz('streakChart', true);
+  } else toggleViz('streakChart', false, "Column 'Streak' not found.");
+
+  if (idxVict >= 0) {
+    const top = [...pool].sort((a,b)=>num(b[idxVict])-num(a[idxVict])).slice(0,10);
+    renderBar('victoriesChart', top.map(r=>r[idxTeam]), top.map(r=>num(r[idxVict])), { bg:'rgba(0,255,136,0.80)', border:'#00ff88' });
+    toggleViz('victoriesChart', true);
+  } else toggleViz('victoriesChart', false, "Column 'Victories' not found.");
+
+  if (idxPrestige >= 0) {
+    const top = [...pool].sort((a,b)=>num(b[idxPrestige])-num(a[idxPrestige])).slice(0,10);
+    renderBar('pointsChart', top.map(r=>r[idxTeam]), top.map(r=>num(r[idxPrestige])), { bg:'rgba(255,215,0,0.85)', border:'#ffd700' });
+    toggleViz('pointsChart', true);
+  } else toggleViz('pointsChart', false, "Column 'Prestige' not found.");
+
+  if (idxPoints >= 0) {
+    const top = [...pool].sort((a,b)=>num(b[idxPoints])-num(a[idxPoints])).slice(0,20);
+    renderLine('comparisonChart', top.map(r=>r[idxTeam]), top.map(r=>num(r[idxPoints])), { line:'#00f5ff', fill:'rgba(0,245,255,0.10)', point:'#7dd3fc' }, 'Points');
+    toggleViz('comparisonChart', true);
+  } else toggleViz('comparisonChart', false, "Column 'Points' not found.");
+
+  if (idxMajors >= 0) {
+    const top = [...pool].sort((a,b)=>num(b[idxMajors])-num(a[idxMajors])).slice(0,20);
+    renderLine('majorsChart', top.map(r=>r[idxTeam]), top.map(r=>num(r[idxMajors])), { line:'#ff6b35', fill:'rgba(255,107,53,0.10)', point:'#fb923c' }, 'Majors');
+    toggleViz('majorsChart', true);
+  } else toggleViz('majorsChart', false, "Column 'Majors' not found.");
+}
+
+function renderBar(id, labels, values, c) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const charts = { streakChart, victoriesChart, pointsChart };
+  if (charts[id]) charts[id].destroy();
+  const ch = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: c.bg, borderColor: c.border, borderWidth:1, borderRadius:4, maxBarThickness:42 }] },
+    options: {
+      ...baseOpts(),
+      scales: {
+        x:{ ticks:{color:'#5a7a96',font:{size:10},maxRotation:35}, grid:{display:false} },
+        y:{ ticks:{color:'#5a7a96',font:{size:10},precision:0}, grid:{color:'rgba(0,245,255,0.05)'}, beginAtZero:true }
+      }
+    }
+  });
+  if (id === 'streakChart')    streakChart = ch;
+  if (id === 'victoriesChart') victoriesChart = ch;
+  if (id === 'pointsChart')    pointsChart = ch;
+}
+
+function renderLine(id, labels, values, c, label) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (id === 'comparisonChart' && comparisonChart) comparisonChart.destroy();
+  if (id === 'majorsChart' && majorsChart) majorsChart.destroy();
+  const ch = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label, data: values,
+      borderColor: c.line, backgroundColor: c.fill, pointBackgroundColor: c.point,
+      pointRadius: 3, pointHoverRadius: 5, tension: 0.28, fill: true, borderWidth: 2
+    }]},
+    options: {
+      ...baseOpts(),
+      plugins: { ...baseOpts().plugins, legend: { display: true, labels: { color:'#5a7a96', font:{weight:'700'} } } },
+      scales: {
+        x:{ ticks:{color:'#5a7a96',font:{size:10},maxRotation:35}, grid:{display:false} },
+        y:{ ticks:{color:'#5a7a96',font:{size:10},precision:0}, grid:{color:'rgba(0,245,255,0.05)'}, beginAtZero:true }
+      }
+    }
+  });
+  if (id === 'comparisonChart') comparisonChart = ch;
+  if (id === 'majorsChart')     majorsChart = ch;
+}
+
+/* ================================================================
+   PIE CHART
+================================================================ */
+function populateTeamPieSelect() {
+  const sel = document.getElementById('teamPieSelect');
+  const idxTeam = headers.indexOf('Team');
+  if (idxTeam < 0) return;
+  const teams = [...new Set(rows.map(r=>(r[idxTeam]||'').toString()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const cur = sel.value;
+  if (sel.options.length !== teams.length + 1) {
+    sel.innerHTML = '<option value="">Choose team…</option>' + teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  }
+  sel.value = cur && teams.includes(cur) ? cur : '';
+}
+
+function renderTeamPie() {
+  const sel = document.getElementById('teamPieSelect');
+  const canvas = document.getElementById('teamPieChart');
+  const state  = document.getElementById('teamPieState');
+  const idxTeam = headers.indexOf('Team');
+  const idxVict = headers.indexOf('Victories');
+  const idxLose = headers.indexOf('Loses');
+
+  if (!sel.value) { state.innerHTML = 'Select a team above.'; state.style.display='flex'; canvas.style.display='none'; return; }
+  if (idxVict<0||idxLose<0) { state.innerHTML = "Missing 'Victories'/'Loses' columns."; state.style.display='flex'; canvas.style.display='none'; return; }
+
+  const row = rows.find(r => (r[idxTeam]||'').toString() === sel.value);
+  if (!row) { state.innerHTML = 'Team not found.'; state.style.display='flex'; canvas.style.display='none'; return; }
+
+  const wins = num(row[idxVict]), losses = num(row[idxLose]);
+  if (wins===0 && losses===0) { state.innerHTML = 'No W/L data.'; state.style.display='flex'; canvas.style.display='none'; return; }
+
+  if (teamPieChart) teamPieChart.destroy();
+  const ctx = canvas.getContext('2d');
+  const total = wins + losses;
+  const wr = total > 0 ? ((wins/total)*100).toFixed(1) : 0;
+
+  teamPieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Victories','Losses'],
+      datasets: [{ data:[wins,losses], backgroundColor:['rgba(0,255,136,0.80)','rgba(239,68,68,0.70)'], borderColor:['#00ff88','#ef4444'], borderWidth:1.5, hoverOffset:6 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      cutout: '65%',
+      plugins: {
+        legend:{ display:true, labels:{ color:'#c9d8e8', font:{weight:'700'}, padding:14 } },
+        tooltip:{
+          backgroundColor:'rgba(5,8,16,0.97)', titleColor:'#e8f4ff', bodyColor:'#c9d8e8',
+          borderColor:'rgba(0,245,255,0.25)', borderWidth:1,
+          callbacks: { label: tt => { const v=tt.parsed; const pct=total?((v/total)*100).toFixed(1):0; return ` ${tt.label}: ${v} (${pct}%)`; } }
+        }
+      },
+      layout:{ padding:8 }
+    },
+    plugins: [{
+      id:'centerText',
+      afterDraw(chart) {
+        const {ctx, chartArea:{left,top,right,bottom}} = chart;
+        const cx=(left+right)/2, cy=(top+bottom)/2;
+        ctx.save();
+        ctx.fillStyle = '#00ff88';
+        ctx.font = '800 22px Syne, system-ui';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(wr+'%', cx, cy-8);
+        ctx.fillStyle = '#5a7a96';
+        ctx.font = '400 10px JetBrains Mono, monospace';
+        ctx.fillText('WIN RATE', cx, cy+10);
+        ctx.restore();
+      }
+    }]
+  });
+  state.style.display='none'; canvas.style.display='block';
+}
+
+/* ================================================================
+   TEAM COMPARE RADAR
+================================================================ */
+function populateTeamCompareSelects() {
+  const selA = document.getElementById('teamCompareA');
+  const selB = document.getElementById('teamCompareB');
+  const idxTeam = headers.indexOf('Team');
+  if (idxTeam < 0) return;
+  const teams = [...new Set(rows.map(r=>(r[idxTeam]||'').toString()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const [cA, cB] = [selA.value, selB.value];
+  if (selA.options.length !== teams.length+1) {
+    const opts = '<option value="">Choose…</option>' + teams.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    selA.innerHTML = opts; selB.innerHTML = opts;
+  }
+  selA.value = (cA && teams.includes(cA)) ? cA : (teams[0]||'');
+  selB.value = (cB && teams.includes(cB) && cB !== selA.value) ? cB : (teams[1]||'');
+}
+
+function renderTeamCompare() {
+  const selA = document.getElementById('teamCompareA');
+  const selB = document.getElementById('teamCompareB');
+  const canvas = document.getElementById('teamCompareChart');
+  const state  = document.getElementById('teamCompareState');
+
+  const idxTeam = headers.indexOf('Team');
+  const metricMap = [
+    { name:'Victories', idx: headers.indexOf('Victories') },
+    { name:'Loses',     idx: headers.indexOf('Loses') },
+    { name:'Streak',    idx: headers.indexOf('Streak') },
+    { name:'Points',    idx: headers.indexOf('Points') },
+    { name:'Prestige',  idx: headers.indexOf('Prestige') }
+  ];
+  const missing = metricMap.filter(m => m.idx < 0).map(m => m.name);
+  if (missing.length) { state.innerHTML = `Missing columns: ${missing.join(', ')}`; state.style.display='flex'; canvas.style.display='none'; return; }
+  if (!selA.value || !selB.value || selA.value === selB.value) {
+    state.innerHTML = 'Select two different teams to compare.'; state.style.display='flex'; canvas.style.display='none'; return;
+  }
+
+  const rowA = rows.find(r => (r[idxTeam]||'').toString() === selA.value);
+  const rowB = rows.find(r => (r[idxTeam]||'').toString() === selB.value);
+  if (!rowA || !rowB) { state.innerHTML = 'Team not found.'; state.style.display='flex'; canvas.style.display='none'; return; }
+
+  const rawA = metricMap.map(m => num(rowA[m.idx]));
+  const rawB = metricMap.map(m => num(rowB[m.idx]));
+  const mins = metricMap.map(m => Math.min(...rows.map(r=>num(r[m.idx]))));
+  const maxs = metricMap.map(m => Math.max(...rows.map(r=>num(r[m.idx]))));
+  const norm = (v, mn, mx) => mx===mn ? (v>0?100:0) : +((v-mn)/(mx-mn)*100).toFixed(2);
+  const normA = rawA.map((v,k)=>norm(v,mins[k],maxs[k]));
+  const normB = rawB.map((v,k)=>norm(v,mins[k],maxs[k]));
+
+  if (teamCompareChart) teamCompareChart.destroy();
+  const ctx = canvas.getContext('2d');
+  teamCompareChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: metricMap.map(m => m.name),
+      datasets: [
+        { label: selA.value, data: normA, borderColor:'#00f5ff', backgroundColor:'rgba(0,245,255,0.12)', pointBackgroundColor:'#7dd3fc', borderWidth:2, pointRadius:4 },
+        { label: selB.value, data: normB, borderColor:'#bf5fff', backgroundColor:'rgba(191,95,255,0.12)', pointBackgroundColor:'#c4b5fd', borderWidth:2, pointRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend: { display:true, labels:{ color:'#c9d8e8', font:{weight:'700'}, padding:16 } },
+        tooltip: {
+          backgroundColor:'rgba(5,8,16,0.97)', titleColor:'#e8f4ff', bodyColor:'#c9d8e8',
+          borderColor:'rgba(0,245,255,0.25)', borderWidth:1,
+          callbacks: { label: tt => { const i=tt.dataIndex, who=tt.datasetIndex; const raw=who===0?rawA[i]:rawB[i]; const nm=who===0?normA[i]:normB[i]; return ` ${tt.dataset.label}: ${nm.toFixed(1)}% (real: ${raw})`; } }
+        }
+      },
+      scales: {
+        r: {
+          min:0, max:100,
+          angleLines: { color:'rgba(0,245,255,0.10)' },
+          grid:        { color:'rgba(0,245,255,0.10)' },
+          pointLabels: { color:'#c9d8e8', font:{size:12,weight:'700'} },
+          ticks:       { color:'#5a7a96', backdropColor:'rgba(5,8,16,0.5)', showLabelBackdrop:true, stepSize:20 }
+        }
+      }
+    }
+  });
+  state.style.display='none'; canvas.style.display='block';
+}
+
+/* ================================================================
+   AI ANALYSIS (Claude API)
+================================================================ */
+async function runAIAnalysis() {
+  if (!rows.length) { alert('Load data first!'); return; }
+
+  const panel  = document.getElementById('aiPanel');
+  const output = document.getElementById('aiOutput');
+  const tsEl   = document.getElementById('aiTimestamp');
+  const btn    = document.getElementById('aiAnalyzeBtn');
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior:'smooth', block:'start' });
+
+  output.innerHTML = '<span class="ai-typing"></span>';
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  tsEl.textContent = new Date().toLocaleTimeString();
+
+  // Build compact data summary
+  const idxTeam   = headers.indexOf('Team');
+  const idxPoints = headers.indexOf('Points');
+  const idxVict   = headers.indexOf('Victories');
+  const idxLose   = headers.indexOf('Loses');
+  const idxStreak = headers.indexOf('Streak');
+  const idxRegion = headers.indexOf('Region');
+  const idxTier   = headers.indexOf('Tier');
+  const idxMajors = headers.indexOf('Majors');
+
+  const sorted = [...rows].sort((a,b)=>num(b[idxPoints])-num(a[idxPoints]));
+  const top10  = sorted.slice(0,10).map(r=>({
+    team:    r[idxTeam]||'?',
+    points:  num(r[idxPoints]).toFixed(2),
+    wins:    idxVict>=0   ? num(r[idxVict])   : 'N/A',
+    losses:  idxLose>=0   ? num(r[idxLose])   : 'N/A',
+    streak:  idxStreak>=0 ? num(r[idxStreak]) : 'N/A',
+    region:  idxRegion>=0 ? r[idxRegion]      : 'N/A',
+    tier:    idxTier>=0   ? r[idxTier]        : 'N/A',
+    majors:  idxMajors>=0 ? num(r[idxMajors]) : 'N/A'
+  }));
+
+  const regStats = {};
+  rows.forEach(r => {
+    const reg = (idxRegion>=0 ? r[idxRegion] : 'Unknown') || 'Unknown';
+    if (!regStats[reg]) regStats[reg]={count:0,pts:[]};
+    regStats[reg].count++;
+    if (idxPoints>=0) regStats[reg].pts.push(num(r[idxPoints]));
+  });
+  const regSummary = Object.entries(regStats).map(([k,v])=>({
+    region:k, teams:v.count, avgPts: v.pts.length ? (v.pts.reduce((a,b)=>a+b,0)/v.pts.length).toFixed(2) : 0
+  }));
+
+  const totalTeams = rows.length;
+  const legends = rows.filter(r=>num(r[idxPoints])>1700).length;
+
+  const prompt = `You are a CS2 esports analyst. Analyze this team ranking data and provide insightful, data-driven commentary.
+
+DATASET OVERVIEW:
+- Total Teams: ${totalTeams}
+- Legends (1700+ pts): ${legends}
+- Regions: ${regSummary.map(r=>`${r.region} (${r.teams} teams, avg ${r.avgPts} pts)`).join(', ')}
+
+TOP 10 TEAMS BY POINTS:
+${top10.map((t,i)=>`${i+1}. ${t.team} | ${t.points}pts | W:${t.wins} L:${t.losses} | Streak:${t.streak} | ${t.region} | ${t.tier} | Majors:${t.majors}`).join('\n')}
+
+Provide a sharp, concise analysis (max 350 words) covering:
+1. DOMINANT FORCE — Who leads and why they're ahead
+2. REGIONAL BATTLE — Which region dominates and interesting regional dynamics
+3. HOT STREAKS — Teams with momentum worth watching
+4. UNDERDOG ALERT — A surprising or notable entry in the data
+5. KEY INSIGHT — One unexpected pattern or statistic that stands out
+
+Format with these exact section headers (use ▸ prefix) and keep it punchy, analytical, and specific to the numbers. Reference actual team names and numbers.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role:'user', content: prompt }]
+      })
     });
+    const data = await res.json();
+    const text = data.content?.map(b=>b.text||'').join('') || 'No response.';
+    typewriterRender(output, text);
+  } catch(err) {
+    output.innerHTML = `<span style="color:var(--neon-orange)">⚠ API Error: ${esc(err.message)}\n\nMake sure you're running in an environment where the Anthropic API key is injected. This feature uses the Claude API for live analysis.</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> AI Analysis`;
+  }
+}
 
-    document.getElementById("legendsRegionFilter").addEventListener("change", update);
+function typewriterRender(el, text) {
+  // Parse and highlight sections
+  const formatted = text
+    .replace(/▸\s*(.*)/g, '<span class="ai-header-line">▸ $1</span>')
+    .replace(/(\d[\d,.]+(?:\s*pts?)?)/g, '<span class="ai-stat">$1</span>');
 
-    document.addEventListener('change', (e) => {
-      if(e.target && e.target.id === 'teamPieSelect'){
-        renderTeamPie();
-      }
-      if(e.target && (e.target.id === 'teamCompareA' || e.target.id === 'teamCompareB')){
-        renderTeamCompare();
-      }
-    });
+  el.innerHTML = '';
+  const lines = formatted.split('\n');
+  let lineIdx = 0, charIdx = 0;
 
-    document.getElementById('updateBtn').addEventListener('click', () => {
-      loadExcelFixed(true);
-    });
+  function next() {
+    if (lineIdx >= lines.length) return;
+    const line = lines[lineIdx];
+    if (charIdx === 0 && lineIdx > 0) el.innerHTML += '\n';
 
-    document.addEventListener('DOMContentLoaded', () => loadExcelFixed(false));
-
-    async function loadExcelFixed(forceReload = false){
-      setLoading(true);
-      try{
-        const url = forceReload
-          ? `file/ranking.xlsx?v=${Date.now()}`
-          : `file/ranking.xlsx`;
-
-        const res = await fetch(url, { cache: 'no-store' });
-        if(!res.ok) throw new Error('Não foi possível carregar file/Ranking.xlsx');
-        const arrayBuffer = await res.arrayBuffer();
-
-        const wb = XLSX.read(new Uint8Array(arrayBuffer), { type:'array' });
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-        headers = (data[0] || []).map(h => (h ?? '').toString());
-        rows = data.slice(1);
-
-        update();
-      }catch(err){
-        console.error(err);
-        setError("Erro ao ler o arquivo fixo (file/Ranking.xlsx). Verifique se ele existe e tente novamente.");
-      }
+    // For HTML lines, add whole line at once to avoid breaking tags
+    if (line.includes('<')) {
+      el.innerHTML += line;
+      lineIdx++;
+      charIdx = 0;
+      setTimeout(next, 30);
+    } else {
+      el.innerHTML += line[charIdx] || '';
+      charIdx++;
+      if (charIdx >= line.length) { lineIdx++; charIdx=0; setTimeout(next, 25); }
+      else setTimeout(next, 8);
     }
-
-    function setLoading(isLoading){
-      const regionState = document.getElementById('regionChartState');
-      const topState = document.getElementById('topChartState');
-      const dataState = document.getElementById('dataTableState');
-      const legendsState = document.getElementById('legendsTableState');
-
-      const streakState = document.getElementById('streakChartState');
-      const victoriesState = document.getElementById('victoriesChartState');
-      const pointsState = document.getElementById('pointsChartState');
-      const comparisonState = document.getElementById('comparisonChartState');
-      const majorsState = document.getElementById('majorsChartState');
-
-      const teamPieState = document.getElementById('teamPieState');
-      const teamCompareState = document.getElementById('teamCompareState');
-
-      [regionState, topState, dataState, legendsState, streakState, victoriesState, pointsState, comparisonState, majorsState, teamPieState, teamCompareState]
-        .forEach(el => { if(el) el.style.display = isLoading ? 'flex':'none' });
-
-      ['regionChart','topChart','dataTable','legendsTable','streakChart','victoriesChart','pointsChart','comparisonChart','majorsChart','teamPieChart','teamCompareChart']
-        .forEach(id => {
-          const el = document.getElementById(id);
-          if(el) el.style.display = isLoading ? 'none':'';
-        });
-    }
-
-    function setError(msg){
-      ['regionChartState','topChartState','dataTableState','legendsTableState','streakChartState','victoriesChartState','pointsChartState','comparisonChartState','majorsChartState','teamPieState','teamCompareState'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el){ el.innerHTML = msg; el.style.display = 'flex'; }
-      });
-      ['regionChart','topChart','dataTable','legendsTable','streakChart','victoriesChart','pointsChart','comparisonChart','majorsChart','teamPieChart','teamCompareChart'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.style.display = 'none';
-      });
-    }
-
-    function update(){
-      if(!headers.length || !rows.length){
-        setLoading(false);
-        setError("Load an Excel file to see the data.");
-        return;
-      }
-
-      const region = document.getElementById('regionFilter').value;
-      const search = (document.getElementById('teamSearch').value || '').toLowerCase();
-      const metric = document.getElementById('metric').value;
-      const order = document.getElementById('sortOrder').value;
-
-      const idxTeam   = headers.indexOf("Team");
-      const idxRegion = headers.indexOf("Region");
-      const idxMetric = headers.indexOf(metric);
-      const idxPoints = headers.indexOf("Points");
-
-      const regions = { "AM": [], "EU": [], "AS/SIS/ESEA": [] };
-
-      rows.forEach(r => {
-        const team = (r[idxTeam] || "").toString().toLowerCase();
-        if (search && !team.includes(search)) return;
-        const reg = r[idxRegion];
-        const val = num(r[idxMetric]);
-        if(regions[reg] !== undefined){
-          regions[reg].push(val);
-        }
-      });
-
-      renderRegionChart(
-        ["Americas", "Europa", "Asia"],
-        [avg(regions["AM"]), avg(regions["EU"]), avg(regions["AS/SIS/ESEA"])],
-        metric
-      );
-
-      let filtered = rows.filter(r => {
-        const team = (r[idxTeam] || "").toString().toLowerCase();
-        const regionOk = (region === "Global" || r[idxRegion] === region);
-        const searchOk = (!search || team.includes(search));
-        return regionOk && searchOk;
-      });
-
-      filtered.sort((a,b) =>
-        order === "asc"
-          ? (num(a[idxMetric]) - num(a[idxMetric]))
-          : (num(b[idxMetric]) - num(a[idxMetric]))
-      );
-
-      filtered.sort((a,b) =>
-        order === "asc"
-          ? (num(a[idxMetric]) - num(b[idxMetric]))
-          : (num(b[idxMetric]) - num(a[idxMetric]))
-      );
-
-      renderTable(filtered, idxRegion);
-      renderTopChart(filtered.slice(0,10), idxTeam, idxMetric, metric);
-
-      const legendsRegion = document.getElementById("legendsRegionFilter").value;
-      const legends = rows
-        .filter(r => {
-          const points = num(r[idxPoints]);
-          const regionMatch = (legendsRegion === "Global" || r[idxRegion] === legendsRegion);
-          return points > 1700 && regionMatch;
-        })
-        .sort((a,b) => num(b[idxPoints]) - num(a[idxPoints]));
-
-      renderLegendsTable(legends, idxTeam, idxPoints);
-
-      renderRegionFixedCharts();
-
-      populateTeamPieSelect();
-      renderTeamPie();
-
-      populateTeamCompareSelects();
-      renderTeamCompare();
-
-      document.getElementById('regionChartState').style.display = 'none';
-      document.getElementById('topChartState').style.display = 'none';
-      document.getElementById('dataTableState').style.display = filtered.length ? 'none' : 'flex';
-      document.getElementById('legendsTableState').style.display = legends.length ? 'none' : 'flex';
-
-      document.getElementById('regionChart').style.display = 'block';
-      document.getElementById('topChart').style.display = 'block';
-      document.getElementById('dataTable').style.display = filtered.length ? 'table' : 'none';
-      document.getElementById('legendsTable').style.display = legends.length ? 'table' : 'none';
-    }
-
-    function avg(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
-    function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
-
-    function baseChartOptions(title){
-      return {
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{
-          legend:{ display:false },
-          tooltip:{
-            backgroundColor:'rgba(2,6,23,0.96)',
-            titleColor:'#e5e7eb',
-            bodyColor:'#cbd5e1',
-            borderColor:'rgba(148,163,184,0.25)',
-            borderWidth:1,
-            padding:10
-          },
-          title:{
-            display:false, text:title, color:'#e5e7eb', font:{weight:'700', size:14}
-          }
-        },
-        layout:{ padding:6 },
-        animation:{ duration:320 },
-        scales:{
-          x:{
-            ticks:{ color:'#cbd5e1', font:{ size:12 } },
-            grid:{ color:'rgba(148,163,184,0.12)' }
-          },
-          y:{
-            ticks:{ color:'#cbd5e1', font:{ size:12 }, precision:0 },
-            grid:{ color:'rgba(148,163,184,0.10)' },
-            beginAtZero:true
-          }
-        }
-      }
-    }
-
-    function renderRegionChart(labels, values, metric){
-      const ctx = document.getElementById('regionChart').getContext('2d');
-      if(regionChart) regionChart.destroy();
-
-      regionChart = new Chart(ctx, {
-        type:'bar',
-        data:{
-          labels,
-          datasets:[{
-            label:`Média de ${metric}`,
-            data: values.map(v => Number(v.toFixed(2))),
-            backgroundColor: [ '#22c55e', '#38bdf8', '#a78bfa' ],
-            borderColor: [ '#16a34a', '#0891b2', '#7c3aed' ],
-            borderWidth:1.5,
-            borderRadius:8,
-            maxBarThickness: 38
-          }]
-        },
-        options: baseChartOptions()
-      });
-    }
-
-    function renderTopChart(data, teamIdx, valIdx, metric){
-      const ctx = document.getElementById('topChart').getContext('2d');
-      if(topChart) topChart.destroy();
-
-      topChart = new Chart(ctx, {
-        type:'bar',
-        data:{
-          labels: data.map(r => r[teamIdx]),
-          datasets:[{
-            label: metric,
-            data: data.map(r => num(r[valIdx])),
-            backgroundColor: data.map(()=> createBarGradient(ctx)),
-            borderColor: '#facc15',
-            borderWidth:1.2,
-            borderRadius:8,
-            maxBarThickness: 42
-          }]
-        },
-        options: {
-          ...baseChartOptions(),
-          scales:{
-            x:{ ticks:{ color:'#cbd5e1', font:{size:11} }, grid:{ display:false } },
-            y:{ ticks:{ color:'#cbd5e1', font:{size:12} }, grid:{ color:'rgba(148,163,184,0.10)' }, beginAtZero:true }
-          }
-        }
-      });
-    }
-
-    function createBarGradient(ctx){
-      const gradient = ctx.createLinearGradient(0,0,0,280);
-      gradient.addColorStop(0, 'rgba(250,204,21,0.95)');
-      gradient.addColorStop(1, 'rgba(202,138,4,0.90)');
-      return gradient;
-    }
-
-    function renderTable(data, idxRegion){
-      const metric = document.getElementById("metric").value;
-      const idxMetric = headers.indexOf(metric);
-      const idxTeam = headers.indexOf("Team");
-
-      let html = "<thead><tr>";
-      headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
-      html += "</tr></thead><tbody>";
-
-      const topFiveTeams = data.slice(0, 5).map(r => r[idxTeam]?.toString());
-
-      data.forEach(r => {
-        html += "<tr>";
-        headers.forEach((h, i) => {
-          let cell = r[i] ?? "";
-          let cls = "";
-
-          if (i === idxMetric) cls = "metric-highlight";
-          if (i === idxTeam && topFiveTeams.includes(r[idxTeam]?.toString())) {
-            cls = (cls + " gold-name").trim();
-          }
-
-          if (i === idxRegion) {
-            const region = (cell || "").toString();
-            const badgeClass =
-              region === "AM" ? "badge-am" :
-              region === "EU" ? "badge-eu" :
-              region === "AS/SIS/ESEA" ? "badge-as" : "";
-            cell = badgeClass
-              ? `<span class="badge ${badgeClass}">${escapeHtml(region)}</span>`
-              : escapeHtml(region);
-          } else {
-            cell = escapeHtml(cell);
-          }
-
-          html += `<td class="${cls}">${cell}</td>`;
-        });
-        html += "</tr>";
-      });
-
-      html += "</tbody>";
-      document.getElementById('dataTable').innerHTML = html;
-    }
-
-    function renderLegendsTable(data, teamIdx, pointsIdx){
-      let html = `
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Team</th>
-            <th>Points</th>
-          </tr>
-        </thead>
-        <tbody>
-      `;
-
-      data.forEach((r,i) => {
-        let cls = "legend-other";
-        if (i === 0) cls = "legend-gold";
-        else if (i === 1) cls = "legend-silver";
-        else if (i === 2) cls = "legend-bronze";
-
-        html += `
-          <tr class="${cls}">
-            <td>${i+1}</td>
-            <td>${escapeHtml(r[teamIdx])}</td>
-            <td>${escapeHtml(r[pointsIdx])}</td>
-          </tr>
-        `;
-      });
-
-      html += "</tbody>";
-      document.getElementById('legendsTable').innerHTML = html;
-    }
-
-    function escapeHtml(v){
-      return (v ?? "").toString()
-        .replaceAll("&amp;","&amp;amp;")
-        .replaceAll("&lt;","&amp;lt;")
-        .replaceAll("&gt;","&amp;gt;")
-        .replaceAll('"',"&amp;quot;")
-        .replaceAll("'","&amp;#039;");
-    }
-
-    function renderRegionFixedCharts(){
-      if(!headers.length || !rows.length) return;
-
-      const region = document.getElementById('regionFilter').value;
-      const idxTeam    = headers.indexOf("Team");
-      const idxRegion  = headers.indexOf("Region");
-      const idxPrestige= headers.indexOf("Prestige");
-      const idxVict    = headers.indexOf("Victories");
-      const idxStreak  = headers.indexOf("Streak");
-      const idxPoints  = headers.indexOf("Points");
-      const idxMajors  = headers.indexOf("Majors");
-
-      const hasTeam = idxTeam >= 0, hasRegion = idxRegion >= 0;
-      if(!hasTeam || !hasRegion) {
-        setError("Colunas obrigatórias ausentes (Team/Region).");
-        return;
-      }
-
-      const regionOnly = rows.filter(r => region === "Global" || r[idxRegion] === region);
-
-      if(idxStreak >= 0){
-        const topStreak = [...regionOnly].sort((a,b) => num(b[idxStreak]) - num(a[idxStreak])).slice(0,10);
-        renderMetricBarChart('streakChart', topStreak.map(r => r[idxTeam]), topStreak.map(r => num(r[idxStreak])),
-          { bg:'rgba(167,139,250,0.85)', border:'#7c3aed' });
-        toggleState('streakChart', true);
-      }else{
-        showStateMsg('streakChart', "Coluna 'Streak' não encontrada.");
-      }
-
-      if(idxVict >= 0){
-        const topVict = [...regionOnly].sort((a,b) => num(b[idxVict]) - num(a[idxVict])).slice(0,10);
-        renderMetricBarChart('victoriesChart', topVict.map(r => r[idxTeam]), topVict.map(r => num(r[idxVict])),
-          { bg:'rgba(34,197,94,0.85)', border:'#16a34a' });
-        toggleState('victoriesChart', true);
-      }else{
-        showStateMsg('victoriesChart', "Coluna 'Victories' não encontrada.");
-      }
-
-      if(idxPrestige >= 0){
-        const topPrestige = [...regionOnly].sort((a,b) => num(b[idxPrestige]) - num(a[idxPrestige])).slice(0,10);
-        renderMetricBarChart('pointsChart', topPrestige.map(r => r[idxTeam]), topPrestige.map(r => num(r[idxPrestige])),
-          { bg:'rgba(250,204,21,0.92)', border:'#ca8a04' });
-        toggleState('pointsChart', true);
-      }else{
-        showStateMsg('pointsChart', "Coluna 'Prestige' não encontrada.");
-      }
-
-      if(idxPoints >= 0){
-        const top20 = [...regionOnly].sort((a,b) => num(b[idxPoints]) - num(a[idxPoints])).slice(0, Math.min(20, regionOnly.length));
-        renderLineComparison('comparisonChart', top20.map(r => r[idxTeam]), top20.map(r => num(r[idxPoints])),
-          { line:'#38bdf8', fill:'rgba(56,189,248,0.15)', point:'#7dd3fc' });
-        toggleState('comparisonChart', true);
-      }else{
-        showStateMsg('comparisonChart', "Coluna 'Points' não encontrada.");
-      }
-
-      if(idxMajors >= 0){
-        const top20Majors = [...regionOnly].sort((a,b) => num(b[idxMajors]) - num(a[idxMajors])).slice(0, Math.min(20, regionOnly.length));
-        renderLineComparison('majorsChart', top20Majors.map(r => r[idxTeam]), top20Majors.map(r => num(r[idxMajors])),
-          { line:'#f97316', fill:'rgba(249,115,22,0.15)', point:'#fb923c' });
-        toggleState('majorsChart', true);
-      }else{
-        showStateMsg('majorsChart', "Coluna 'Majors' não encontrada.");
-      }
-    }
-
-    function toggleState(chartId, ok){
-      const stateId = chartId + 'State';
-      const canvas = document.getElementById(chartId);
-      const state = document.getElementById(stateId);
-      if(state) state.style.display = ok ? 'none' : 'flex';
-      if(canvas) canvas.style.display = ok ? 'block' : 'none';
-    }
-    function showStateMsg(chartId, msg){
-      const state = document.getElementById(chartId + 'State');
-      const canvas = document.getElementById(chartId);
-      if(state){ state.textContent = msg; state.style.display = 'flex'; }
-      if(canvas){ canvas.style.display = 'none'; }
-    }
-
-    function renderMetricBarChart(canvasId, labels, values, colors){
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      if(canvasId === 'streakChart' && streakChart) { streakChart.destroy(); }
-      if(canvasId === 'victoriesChart' && victoriesChart) { victoriesChart.destroy(); }
-      if(canvasId === 'pointsChart' && pointsChart) { pointsChart.destroy(); }
-
-      const chart = new Chart(ctx, {
-        type:'bar',
-        data:{
-          labels,
-          datasets:[{
-            label: '',
-            data: values,
-            backgroundColor: colors.bg,
-            borderColor: colors.border,
-            borderWidth:1.2,
-            borderRadius:8,
-            maxBarThickness: 48
-          }]
-        },
-        options:{
-          ...baseChartOptions(),
-          scales:{
-            x:{ ticks:{ color:'#cbd5e1', font:{ size:11 } }, grid:{ display:false } },
-            y:{ ticks:{ color:'#cbd5e1', font:{ size:12 }, precision:0 }, grid:{ color:'rgba(148,163,184,0.10)' }, beginAtZero:true }
-          }
-        }
-      });
-
-      if(canvasId === 'streakChart') streakChart = chart;
-      if(canvasId === 'victoriesChart') victoriesChart = chart;
-      if(canvasId === 'pointsChart') pointsChart = chart;
-    }
-
-    function renderLineComparison(canvasId, labels, values, colors){
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      if(canvasId === 'comparisonChart' && comparisonChart) comparisonChart.destroy();
-      if(canvasId === 'majorsChart' && majorsChart) majorsChart.destroy();
-
-      const chart = new Chart(ctx, {
-        type:'line',
-        data:{
-          labels,
-          datasets:[{
-            label: (canvasId === 'majorsChart') ? 'Majors' : 'Points',
-            data: values,
-            borderColor: colors.line,
-            pointBackgroundColor: colors.point,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            tension: 0.26,
-            fill: true,
-            backgroundColor: colors.fill,
-            borderWidth: 2
-          }]
-        },
-        options:{
-          ...baseChartOptions(),
-          plugins:{
-            ...baseChartOptions().plugins,
-            legend:{ display:true, labels:{ color:'#cbd5e1', font:{ weight:600 } } }
-          },
-          scales:{
-            x:{ ticks:{ color:'#cbd5e1', font:{ size:11 } }, grid:{ display:false } },
-            y:{ ticks:{ color:'#cbd5e1', font:{ size:12 }, precision:0 }, grid:{ color:'rgba(148,163,184,0.10)' }, beginAtZero:true }
-          }
-        }
-      });
-
-      if(canvasId === 'comparisonChart') comparisonChart = chart;
-      if(canvasId === 'majorsChart') majorsChart = chart;
-    }
-
-    function populateTeamPieSelect(){
-      const select = document.getElementById('teamPieSelect');
-      if(!select) return;
-
-      const idxTeam = headers.indexOf("Team");
-      if(idxTeam < 0){
-        document.getElementById('teamPieState').textContent = "Coluna 'Team' não encontrada.";
-        return;
-      }
-
-      const teams = Array.from(new Set(rows.map(r => (r[idxTeam] ?? '').toString()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
-      const current = select.value;
-
-      if(select.options.length !== teams.length + 1){
-        select.innerHTML = `<option value="">Choose a team…</option>` + teams.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-      }
-
-      if(current && teams.includes(current)){
-        select.value = current;
-      }else{
-        select.value = "";
-      }
-    }
-
-    function renderTeamPie(){
-      const select = document.getElementById('teamPieSelect');
-      const state = document.getElementById('teamPieState');
-      const canvas = document.getElementById('teamPieChart');
-
-      if(!select || !state || !canvas) return;
-
-      const idxTeam = headers.indexOf("Team");
-      const idxVict = headers.indexOf("Victories");
-      const idxLose = headers.indexOf("Loses");
-
-      if(idxTeam < 0){ state.textContent = "Coluna 'Team' não encontrada."; state.style.display='flex'; canvas.style.display='none'; return; }
-      if(idxVict < 0 || idxLose < 0){
-        state.textContent = "Colunas 'Victories' e/ou 'Loses' não encontradas.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const team = select.value;
-      if(!team){
-        state.innerHTML = "Choose a team to show.";
-        state.style.display='flex';
-        canvas.style.display='none';
-        return;
-      }
-
-      const row = rows.find(r => (r[idxTeam] ?? '').toString() === team);
-      if(!row){
-        state.textContent = "Time não encontrado nos dados.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const victories = num(row[idxVict]);
-      const loses = num(row[idxLose]);
-
-      if(victories === 0 && loses === 0){
-        state.textContent = "Sem dados de vitórias/derrotas para este time.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      if(teamPieChart) teamPieChart.destroy();
-
-      const total = victories + loses;
-
-      const totalBoxPlugin = {
-        id: 'totalBox',
-        afterDraw(chart) {
-          const {ctx, chartArea} = chart;
-          if(!chartArea) return;
-
-          const paddingX = 8;
-          const paddingY = 6;
-          const radius = 8;
-          const text = `Total de partidas: ${total}`;
-          ctx.save();
-          ctx.font = '600 12px Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
-          const textMetrics = ctx.measureText(text);
-          const textWidth = textMetrics.width;
-          const textHeight = 14;
-
-          const boxWidth = textWidth + paddingX * 2;
-          const boxHeight = textHeight + paddingY * 2;
-          const x = chartArea.right - boxWidth - 8;
-          const y = chartArea.top + 8;
-
-          ctx.fillStyle = 'rgba(2,6,23,0.65)';
-          ctx.strokeStyle = 'rgba(56,189,248,0.35)';
-          ctx.lineWidth = 1;
-
-          const r = radius;
-          ctx.beginPath();
-          ctx.moveTo(x + r, y);
-          ctx.lineTo(x + boxWidth - r, y);
-          ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + r);
-          ctx.lineTo(x + boxWidth, y + boxHeight - r);
-          ctx.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - r, y + boxHeight);
-          ctx.lineTo(x + r, y + boxHeight);
-          ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - r);
-          ctx.lineTo(x, y + r);
-          ctx.quadraticCurveTo(x, y, x + r, y);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-
-          ctx.fillStyle = '#cbd5e1';
-          ctx.fillText(text, x + paddingX, y + paddingY + textHeight - 3);
-          ctx.restore();
-        }
-      };
-
-      const ctx = canvas.getContext('2d');
-      teamPieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: ['Victories', 'Loses'],
-          datasets: [{
-            data: [victories, loses],
-            backgroundColor: ['#22c55e', '#ef4444'],
-            borderColor: ['#16a34a', '#b91c1c'],
-            borderWidth: 1.5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins:{
-            legend:{ display:true, labels:{ color:'#cbd5e1', font:{ weight:600 } } },
-            tooltip:{
-              backgroundColor:'rgba(2,6,23,0.95)',
-              titleColor:'#e5e7eb', bodyColor:'#cbd5e1',
-              borderColor:'rgba(148,163,184,0.25)', borderWidth:1,
-              callbacks:{
-                label: (ctx) => {
-                  const totalLocal = victories + loses;
-                  const val = ctx.parsed;
-                  const pct = totalLocal ? ((val/totalLocal)*100).toFixed(1) : 0;
-                  return ` ${ctx.label}: ${val} (${pct}%)`;
-                }
-              }
-            }
-          },
-          layout:{ padding: 8 }
-        },
-        plugins: [totalBoxPlugin]
-      });
-
-      state.style.display='none';
-      canvas.style.display='block';
-    }
-
-    function populateTeamCompareSelects(){
-      const selA = document.getElementById('teamCompareA');
-      const selB = document.getElementById('teamCompareB');
-      const state = document.getElementById('teamCompareState');
-      if(!selA || !selB || !state) return;
-
-      const idxTeam = headers.indexOf("Team");
-      if(idxTeam < 0){
-        state.textContent = "Coluna 'Team' não encontrada.";
-        state.style.display = 'flex';
-        return;
-      }
-
-      const teams = Array.from(
-        new Set(rows.map(r => (r[idxTeam] ?? '').toString()).filter(Boolean))
-      ).sort((a,b)=>a.localeCompare(b));
-
-      const curA = selA.value;
-      const curB = selB.value;
-
-      const desiredLen = teams.length + 1;
-      if(selA.options.length !== desiredLen || selB.options.length !== desiredLen){
-        const opts = `<option value="">Choose a team…</option>` +
-          teams.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-
-        selA.innerHTML = opts;
-        selB.innerHTML = opts;
-      }
-
-      if(curA && teams.includes(curA)) selA.value = curA;
-      if(curB && teams.includes(curB)) selB.value = curB;
-
-      if(!selA.value && teams.length) selA.value = teams[0];
-      if(!selB.value && teams.length > 1) selB.value = teams[1];
-      if(selA.value && selB.value && selA.value === selB.value && teams.length > 1){
-        selB.value = teams.find(t => t !== selA.value) || "";
-      }
-    }
-
-    function renderTeamCompare(){
-      const selA = document.getElementById('teamCompareA');
-      const selB = document.getElementById('teamCompareB');
-      const state = document.getElementById('teamCompareState');
-      const canvas = document.getElementById('teamCompareChart');
-      if(!selA || !selB || !state || !canvas) return;
-
-      const idxTeam = headers.indexOf("Team");
-      const idxVict = headers.indexOf("Victories");
-      const idxLose = headers.indexOf("Loses");
-      const idxStreak = headers.indexOf("Streak");
-      const idxPoints = headers.indexOf("Points");
-      const idxPrestige = headers.indexOf("Prestige");
-
-      if(idxTeam < 0){
-        state.textContent = "Coluna 'Team' não encontrada.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const required = [
-        {name:"Victories", idx: idxVict},
-        {name:"Loses", idx: idxLose},
-        {name:"Streak", idx: idxStreak},
-        {name:"Points", idx: idxPoints},
-        {name:"Prestige", idx: idxPrestige},
-      ];
-      const missing = required.filter(x => x.idx < 0).map(x => x.name);
-      if(missing.length){
-        state.textContent = `Colunas ausentes para comparação: ${missing.join(", ")}.`;
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const teamA = selA.value;
-      const teamB = selB.value;
-
-      if(!teamA || !teamB){
-        state.textContent = "Escolha 2 times para comparar.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-      if(teamA === teamB){
-        state.textContent = "Escolha dois times diferentes.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const rowA = rows.find(r => (r[idxTeam] ?? '').toString() === teamA);
-      const rowB = rows.find(r => (r[idxTeam] ?? '').toString() === teamB);
-      if(!rowA || !rowB){
-        state.textContent = "Um dos times não foi encontrado nos dados.";
-        state.style.display='flex'; canvas.style.display='none';
-        return;
-      }
-
-      const metricLabels = ["Victories","Loses","Streak","Points","Prestige"];
-      const metricIdxs = [idxVict, idxLose, idxStreak, idxPoints, idxPrestige];
-
-      const rawA = metricIdxs.map(i => num(rowA[i]));
-      const rawB = metricIdxs.map(i => num(rowB[i]));
-
-      const mins = metricIdxs.map(i => Math.min(...rows.map(r => num(r[i]))));
-      const maxs = metricIdxs.map(i => Math.max(...rows.map(r => num(r[i]))));
-
-      const norm = (val, minV, maxV) => {
-        if(maxV === minV) return val > 0 ? 100 : 0;
-        return ((val - minV) / (maxV - minV)) * 100;
-      };
-
-      const normA = rawA.map((v, k) => +norm(v, mins[k], maxs[k]).toFixed(2));
-      const normB = rawB.map((v, k) => +norm(v, mins[k], maxs[k]).toFixed(2));
-
-      if(teamCompareChart) teamCompareChart.destroy();
-
-      const ctx = canvas.getContext('2d');
-      teamCompareChart = new Chart(ctx, {
-        type: 'radar',
-        data: {
-          labels: metricLabels,
-          datasets: [
-            {
-              label: teamA,
-              data: normA,
-              borderColor: '#38bdf8',
-              backgroundColor: 'rgba(56,189,248,0.18)',
-              pointBackgroundColor: '#7dd3fc',
-              borderWidth: 2
-            },
-            {
-              label: teamB,
-              data: normB,
-              borderColor: '#a78bfa',
-              backgroundColor: 'rgba(167,139,250,0.18)',
-              pointBackgroundColor: '#c4b5fd',
-              borderWidth: 2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, labels: { color: '#cbd5e1', font: { weight: 700 } } },
-            tooltip: {
-              backgroundColor:'rgba(2,6,23,0.95)',
-              titleColor:'#e5e7eb',
-              bodyColor:'#cbd5e1',
-              borderColor:'rgba(148,163,184,0.25)',
-              borderWidth:1,
-              callbacks:{
-                label: (tt) => {
-                  const idx = tt.dataIndex;
-                  const who = tt.datasetIndex;
-                  const raw = (who === 0 ? rawA[idx] : rawB[idx]);
-                  const nm  = (who === 0 ? normA[idx] : normB[idx]);
-                  return ` ${tt.dataset.label}: ${nm}% (valor real: ${raw})`;
-                }
-              }
-            }
-          },
-          scales: {
-            r: {
-              min: 0,
-              max: 100,
-              angleLines: { color:'rgba(148,163,184,0.16)' },
-              grid: { color:'rgba(148,163,184,0.16)' },
-              pointLabels: { color:'#e5e7eb', font:{ size: 12, weight: 700 } },
-              ticks: {
-                color:'#a7b0c0',
-                backdropColor:'rgba(2,6,23,0.35)',
-                showLabelBackdrop: true,
-                stepSize: 20
-              }
-            }
-          }
-        }
-      });
-
-      state.style.display='none';
-      canvas.style.display='block';
-    }
-
-    // ✅ ALTERAÇÃO ÚNICA: Atalho agora é tecla "0" para voltar ao menu
-    // (não funciona quando o foco está em input/textarea/select ou contenteditable)
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== '0' && e.code !== 'Numpad0') return;
-
-      const el = document.activeElement;
-      const tag = (el && el.tagName) ? el.tagName.toLowerCase() : '';
-      const typing =
-        tag === 'input' ||
-        tag === 'textarea' ||
-        tag === 'select' ||
-        (el && el.isContentEditable);
-
-      if (typing) return;
-
-      window.location.href = 'index.html';
-    });
-  </script>
+  }
+  next();
+}
+</script>
 </body>
 </html>
-``
