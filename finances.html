@@ -1248,8 +1248,8 @@ async function scanFiles() {
 
   try {
     const [finData, plyData] = await Promise.all([
-      fetchXL('files/finances_updated.xlsx'),
-      fetchXL('files/players_updated.xlsx')
+      fetchXL('file/finances_updated.xlsx'),
+      fetchXL('file/players_updated.xlsx')
     ]);
     finances = finData; finLoaded = true;
     $('fin-box').classList.add('loaded');
@@ -1263,7 +1263,7 @@ async function scanFiles() {
     btn.textContent = '✓ FILES LOADED';
   } catch(e) {
     status.style.color = 'var(--red)';
-    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta files/`;
+    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta file/`;
     btn.classList.remove('scanning');
     btn.textContent = '⟳ SCAN FILES/';
   }
