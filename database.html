@@ -1128,7 +1128,7 @@ input[type="file"] { cursor: pointer; }
             <span style="color:var(--text-dim)">base =</span> <span style="color:var(--cyan)">1000</span><br>
             <span style="color:var(--text-dim)">keep =</span> <span style="color:var(--cyan)">35%</span><br>
             <span style="color:var(--text-dim)">new  =</span> <span style="color:var(--cyan)">1000 + (old − 1000) × 0.35</span><br>
-            <span style="color:var(--text-dim)">prestige +=</span> <span style="color:var(--gold)">oldPoints</span>
+            <span style="color:var(--text-dim)">prestige +=</span> <span style="color:var(--gold)">oldPoints ÷ 1000</span>
           </div>
           <button class="btn btn-full" id="btnPreviewReset">Preview Reset</button>
           <div id="resetPreview"></div>
@@ -1325,7 +1325,7 @@ function renderTable() {
         <td class="num"><span class="${streakClass}">${streakLabel}</span></td>
         <td class="num">${t[COL.MAJ]}</td>
         <td class="num">${t[COL.TRO]}</td>
-        <td class="num" style="color:var(--gold)">${Number(t[COL.PRE]||0).toFixed(0)}</td>
+        <td class="num" style="color:var(--gold)">${Number(t[COL.PRE]||0).toFixed(3)}</td>
         <td><span class="${tierClass(t[COL.TIER])}">${htmlEsc(t[COL.TIER])}</span></td>
         <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${htmlEsc(t[COL.REG])}</td>
         <td>${bonusHtml}</td>
@@ -1506,7 +1506,7 @@ document.getElementById("btnPreviewReset").addEventListener("click",()=>{
     const o=Number(t[COL.PTS])||RESET_BASE;
     const n=RESET_BASE+(o-RESET_BASE)*RESET_KEEP;
     sumO+=o; sumN+=n;
-    if(o-n>maxDrop){ maxDrop=o-n; biggest={team:t[COL.TEAM],o,n,pre:Math.round(o)}; }
+    if(o-n>maxDrop){ maxDrop=o-n; biggest={team:t[COL.TEAM],o,n,pre:o/1000}; }
   }
   const avgO=sumO/teams.length, avgN=sumN/teams.length;
   const box=document.getElementById("resetPreview");
@@ -1527,7 +1527,7 @@ document.getElementById("btnConfirmReset").addEventListener("click",()=>{
   for(const t of teams){
     const o=Number(t[COL.PTS])||RESET_BASE;
     t[COL.PTS]=RESET_BASE+(o-RESET_BASE)*RESET_KEEP;
-    t[COL.PRE]=(Number(t[COL.PRE])||0)+Math.round(o);
+    t[COL.PRE]=(Number(t[COL.PRE])||0)+(o/1000);
     t[COL.V]=0; t[COL.L]=0; t[COL.S]=0;
     ensureBonus(t);
     t[COL.BONUS_TYPE]="none"; t[COL.BONUS_REM]=0;
@@ -1737,7 +1737,7 @@ function runAIAnalysis() {
   // Prestige leaders
   const preTeams=[...teams].filter(t=>(Number(t[COL.PRE])||0)>0).sort((a,b)=>Number(b[COL.PRE])-Number(a[COL.PRE]));
   if(preTeams.length>0){
-    insights.push({type:"info",icon:"👑",text:`Prestige leaders (veterans): <strong>${preTeams.slice(0,3).map(t=>`${htmlEsc(t[COL.TEAM])} (${Number(t[COL.PRE]).toFixed(0)})`).join(", ")}</strong>. High prestige indicates multi-season longevity.`});
+    insights.push({type:"info",icon:"👑",text:`Prestige leaders (veterans): <strong>${preTeams.slice(0,3).map(t=>`${htmlEsc(t[COL.TEAM])} (${Number(t[COL.PRE]).toFixed(3)})`).join(", ")}</strong>. High prestige indicates multi-season longevity.`});
   }
 
   // Region balance
