@@ -857,7 +857,7 @@ body::before {
   </div>
 
   <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-    <button class="upload-scan" id="scan-btn" onclick="scanFiles()">⟳ SCAN FILES/</button>
+    <button class="upload-scan" id="scan-btn" onclick="scanFiles()">⟳ SCAN FILE/</button>
     <div class="scan-status" id="scan-status"></div>
     <button class="upload-launch" id="launch-btn" onclick="launchApp()">INITIALIZE NEXUS</button>
   </div>
@@ -1315,7 +1315,7 @@ async function scanFiles() {
   btn.classList.add('scanning');
   btn.textContent = '⟳ SCANNING...';
   status.style.color = 'var(--cyan)';
-  status.textContent = 'Buscando arquivos em files/...';
+  status.textContent = 'Buscando arquivos em file/...';
 
   async function fetchXL(path) {
     const res = await fetch(path);
@@ -1342,12 +1342,10 @@ async function scanFiles() {
     btn.textContent = '✓ FILES LOADED';
   } catch(e) {
     status.style.color = 'var(--red)';
-    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta files/`;
+    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta file/`;
     btn.classList.remove('scanning');
-    btn.textContent = '⟳ SCAN FILES/';
+    btn.textContent = '⟳ SCAN FILE/';
   }
-}
-
 }
 
 /* ═══════════════════════════════════════════════
