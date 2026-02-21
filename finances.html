@@ -1315,7 +1315,7 @@ async function scanFiles() {
   btn.classList.add('scanning');
   btn.textContent = '⟳ SCANNING...';
   status.style.color = 'var(--cyan)';
-  status.textContent = 'Buscando arquivos em file/...';
+  status.textContent = 'Buscando arquivos em files/...';
 
   async function fetchXL(path) {
     const res = await fetch(path);
@@ -1342,7 +1342,7 @@ async function scanFiles() {
     btn.textContent = '✓ FILES LOADED';
   } catch(e) {
     status.style.color = 'var(--red)';
-    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta file/`;
+    status.textContent = `✗ NÃO ENCONTRADO: ${e.message} — verifique a pasta files/`;
     btn.classList.remove('scanning');
     btn.textContent = '⟳ SCAN FILES/';
   }
