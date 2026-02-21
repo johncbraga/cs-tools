@@ -704,7 +704,7 @@
       </button>
       <button id="aiAnalyzeBtn" class="btn btn-ai">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-        AI Analysis
+        Analysis
       </button>
       <a href="index.html" class="btn btn-ghost">← Menu</a>
     </div>
@@ -856,25 +856,23 @@
   </div>
 
   <!-- ============================================================
-       AI ANALYSIS PANEL
+       DATA ANALYSIS PANEL (local, no API)
   ============================================================ -->
   <div class="ai-panel panel" id="aiPanel" style="margin-bottom:16px; display:none;">
     <div class="panel-header">
       <div class="panel-title">
         <div class="panel-title-icon"></div>
-        AI Insights — Claude Analysis
+        Data Analysis — Auto Insights
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="panel-sub" id="aiTimestamp"></div>
         <button class="btn btn-ghost" id="aiCloseBtn" style="font-size:10px;padding:4px 8px">✕ Close</button>
       </div>
     </div>
-    <div class="ai-output" id="aiOutput">
-      <span class="ai-typing"></span>
-    </div>
+    <div class="ai-output" id="aiOutput"></div>
     <div class="ai-footer">
       <div class="status-dot" style="background:var(--neon-purple);box-shadow:0 0 8px var(--neon-purple)"></div>
-      Powered by Claude · Analysis based on current dataset · Auto-generated insights
+      Auto-generated · Based on current dataset · No API required
     </div>
   </div>
 
@@ -1034,7 +1032,17 @@ function baseOpts(extra = {}) {
 /* ================================================================
    HELPERS
 ================================================================ */
-const num = v => { const n = Number((v ?? '').toString().replace(',','.')); return isNaN(n) ? 0 : n; };
+const num = v => {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
+  // Handle comma as decimal separator (e.g. "1088,820632")
+  const s = v.toString().trim().replace(/\./g,'').replace(',','.');
+  // If that made it weird, try just replacing comma with dot directly
+  const n1 = parseFloat(s);
+  if (!isNaN(n1)) return n1;
+  const n2 = parseFloat(v.toString().replace(',','.'));
+  return isNaN(n2) ? 0 : n2;
+};
 const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 const esc = v => (v ?? '').toString()
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1100,7 +1108,8 @@ async function loadExcel(force = false) {
     const buf = await res.arrayBuffer();
     const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+    // raw:true keeps numbers as numbers; defval:'' fills empty cells
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
     headers = (data[0] || []).map(h => (h ?? '').toString().trim());
     rows = data.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
     setStatus('LIVE · ' + rows.length + ' TEAMS');
@@ -1158,13 +1167,30 @@ function updateStatCards() {
   }
 
   if (idxUpd >= 0) {
-    const dates = rows.map(r => r[idxUpd]).filter(Boolean).sort().reverse();
-    if (dates[0]) {
+    // With raw:true, dates in XLSX can come as serial numbers or strings
+    const dateVals = rows.map(r => r[idxUpd]).filter(Boolean);
+    let latestStr = '';
+    dateVals.forEach(v => {
+      const s = v.toString();
+      // Try parsing as ISO string or any date string
+      if (s.includes('-') || s.includes('/')) {
+        if (!latestStr || s > latestStr) latestStr = s;
+      }
+    });
+    if (latestStr) {
       try {
-        const d = new Date(dates[0]);
-        document.getElementById('sc-updated').textContent = d.toLocaleDateString('en', {month:'short',day:'numeric'});
-        document.getElementById('sc-updated').title = dates[0];
-      } catch(e) {}
+        const d = new Date(latestStr);
+        if (!isNaN(d)) {
+          document.getElementById('sc-updated').textContent = d.toLocaleDateString('en', {month:'short',day:'numeric'});
+          document.getElementById('sc-updated').title = latestStr;
+        } else {
+          document.getElementById('sc-updated').textContent = latestStr.slice(0,10);
+        }
+      } catch(e) {
+        document.getElementById('sc-updated').textContent = latestStr.slice(0,10);
+      }
+    } else {
+      document.getElementById('sc-updated').textContent = 'N/A';
     }
   }
 }
@@ -1617,130 +1643,178 @@ function renderTeamCompare() {
   state.style.display='none'; canvas.style.display='block';
 }
 
+
 /* ================================================================
-   AI ANALYSIS (Claude API)
+   LOCAL DATA ANALYSIS (no API, no key needed)
 ================================================================ */
-async function runAIAnalysis() {
+function runAIAnalysis() {
   if (!rows.length) { alert('Load data first!'); return; }
 
   const panel  = document.getElementById('aiPanel');
   const output = document.getElementById('aiOutput');
   const tsEl   = document.getElementById('aiTimestamp');
-  const btn    = document.getElementById('aiAnalyzeBtn');
 
   panel.style.display = 'block';
-  panel.scrollIntoView({ behavior:'smooth', block:'start' });
-
-  output.innerHTML = '<span class="ai-typing"></span>';
-  btn.disabled = true;
-  btn.textContent = 'Analyzing…';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  output.innerHTML = '';
   tsEl.textContent = new Date().toLocaleTimeString();
 
-  // Build compact data summary
-  const idxTeam   = headers.indexOf('Team');
-  const idxPoints = headers.indexOf('Points');
-  const idxVict   = headers.indexOf('Victories');
-  const idxLose   = headers.indexOf('Loses');
-  const idxStreak = headers.indexOf('Streak');
-  const idxRegion = headers.indexOf('Region');
-  const idxTier   = headers.indexOf('Tier');
-  const idxMajors = headers.indexOf('Majors');
+  const idxTeam     = headers.indexOf('Team');
+  const idxPoints   = headers.indexOf('Points');
+  const idxVict     = headers.indexOf('Victories');
+  const idxLose     = headers.indexOf('Loses');
+  const idxStreak   = headers.indexOf('Streak');
+  const idxRegion   = headers.indexOf('Region');
+  const idxTier     = headers.indexOf('Tier');
+  const idxMajors   = headers.indexOf('Majors');
+  const idxPrestige = headers.indexOf('Prestige');
 
-  const sorted = [...rows].sort((a,b)=>num(b[idxPoints])-num(a[idxPoints]));
-  const top10  = sorted.slice(0,10).map(r=>({
-    team:    r[idxTeam]||'?',
-    points:  num(r[idxPoints]).toFixed(2),
-    wins:    idxVict>=0   ? num(r[idxVict])   : 'N/A',
-    losses:  idxLose>=0   ? num(r[idxLose])   : 'N/A',
-    streak:  idxStreak>=0 ? num(r[idxStreak]) : 'N/A',
-    region:  idxRegion>=0 ? r[idxRegion]      : 'N/A',
-    tier:    idxTier>=0   ? r[idxTier]        : 'N/A',
-    majors:  idxMajors>=0 ? num(r[idxMajors]) : 'N/A'
-  }));
+  const get  = (row, idx) => idx >= 0 ? num(row[idx]) : 0;
+  const name = row => (row[idxTeam] || '?').toString();
 
-  const regStats = {};
+  // Sort by points
+  const byPoints = [...rows].sort((a,b) => get(b,idxPoints) - get(a,idxPoints));
+  const top1 = byPoints[0], top2 = byPoints[1];
+
+  // Region stats
+  const regions = {};
   rows.forEach(r => {
-    const reg = (idxRegion>=0 ? r[idxRegion] : 'Unknown') || 'Unknown';
-    if (!regStats[reg]) regStats[reg]={count:0,pts:[]};
-    regStats[reg].count++;
-    if (idxPoints>=0) regStats[reg].pts.push(num(r[idxPoints]));
+    const reg = (idxRegion >= 0 ? r[idxRegion] : 'Unknown') || 'Unknown';
+    if (!regions[reg]) regions[reg] = { teams:[], pts:[], wins:[], losses:[] };
+    regions[reg].teams.push(r);
+    regions[reg].pts.push(get(r, idxPoints));
+    regions[reg].wins.push(get(r, idxVict));
+    regions[reg].losses.push(get(r, idxLose));
   });
-  const regSummary = Object.entries(regStats).map(([k,v])=>({
-    region:k, teams:v.count, avgPts: v.pts.length ? (v.pts.reduce((a,b)=>a+b,0)/v.pts.length).toFixed(2) : 0
-  }));
+  const regList = Object.entries(regions).map(([k,v]) => ({
+    name: k,
+    count: v.teams.length,
+    avgPts: avg(v.pts),
+    topTeam: [...v.teams].sort((a,b)=>get(b,idxPoints)-get(a,idxPoints))[0]
+  })).sort((a,b) => b.avgPts - a.avgPts);
+  const topRegion = regList[0];
 
-  const totalTeams = rows.length;
-  const legends = rows.filter(r=>num(r[idxPoints])>1700).length;
+  // Streak
+  const byStreak = idxStreak >= 0 ? [...rows].sort((a,b) => get(b,idxStreak) - get(a,idxStreak)) : [];
+  const hotStreak = byStreak[0];
+  const hotStreakVal = hotStreak ? get(hotStreak, idxStreak) : 0;
 
-  const prompt = `You are a CS2 esports analyst. Analyze this team ranking data and provide insightful, data-driven commentary.
+  // Perfect records
+  const perfectTeams = idxLose >= 0 ? rows.filter(r => get(r,idxLose) === 0 && get(r,idxVict) > 0) : [];
 
-DATASET OVERVIEW:
-- Total Teams: ${totalTeams}
-- Legends (1700+ pts): ${legends}
-- Regions: ${regSummary.map(r=>`${r.region} (${r.teams} teams, avg ${r.avgPts} pts)`).join(', ')}
+  // Best win rate (min 3 games)
+  const wrTeams = rows
+    .map(r => { const w=get(r,idxVict),l=get(r,idxLose); return {name:name(r),games:w+l,wr:w+l>0?w/(w+l):0,wins:w,losses:l}; })
+    .filter(t => t.games >= 3)
+    .sort((a,b) => b.wr - a.wr);
+  const bestWR = wrTeams[0];
 
-TOP 10 TEAMS BY POINTS:
-${top10.map((t,i)=>`${i+1}. ${t.team} | ${t.points}pts | W:${t.wins} L:${t.losses} | Streak:${t.streak} | ${t.region} | ${t.tier} | Majors:${t.majors}`).join('\n')}
+  // Legends
+  const legends = byPoints.filter(r => get(r,idxPoints) > 1700);
 
-Provide a sharp, concise analysis (max 350 words) covering:
-1. DOMINANT FORCE — Who leads and why they're ahead
-2. REGIONAL BATTLE — Which region dominates and interesting regional dynamics
-3. HOT STREAKS — Teams with momentum worth watching
-4. UNDERDOG ALERT — A surprising or notable entry in the data
-5. KEY INSIGHT — One unexpected pattern or statistic that stands out
+  // Majors leader
+  const byMajors = idxMajors >= 0 ? [...rows].sort((a,b)=>get(b,idxMajors)-get(a,idxMajors)) : [];
+  const majorLeader = byMajors[0];
+  const majorLeaderVal = majorLeader ? get(majorLeader, idxMajors) : 0;
 
-Format with these exact section headers (use ▸ prefix) and keep it punchy, analytical, and specific to the numbers. Reference actual team names and numbers.`;
+  // Gap between #1 and #2
+  const gap = top1 && top2 ? (get(top1,idxPoints) - get(top2,idxPoints)).toFixed(2) : 0;
 
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role:'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.map(b=>b.text||'').join('') || 'No response.';
-    typewriterRender(output, text);
-  } catch(err) {
-    output.innerHTML = `<span style="color:var(--neon-orange)">⚠ API Error: ${esc(err.message)}\n\nMake sure you're running in an environment where the Anthropic API key is injected. This feature uses the Claude API for live analysis.</span>`;
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> AI Analysis`;
+  // Tier breakdown
+  const tierCount = {};
+  if (idxTier >= 0) rows.forEach(r => { const t=r[idxTier]||'Unknown'; tierCount[t]=(tierCount[t]||0)+1; });
+
+  // Closest battle in top 10
+  let closestBattle = null, closestDiff = Infinity;
+  for (let i = 0; i < Math.min(byPoints.length-1, 9); i++) {
+    const diff = Math.abs(get(byPoints[i],idxPoints) - get(byPoints[i+1],idxPoints));
+    if (diff < closestDiff) { closestDiff=diff; closestBattle={a:byPoints[i],b:byPoints[i+1],diff}; }
   }
-}
 
-function typewriterRender(el, text) {
-  // Parse and highlight sections
-  const formatted = text
-    .replace(/▸\s*(.*)/g, '<span class="ai-header-line">▸ $1</span>')
-    .replace(/(\d[\d,.]+(?:\s*pts?)?)/g, '<span class="ai-stat">$1</span>');
+  // Most volatile
+  const volatile = rows
+    .filter(r => get(r,idxVict) > 0 && get(r,idxLose) > 0)
+    .sort((a,b) => (get(b,idxLose)/Math.max(get(b,idxVict),1)) - (get(a,idxLose)/Math.max(get(a,idxVict),1)));
+  const mostVolatile = volatile[0];
 
-  el.innerHTML = '';
-  const lines = formatted.split('\n');
-  let lineIdx = 0, charIdx = 0;
+  // Build lines
+  const lines = [];
+  lines.push(`▸ LEADERBOARD SNAPSHOT`);
+  lines.push(`  ${rows.length} teams tracked · ${legends.length} at Legend status (1700+ pts) · ${regList.length} active regions`);
+  if (top1) lines.push(`  Current #1: ${name(top1)} — ${get(top1,idxPoints).toFixed(2)} pts${top2 ? ' · leads '+name(top2)+' by '+gap+' pts':''}`);
+  lines.push('');
 
-  function next() {
-    if (lineIdx >= lines.length) return;
-    const line = lines[lineIdx];
-    if (charIdx === 0 && lineIdx > 0) el.innerHTML += '\n';
+  lines.push(`▸ REGIONAL POWER`);
+  if (topRegion) {
+    lines.push(`  ${topRegion.name} dominates with avg ${topRegion.avgPts.toFixed(2)} pts across ${topRegion.count} teams`);
+    if (topRegion.topTeam) lines.push(`  Region flagship: ${name(topRegion.topTeam)} (${get(topRegion.topTeam,idxPoints).toFixed(2)} pts)`);
+  }
+  regList.forEach(r => {
+    if (r !== topRegion) lines.push(`  ${r.name}: ${r.count} teams · avg ${r.avgPts.toFixed(2)} pts · best: ${r.topTeam ? name(r.topTeam) : '—'}`);
+  });
+  lines.push('');
 
-    // For HTML lines, add whole line at once to avoid breaking tags
-    if (line.includes('<')) {
-      el.innerHTML += line;
-      lineIdx++;
-      charIdx = 0;
-      setTimeout(next, 30);
-    } else {
-      el.innerHTML += line[charIdx] || '';
-      charIdx++;
-      if (charIdx >= line.length) { lineIdx++; charIdx=0; setTimeout(next, 25); }
-      else setTimeout(next, 8);
+  lines.push(`▸ MOMENTUM`);
+  if (hotStreak && hotStreakVal > 0) lines.push(`  Hottest streak: ${name(hotStreak)} on a ${hotStreakVal}-win run`);
+  if (perfectTeams.length > 0) {
+    lines.push(`  Unbeaten: ${perfectTeams.map(r=>name(r)).join(', ')}`);
+  } else {
+    lines.push(`  No unbeaten teams — everyone has taken a loss`);
+  }
+  if (bestWR) lines.push(`  Best win rate (min 3 games): ${bestWR.name} at ${(bestWR.wr*100).toFixed(1)}% (${bestWR.wins}W-${bestWR.losses}L)`);
+  lines.push('');
+
+  lines.push(`▸ NOTABLE PATTERNS`);
+  if (closestBattle) {
+    const posA=byPoints.indexOf(closestBattle.a)+1, posB=byPoints.indexOf(closestBattle.b)+1;
+    lines.push(`  Tightest race: #${posA} ${name(closestBattle.a)} vs #${posB} ${name(closestBattle.b)} — ${closestBattle.diff.toFixed(2)} pts apart`);
+  }
+  if (majorLeader && majorLeaderVal > 0) lines.push(`  Major trophies leader: ${name(majorLeader)} with ${majorLeaderVal}`);
+  if (mostVolatile && get(mostVolatile,idxLose) >= 3) {
+    const vl=get(mostVolatile,idxLose), vw=get(mostVolatile,idxVict);
+    lines.push(`  Most volatile: ${name(mostVolatile)} — ${vw}W/${vl}L (loss ratio ${(vl/Math.max(vw,1)).toFixed(2)})`);
+  }
+  if (idxTier >= 0 && Object.keys(tierCount).length) {
+    lines.push(`  Tier distribution: ${Object.entries(tierCount).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+':'+v).join('  ')}`);
+  }
+  lines.push('');
+
+  lines.push(`▸ TOP 5 STANDINGS`);
+  byPoints.slice(0,5).forEach((r,i) => {
+    const medal=['◆','◇','▲','△','○'][i];
+    const pts=get(r,idxPoints).toFixed(2);
+    const w=idxVict>=0?get(r,idxVict):'—';
+    const l=idxLose>=0?get(r,idxLose):'—';
+    const reg=idxRegion>=0?(r[idxRegion]||'?'):'';
+    lines.push(`  ${medal} #${i+1}  ${name(r).padEnd(22)} ${pts} pts   ${w}W-${l}L   ${reg}`);
+  });
+
+  // Typewriter render
+  const fullText = lines.join('\n');
+  let charPos = 0;
+  function tick() {
+    if (charPos >= fullText.length) return;
+    const batchSize = 6;
+    for (let b = 0; b < batchSize && charPos < fullText.length; b++) {
+      const ch = fullText[charPos];
+      // At start of a ▸ line, render entire line as a styled span
+      if (ch === '▸') {
+        const end = fullText.indexOf('\n', charPos);
+        const lineEnd = end === -1 ? fullText.length : end;
+        const span = document.createElement('span');
+        span.className = 'ai-header-line';
+        span.textContent = fullText.slice(charPos, lineEnd);
+        output.appendChild(span);
+        charPos = lineEnd;
+        break;
+      } else {
+        output.appendChild(document.createTextNode(ch));
+        charPos++;
+      }
     }
+    requestAnimationFrame(tick);
   }
-  next();
+  tick();
 }
 </script>
 </body>
