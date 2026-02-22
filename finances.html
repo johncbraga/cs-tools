@@ -800,6 +800,7 @@ body::before {
 .intel-team-card:hover { border-color: var(--cyan); background: var(--bg3); }
 .intel-team-card.rising { border-left: 3px solid var(--green); }
 .intel-team-card.falling { border-left: 3px solid var(--red); }
+.intel-team-card.stable { border-left: 3px solid var(--cyan); }
 .intel-team-card.selected { border-color: var(--cyan); background: var(--bg3); }
 .intel-team-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
 .intel-team-name { font-family:var(--font-display); font-size:13px; font-weight:700; letter-spacing:2px; }
@@ -1066,7 +1067,7 @@ body::before {
                 <div class="form-label">ROLE</div>
                 <select class="nx-select" id="market-filter" onchange="refreshMarket()">
                   <option value="all">All Roles</option>
-                  <option value="none">Free Agents</option>
+                  <option value="none">🚫 Sem Time</option>
                   <option value="Bench">Benched</option>
                   <option value="Starter">Starters</option>
                 </select>
@@ -1303,11 +1304,16 @@ body::before {
 
     <!-- ═══ INTEL PANEL ═══ -->
     <div class="panel" id="p-intel" style="padding:16px; overflow-y:auto;">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
         <div style="font-family:var(--font-display); font-size:18px; font-weight:900; color:var(--cyan); letter-spacing:4px; text-shadow:0 0 20px var(--cyan);">
           🧠 NEXUS INTEL — ANÁLISE DE DESEMPENHO
         </div>
-        <button class="btn btn-cyan" onclick="runIntel()" style="padding:8px 24px; letter-spacing:2px; font-size:11px;">⟳ ATUALIZAR ANÁLISE</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="form-group" style="margin:0;">
+            <input type="text" class="nx-input" id="intel-search" placeholder="🔍 Buscar time..." oninput="runIntel()" style="width:200px; padding:6px 12px; font-size:12px;">
+          </div>
+          <button class="btn btn-cyan" onclick="runIntel()" style="padding:8px 24px; letter-spacing:2px; font-size:11px;">⟳ ATUALIZAR ANÁLISE</button>
+        </div>
       </div>
 
       <!-- SUMMARY BAR -->
@@ -1317,25 +1323,33 @@ body::before {
       <div class="g2" style="gap:16px; align-items:start;">
 
         <!-- RISING TEAMS -->
-        <div>
+        <div style="display:flex; flex-direction:column; min-height:0;">
           <div style="font-family:var(--font-display); font-size:11px; letter-spacing:3px; color:var(--green); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
             <span style="font-size:16px;">📈</span> TIMES EM ASCENSÃO
           </div>
-          <div id="intel-rising"></div>
+          <div id="intel-rising" style="overflow-y:auto; max-height:380px; border:1px solid var(--border); background:var(--bg); padding:4px;"></div>
         </div>
 
         <!-- FALLING TEAMS -->
-        <div>
+        <div style="display:flex; flex-direction:column; min-height:0;">
           <div style="font-family:var(--font-display); font-size:11px; letter-spacing:3px; color:var(--red); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
             <span style="font-size:16px;">📉</span> TIMES EM COLAPSO
           </div>
-          <div id="intel-falling"></div>
+          <div id="intel-falling" style="overflow-y:auto; max-height:380px; border:1px solid var(--border); background:var(--bg); padding:4px;"></div>
         </div>
 
       </div>
 
+      <!-- STABLE TEAMS (shown when searching or always) -->
+      <div id="intel-stable-wrap" style="margin-top:16px; display:none;">
+        <div style="font-family:var(--font-display); font-size:11px; letter-spacing:3px; color:var(--cyan); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">◈</span> TIMES ESTÁVEIS
+        </div>
+        <div id="intel-stable" style="overflow-y:auto; max-height:300px; border:1px solid var(--border); background:var(--bg); padding:4px; display:grid; grid-template-columns:1fr 1fr; gap:4px;"></div>
+      </div>
+
       <!-- DETAIL REPORT (expanded) -->
-      <div id="intel-detail" style="margin-top:16px;"></div>
+      <div id="intel-detail" style="margin-top:16px; max-height:500px; overflow-y:auto;"></div>
 
     </div>
 
@@ -1369,13 +1383,13 @@ const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
 
 // File handling
 $('upload-finances').addEventListener('change', e => handleXL(e, d => {
-  finances = d; finLoaded = true;
+  finances = normalizeFinances(d); finLoaded = true;
   $('fin-box').classList.add('loaded');
   $('fin-status').textContent = `✓ ${d.length} TEAMS LOADED`;
   checkLaunch();
 }));
 $('upload-players').addEventListener('change', e => handleXL(e, d => {
-  players = d; plyLoaded = true;
+  players = normalizePlayers(d); plyLoaded = true;
   $('ply-box').classList.add('loaded');
   $('ply-status').textContent = `✓ ${d.length} PLAYERS LOADED`;
   checkLaunch();
@@ -1388,6 +1402,48 @@ function handleXL(e, cb) {
     cb(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]));
   };
   r.readAsBinaryString(e.target.files[0]);
+}
+
+/* Normalize column names from Excel → internal code names */
+function normalizePlayers(arr) {
+  return arr.map(p => {
+    const row = {...p};
+    // Excel "PrizePool" (no space) = internal MarketValue
+    if (row['PrizePool'] !== undefined && row['MarketValue'] === undefined) {
+      row.MarketValue = Number(row['PrizePool']) || 0;
+    }
+    // Excel "Prize Pool" (with space) = internal PrizePool (accumulated earnings)
+    if (row['Prize Pool'] !== undefined && row['PrizePool_Earnings'] === undefined) {
+      row.PrizePool = Number(row['Prize Pool']) || 0;
+    }
+    // Ensure all fields exist with defaults
+    row.MarketValue = Number(row.MarketValue) || 0;
+    row.PrizePool = Number(row.PrizePool) || 0;
+    row.Prestige = Number(row.Prestige) || 0;
+    row.MVP = Number(row.MVP) || 0;
+    row.EVP = Number(row.EVP) || 0;
+    row.VP = Number(row.VP) || 0;
+    row.Titles = Number(row.Titles) || 0;
+    row['Total MVP'] = Number(row['Total MVP']) || 0;
+    row['Total EVP'] = Number(row['Total EVP']) || 0;
+    row['Total VP'] = Number(row['Total VP']) || 0;
+    row['Total Titles'] = Number(row['Total Titles']) || 0;
+    row['Previous MV'] = Number(row['Previous MV']) || 0;
+    row.ContractMonths = Number(row.ContractMonths) || 0;
+    return row;
+  });
+}
+
+function normalizeFinances(arr) {
+  return arr.map(t => {
+    const row = {...t};
+    // Handle typo: HeathTeam → HealthTeam
+    if (row['HeathTeam'] !== undefined && row['HealthTeam'] === undefined) {
+      row.HealthTeam = Number(row['HeathTeam']) || 0;
+    }
+    row.CurrentBank = Number(row.CurrentBank) || 0;
+    return row;
+  });
 }
 
 function checkLaunch() {
@@ -1415,10 +1471,10 @@ async function scanFiles() {
       fetchXL('file/finances_updated.xlsx'),
       fetchXL('file/players_updated.xlsx')
     ]);
-    finances = finData; finLoaded = true;
+    finances = normalizeFinances(finData); finLoaded = true;
     $('fin-box').classList.add('loaded');
     $('fin-status').textContent = `✓ ${finData.length} RECORDS LOADED`;
-    players = plyData; plyLoaded = true;
+    players = normalizePlayers(plyData); plyLoaded = true;
     $('ply-box').classList.add('loaded');
     $('ply-status').textContent = `✓ ${plyData.length} PLAYERS LOADED`;
     $('launch-btn').classList.add('ready');
@@ -1490,7 +1546,13 @@ function runIntel() {
   const falling = profiles.filter(p => p.trend <= -2).sort((a,b) => a.trend - b.trend);
   const stable = profiles.filter(p => p.trend > -2 && p.trend < 2);
 
-  // Summary bar
+  // Apply search filter for display only (summary bar stays unfiltered)
+  const intelQuery = ($('intel-search')?.value || '').toLowerCase().trim();
+  const filterProf = arr => intelQuery ? arr.filter(p => p.tName.toLowerCase().includes(intelQuery)) : arr;
+  const risingFiltered = filterProf(rising);
+  const fallingFiltered = filterProf(falling);
+
+  // Summary bar (always full counts)
   $('intel-summary-bar').innerHTML = `
     <div class="stat-box green"><div class="lbl">EM ASCENSÃO</div><div class="val">${rising.length}</div><div class="sub">times sólidos</div></div>
     <div class="stat-box cyan"><div class="lbl">ESTÁVEIS</div><div class="val">${stable.length}</div><div class="sub">monitorando</div></div>
@@ -1500,8 +1562,8 @@ function runIntel() {
 
   function renderTeamCard(prof, type) {
     const netColor = prof.fins.net >= 0 ? 'var(--green)' : 'var(--red)';
-    const trendIcon = type === 'rising' ? '▲' : '▼';
-    const trendColor = type === 'rising' ? 'var(--green)' : 'var(--red)';
+    const trendIcon = type === 'rising' ? '▲' : type === 'falling' ? '▼' : '◈';
+    const trendColor = type === 'rising' ? 'var(--green)' : type === 'falling' ? 'var(--red)' : 'var(--cyan)';
     const bgBadge = `background:${prof.oracle.color}22; color:${prof.oracle.color};`;
     return `
       <div class="intel-team-card ${type} ${intelSelectedTeam===prof.tName?'selected':''}" onclick="selectIntelTeam('${prof.tName.replace(/'/g,"\\'")}')">
@@ -1525,13 +1587,25 @@ function runIntel() {
     `;
   }
 
-  $('intel-rising').innerHTML = rising.length
-    ? rising.map(p => renderTeamCard(p, 'rising')).join('')
-    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">Nenhum time em ascensão detectado.</div>`;
+  const stableFiltered = filterProf(stable);
 
-  $('intel-falling').innerHTML = falling.length
-    ? falling.map(p => renderTeamCard(p, 'falling')).join('')
-    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">Nenhum time crítico detectado.</div>`;
+  $('intel-rising').innerHTML = risingFiltered.length
+    ? risingFiltered.map(p => renderTeamCard(p, 'rising')).join('')
+    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">${intelQuery ? 'Nenhum resultado para "'+intelQuery+'".' : 'Nenhum time em ascensão detectado.'}</div>`;
+
+  $('intel-falling').innerHTML = fallingFiltered.length
+    ? fallingFiltered.map(p => renderTeamCard(p, 'falling')).join('')
+    : `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px;">${intelQuery ? 'Nenhum resultado para "'+intelQuery+'".' : 'Nenhum time crítico detectado.'}</div>`;
+
+  // Show stable teams section when there are stable teams (always, or filtered)
+  const stableWrap = $('intel-stable-wrap');
+  if (stableFiltered.length > 0) {
+    stableWrap.style.display = 'block';
+    $('intel-stable').innerHTML = stableFiltered.map(p => renderTeamCard(p, 'stable')).join('');
+  } else {
+    stableWrap.style.display = intelQuery ? 'block' : 'none';
+    $('intel-stable').innerHTML = intelQuery ? `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px; grid-column:1/-1;">Nenhum resultado para "${intelQuery}".</div>` : '';
+  }
 
   // Auto-select worst team on first run
   if (!intelSelectedTeam && falling.length > 0) {
@@ -1777,7 +1851,8 @@ function getTeamFinances(team) {
   else if (tier==='tier 2') sponsor=40000;
   else if (tier==='tier 3') sponsor=30000;
   if (team.sponsorshipBoost) sponsor *= 1.5;
-  const fixed = ['Coach','Analyst','HealthTeam','PhysicalTeam','Maintenance','Marketing'].reduce((s,k)=>s+Number(team[k]||0),0);
+  const getVal = (obj, key) => Number(obj[key] || (key==='HealthTeam' ? obj['HeathTeam'] : 0) || 0);
+  const fixed = ['Coach','Analyst','HealthTeam','PhysicalTeam','Maintenance','Marketing'].reduce((s,k)=>s+getVal(team,k),0);
   const salaries = players.filter(p=>p.TeamName===team.TeamName).reduce((s,p)=>s+(p.MarketValue||0)*0.10,0);
   return { sponsor, fixed, salaries, net: sponsor-(fixed+salaries) };
 }
@@ -1958,10 +2033,10 @@ function openPlayerProfile(name) {
           <div class="pm-medal" style="border-color:var(--cyan)44;"><div class="icon">🏆</div><div class="cnt" style="color:var(--cyan)">${totalTitles}</div><div class="lbl">TOTAL TITLES</div></div>
         </div>
 
-        <!-- PRESTIGE -->
-        <div class="pm-section-title">PRESTIGE</div>
+        <!-- PRIZE POOL -->
+        <div class="pm-section-title">💰 PRIZE POOL</div>
         <div class="pm-stats-grid" style="grid-template-columns:1fr;">
-          <div class="pm-stat"><div class="v" style="color:var(--purple)">${fmt(p.Prestige||0)}</div><div class="l">LIFETIME PRESTIGE</div></div>
+          <div class="pm-stat"><div class="v" style="color:var(--purple)">${fmt(p.PrizePool||0)}</div><div class="l">TOTAL EARNINGS (TOURNAMENTS + AWARDS)</div></div>
         </div>
 
       </div>
@@ -2729,7 +2804,7 @@ function distributeTourneyPrize() {
   const awardTitle=$('tourney-award-title').checked;
   saveState(); team.CurrentBank+=amt*0.6;
   const share=amt*0.4/5;
-  players.filter(p=>p.TeamName===tName&&p.Role==='Starter').slice(0,5).forEach(p=>{ p.MarketValue+=share; if(awardTitle) p.Titles=(p.Titles||0)+1; });
+  players.filter(p=>p.TeamName===tName&&p.Role==='Starter').slice(0,5).forEach(p=>{ p.MarketValue+=share; p.PrizePool=(p.PrizePool||0)+share; if(awardTitle) p.Titles=(p.Titles||0)+1; });
   const titleMsg=awardTitle?' + 🏆 Title medals awarded':'';
   addLog(`🏆 ${tName} received ${fmt(amt)}! Bank +${fmt(amt*0.6)}, starters +${fmt(share)} MV each${titleMsg}.`,'good'); updateAll();
 }
@@ -2740,11 +2815,12 @@ function applyIndividualPerformance() {
   saveState();
   const type=$('perf-type').value;
   const reward={region:{mvp:4000,evp:3500,vp:2500},global:{mvp:10000,evp:6000,vp:4000},major:{mvp:30000,evp:12500,vp:7500}}[$('perf-tier').value][type];
-  p.Prestige=(p.Prestige||0)+reward;
+  p.MarketValue=(p.MarketValue||0)+reward;
+  p.PrizePool=(p.PrizePool||0)+reward;
   if (type==='mvp') p.MVP=(p.MVP||0)+1;
   else if (type==='evp') p.EVP=(p.EVP||0)+1;
   else p.VP=(p.VP||0)+1;
-  addLog(`⭐ ${pName} awarded ${type.toUpperCase()} (+${fmt(reward)} prestige, medal granted).`,'good'); updateAll();
+  addLog(`⭐ ${pName} awarded ${type.toUpperCase()} (+${fmt(reward)} MV & prize pool, medal granted).`,'good'); updateAll();
 }
 
 /* ═══ MONTHLY CYCLE ═══ */
@@ -2810,9 +2886,39 @@ function undo() {
 }
 
 function exportExcels() {
-  const wb1=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb1,XLSX.utils.json_to_sheet(finances),'Finances'); XLSX.writeFile(wb1,'nexus_finances.xlsx');
-  const wb2=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2,XLSX.utils.json_to_sheet(players),'Players'); XLSX.writeFile(wb2,'nexus_players.xlsx');
-  addLog('📥 Exported nexus_finances.xlsx & nexus_players.xlsx.','good');
+  // Export players with correct column names matching expected format
+  const pData = players.map(p => ({
+    'PlayerName': p.PlayerName || '',
+    'Role': p.Role || '',
+    'PrizePool': p.MarketValue || 0,         // Internal MarketValue → Excel "PrizePool"
+    'Prize Pool': p.PrizePool || 0,           // Accumulated earnings → Excel "Prize Pool"
+    'ContractMonths': p.ContractMonths || 0,
+    'TeamName': p.TeamName || '',
+    'MVP': p.MVP || 0,
+    'EVP': p.EVP || 0,
+    'VP': p.VP || 0,
+    'Titles': p.Titles || 0,
+    'Total MVP': p['Total MVP'] || 0,
+    'Total EVP': p['Total EVP'] || 0,
+    'Total VP': p['Total VP'] || 0,
+    'Total Titles': p['Total Titles'] || 0,
+    'Previous MV': p['Previous MV'] || 0
+  }));
+  // Export finances preserving original column names
+  const fData = finances.map(t => ({
+    'TeamName': t.TeamName || '',
+    'Tier': t.Tier || '',
+    'CurrentBank': t.CurrentBank || 0,
+    'Coach': t.Coach || 0,
+    'Analyst': t.Analyst || 0,
+    'HeathTeam': t.HealthTeam || t.HeathTeam || 0,
+    'PhysicalTeam': t.PhysicalTeam || 0,
+    'Maintenance': t.Maintenance || 0,
+    'Marketing': t.Marketing || 0
+  }));
+  const wb1=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb1,XLSX.utils.json_to_sheet(fData),'Finances'); XLSX.writeFile(wb1,'finances_updated.xlsx');
+  const wb2=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb2,XLSX.utils.json_to_sheet(pData),'Players'); XLSX.writeFile(wb2,'players_updated.xlsx');
+  addLog('📥 Exported finances_updated.xlsx & players_updated.xlsx.','good');
 }
 
 /* ═══ LOG ═══ */
