@@ -842,6 +842,71 @@ body::before {
   flex-shrink: 0;
 }
 .topbar-back:hover { opacity: 1; color: var(--cyan); }
+
+/* ═══ PLAYER PROFILE MODAL ═══ */
+.player-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  animation: fade-in 0.2s ease;
+}
+.player-modal {
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  width: 520px; max-width: 92vw;
+  max-height: 85vh; overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 60px rgba(0,212,255,0.15);
+}
+.player-modal::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 100%; height: 3px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--cyan));
+}
+.pm-header {
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.pm-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: var(--text-dim); font-size: 22px;
+  cursor: pointer; transition: color 0.2s;
+}
+.pm-close:hover { color: var(--red); }
+.pm-name {
+  font-family: var(--font-display); font-size: 20px; font-weight: 900;
+  letter-spacing: 3px; color: var(--cyan);
+}
+.pm-sub {
+  font-family: var(--font-data); font-size: 11px; color: var(--text-dim); margin-top: 4px;
+}
+.pm-body { padding: 16px 20px 20px; }
+.pm-section-title {
+  font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
+  color: var(--text-dim); margin: 14px 0 8px; padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.pm-section-title:first-child { margin-top: 0; }
+.pm-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pm-stat {
+  background: var(--bg3); padding: 10px 12px; text-align: center;
+}
+.pm-stat .v { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.pm-stat .l { font-family: var(--font-data); font-size: 9px; color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
+.pm-medal-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pm-medal {
+  background: var(--bg3); border: 1px solid var(--border); padding: 8px 14px;
+  text-align: center; flex: 1; min-width: 80px;
+}
+.pm-medal .icon { font-size: 20px; }
+.pm-medal .cnt { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-top: 2px; }
+.pm-medal .lbl { font-family: var(--font-data); font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+.pm-mv-compare { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.pm-mv-compare .mv-box { background: var(--bg3); padding: 10px 14px; flex: 1; text-align: center; }
+.pm-mv-compare .mv-box .v { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.pm-mv-compare .mv-box .l { font-family: var(--font-data); font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+.pm-mv-compare .mv-arrow { font-family: var(--font-display); font-size: 16px; color: var(--text-dim); }
 </style>
 <body>
 
@@ -1160,15 +1225,19 @@ body::before {
         <div class="card green">
           <div class="card-title">🏆 TOURNAMENT ENGINE</div>
           <div class="form-group" style="margin-bottom:8px;">
-            <div class="form-label">WINNING TEAM</div>
+            <div class="form-label">TEAM</div>
             <select class="nx-select" id="tourney-team-select"></select>
           </div>
           <div class="form-group" style="margin-bottom:8px;">
             <div class="form-label">PRIZE POOL ($)</div>
             <input type="number" class="nx-input" id="prize-amount" placeholder="0.00">
           </div>
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:10px; cursor:pointer; font-family:var(--font-data); font-size:12px; color:var(--text);">
+            <input type="checkbox" id="tourney-award-title" style="accent-color:var(--green); width:16px; height:16px;">
+            <span>🏆 AWARD TITLE MEDALS <span style="color:var(--text-dim);">(check only if team won the tournament)</span></span>
+          </label>
           <div class="alert-item info" style="margin-bottom:10px; font-size:11px; font-family:var(--font-data);">
-            60% → Team Bank&nbsp;&nbsp;|&nbsp;&nbsp;40% → Starter MV split + Title medals
+            60% → Team Bank&nbsp;&nbsp;|&nbsp;&nbsp;40% → Starter MV split&nbsp;&nbsp;|&nbsp;&nbsp;Titles: optional ☑
           </div>
           <button class="btn btn-green btn-full" onclick="distributeTourneyPrize()">DISTRIBUTE PRIZE</button>
 
@@ -1214,7 +1283,7 @@ body::before {
           </div>
 
           <button class="btn btn-orange btn-full" onclick="applyBailout()" style="margin-bottom:8px;">💊 BANKRUPT BAILOUT (+$25k + 50% Sponsor Boost)</button>
-          <button class="btn btn-red btn-full" onclick="applySeasonReset()">🔁 GLOBAL SEASON RESET (−30% MV, Wipe Medals)</button>
+          <button class="btn btn-red btn-full" onclick="applySeasonReset()">🔁 GLOBAL SEASON RESET (−30% MV, Accumulate Totals)</button>
 
           <hr class="sep">
           <div class="card-title">📁 DATA MANAGEMENT</div>
@@ -1812,6 +1881,96 @@ function medals(p) {
   return s;
 }
 
+/* PLAYER PROFILE MODAL */
+function openPlayerProfile(name) {
+  const p = players.find(x => String(x.PlayerName) === name);
+  if (!p) return;
+  const form = getFormScore(p);
+  const sal = (p.MarketValue||0)*0.10;
+  const buyout = p.TeamName==='none' ? 0 : getPlayerBuyout(p);
+  const prevMV = p['Previous MV']||0;
+  const mvDiff = (p.MarketValue||0) - prevMV;
+  const hasPrev = prevMV > 0;
+
+  // Career totals (already accumulated + current season)
+  const totalMVP = (p['Total MVP']||0) + (p.MVP||0);
+  const totalEVP = (p['Total EVP']||0) + (p.EVP||0);
+  const totalVP  = (p['Total VP']||0)  + (p.VP||0);
+  const totalTitles = (p['Total Titles']||0) + (p.Titles||0);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'player-modal-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = `
+    <div class="player-modal">
+      <button class="pm-close" onclick="this.closest('.player-modal-overlay').remove()">&times;</button>
+      <div class="pm-header">
+        <div class="pm-name">${String(p.PlayerName)}</div>
+        <div class="pm-sub">${p.TeamName==='none'?'FREE AGENT':p.TeamName} • ${p.Role} • Contract: ${p.ContractMonths||0}m ${medals(p)}</div>
+      </div>
+      <div class="pm-body">
+
+        <!-- FINANCIAL -->
+        <div class="pm-section-title">FINANCIAL OVERVIEW</div>
+        <div class="pm-stats-grid">
+          <div class="pm-stat"><div class="v" style="color:var(--cyan)">${fmt(p.MarketValue||0)}</div><div class="l">MARKET VALUE</div></div>
+          <div class="pm-stat"><div class="v" style="color:var(--orange)">${fmt(sal)}/mo</div><div class="l">SALARY</div></div>
+          <div class="pm-stat"><div class="v" style="color:var(--green)">${p.TeamName==='none'?'FREE':fmt(buyout)}</div><div class="l">BUYOUT</div></div>
+          <div class="pm-stat"><div class="v" style="color:var(--yellow)">${form}</div><div class="l">FORM SCORE</div></div>
+        </div>
+
+        ${hasPrev ? `
+        <!-- MV COMPARISON -->
+        <div class="pm-section-title">MARKET VALUE vs PREVIOUS SEASON</div>
+        <div class="pm-mv-compare">
+          <div class="mv-box">
+            <div class="v" style="color:var(--text-dim)">${fmt(prevMV)}</div>
+            <div class="l">PREVIOUS MV</div>
+          </div>
+          <div class="mv-arrow">→</div>
+          <div class="mv-box">
+            <div class="v" style="color:var(--cyan)">${fmt(p.MarketValue||0)}</div>
+            <div class="l">CURRENT MV</div>
+          </div>
+          <div class="mv-box" style="border:1px solid ${mvDiff>=0?'var(--green)':'var(--red)'}44;">
+            <div class="v" style="color:${mvDiff>=0?'var(--green)':'var(--red)'}">${mvDiff>=0?'+':''}${fmt(mvDiff)}</div>
+            <div class="l">CHANGE</div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- CURRENT SEASON MEDALS -->
+        <div class="pm-section-title">CURRENT SEASON MEDALS</div>
+        <div class="pm-medal-row">
+          <div class="pm-medal"><div class="icon">🥇</div><div class="cnt" style="color:var(--yellow)">${p.MVP||0}</div><div class="lbl">MVP</div></div>
+          <div class="pm-medal"><div class="icon">🥈</div><div class="cnt" style="color:#b0bec5">${p.EVP||0}</div><div class="lbl">EVP</div></div>
+          <div class="pm-medal"><div class="icon">🥉</div><div class="cnt" style="color:#ff7043">${p.VP||0}</div><div class="lbl">VP</div></div>
+          <div class="pm-medal"><div class="icon">🏆</div><div class="cnt" style="color:var(--cyan)">${p.Titles||0}</div><div class="lbl">TITLES</div></div>
+        </div>
+
+        <!-- CAREER TOTAL MEDALS -->
+        <div class="pm-section-title">CAREER TOTAL (ALL SEASONS)</div>
+        <div class="pm-medal-row">
+          <div class="pm-medal" style="border-color:var(--yellow)44;"><div class="icon">🥇</div><div class="cnt" style="color:var(--yellow)">${totalMVP}</div><div class="lbl">TOTAL MVP</div></div>
+          <div class="pm-medal"><div class="icon">🥈</div><div class="cnt" style="color:#b0bec5">${totalEVP}</div><div class="lbl">TOTAL EVP</div></div>
+          <div class="pm-medal"><div class="icon">🥉</div><div class="cnt" style="color:#ff7043">${totalVP}</div><div class="lbl">TOTAL VP</div></div>
+          <div class="pm-medal" style="border-color:var(--cyan)44;"><div class="icon">🏆</div><div class="cnt" style="color:var(--cyan)">${totalTitles}</div><div class="lbl">TOTAL TITLES</div></div>
+        </div>
+
+        <!-- PRESTIGE -->
+        <div class="pm-section-title">PRESTIGE</div>
+        <div class="pm-stats-grid" style="grid-template-columns:1fr;">
+          <div class="pm-stat"><div class="v" style="color:var(--purple)">${fmt(p.Prestige||0)}</div><div class="l">LIFETIME PRESTIGE</div></div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
 /* ═══════════════════════════════════════════════
    UPDATE ALL
 ═══════════════════════════════════════════════ */
@@ -1942,7 +2101,7 @@ function updateCommand() {
   const rosterHtml = players.filter(p=>p.TeamName===tName).map(p=>`
     <div class="list-row">
       <div>
-        <div class="name">${String(p.PlayerName)}</div>
+        <div class="name" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="openPlayerProfile('${String(p.PlayerName).replace(/'/g,"\\'")}')">${String(p.PlayerName)}</div>
         <div class="meta">${p.Role} • Contract: ${p.ContractMonths}m • ${fmt(p.MarketValue*0.10)}/mo ${medals(p)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="toggleRole('${String(p.PlayerName).replace(/'/g,"\\'")}')">🔄 ${p.Role==='Starter'?'BENCH':'START'}</button>
@@ -2119,7 +2278,7 @@ function updateLeague() {
     <div class="rank-item" style="padding:7px 10px;">
       <div class="rank-num ${i===0?'gold':i===1?'silver':i===2?'bronze':'other'}" style="font-size:14px; width:24px;">${i+1}</div>
       <div style="flex:1;">
-        <div style="font-size:13px; font-weight:600;">${String(p.PlayerName)} <span style="color:var(--text-dim); font-weight:400; font-size:11px;">(${p.TeamName})</span> ${medals(p)}</div>
+        <div style="font-size:13px; font-weight:600;"><span style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="openPlayerProfile('${String(p.PlayerName).replace(/'/g,"\\'")}')"> ${String(p.PlayerName)}</span> <span style="color:var(--text-dim); font-weight:400; font-size:11px;">(${p.TeamName})</span> ${medals(p)}</div>
         <div style="font-family:var(--font-data); font-size:10px; color:var(--text-dim);">FORM SCORE: <span style="color:var(--yellow);">${getFormScore(p)}</span> | MV: ${fmt(p.MarketValue)}</div>
       </div>
     </div>
@@ -2221,7 +2380,7 @@ function refreshMarket() {
     row.innerHTML=`
       <div style="flex:1; min-width:0;">
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-          <span class="name">${p.pn}</span>
+          <span class="name" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="event.stopPropagation(); openPlayerProfile('${p.pn.replace(/'/g,"\\'")}')">${p.pn}</span>
           <span style="color:var(--text-dim); font-size:11px;">[${p.TeamName}]</span>
           ${isHot?'<span class="badge badge-green">🔥 HOT</span>':''}
           ${p.isDisc?'<span class="badge badge-orange">ON SALE</span>':''}
@@ -2567,10 +2726,12 @@ function distributeTourneyPrize() {
   const amt=parseFloat($('prize-amount').value), tName=$('tourney-team-select').value;
   const team=finances.find(t=>t.TeamName===tName);
   if (!amt||!team) return;
+  const awardTitle=$('tourney-award-title').checked;
   saveState(); team.CurrentBank+=amt*0.6;
   const share=amt*0.4/5;
-  players.filter(p=>p.TeamName===tName&&p.Role==='Starter').slice(0,5).forEach(p=>{ p.MarketValue+=share; p.Titles=(p.Titles||0)+1; });
-  addLog(`🏆 ${tName} won ${fmt(amt)}! Bank +${fmt(amt*0.6)}, starters +${fmt(share)} MV each.`,'good'); updateAll();
+  players.filter(p=>p.TeamName===tName&&p.Role==='Starter').slice(0,5).forEach(p=>{ p.MarketValue+=share; if(awardTitle) p.Titles=(p.Titles||0)+1; });
+  const titleMsg=awardTitle?' + 🏆 Title medals awarded':'';
+  addLog(`🏆 ${tName} received ${fmt(amt)}! Bank +${fmt(amt*0.6)}, starters +${fmt(share)} MV each${titleMsg}.`,'good'); updateAll();
 }
 
 function applyIndividualPerformance() {
@@ -2618,9 +2779,21 @@ function applyBailout() {
 }
 
 function applySeasonReset() {
-  if (confirm('GLOBAL SEASON RESET:\n- Wipes all medals (MVP, EVP, VP, Titles)\n- Cuts all MV by 30%\n\nThis cannot be undone. Continue?')) {
-    saveState(); players.forEach(p=>{ p.MarketValue*=0.7; p.MVP=p.EVP=p.VP=p.Titles=0; });
-    monthCounter=1; addLog('🔁 Season reset applied. New season begins.','warn'); updateAll();
+  if (confirm('GLOBAL SEASON RESET:\n- Accumulates medals into Total MVP/EVP/VP/Titles\n- Saves current MV as Previous MV\n- Wipes season medals (MVP, EVP, VP, Titles)\n- Cuts all MV by 30%\n\nThis cannot be undone. Continue?')) {
+    saveState();
+    players.forEach(p=>{
+      // Accumulate season medals into career totals
+      p['Total MVP'] = (p['Total MVP']||0) + (p.MVP||0);
+      p['Total EVP'] = (p['Total EVP']||0) + (p.EVP||0);
+      p['Total VP']  = (p['Total VP']||0)  + (p.VP||0);
+      p['Total Titles'] = (p['Total Titles']||0) + (p.Titles||0);
+      // Save current MV before cutting
+      p['Previous MV'] = p.MarketValue||0;
+      // Apply season reset
+      p.MarketValue *= 0.7;
+      p.MVP = p.EVP = p.VP = p.Titles = 0;
+    });
+    monthCounter=1; addLog('🔁 Season reset applied. Totals accumulated, Previous MV saved. New season begins.','warn'); updateAll();
   }
 }
 
