@@ -178,6 +178,10 @@
     .search-box:focus{border-color:rgba(59,130,246,.4)}
     .sort-select{padding:7px 12px;border-radius:var(--r3);border:1px solid var(--border);
       background:var(--card);color:var(--muted2);font-size:12px;outline:none;cursor:pointer}
+    .winner-filter{min-width:140px}
+    .winner-filter.has-selection{border-color:rgba(251,191,36,.35);color:var(--gold)}
+    .medalist-filter{min-width:140px}
+    .medalist-filter.has-selection{border-color:rgba(168,85,247,.45);color:#c4b5fd}
 
     /* EVENT CARDS */
     .events-list{display:flex;flex-direction:column;gap:14px}
@@ -517,6 +521,12 @@
       <button class="filter-btn" data-filter="Finished">Finished</button>
       <button class="filter-btn" data-filter="major">Majors</button>
     </div>
+    <select class="sort-select winner-filter" id="winnerFilter" title="Filter by winner">
+      <option value="">🏆 All Winners</option>
+    </select>
+    <select class="sort-select medalist-filter" id="medalistFilter" title="Filter by medalist">
+      <option value="">🎖️ All Medalists</option>
+    </select>
     <input class="search-box" id="searchBox" placeholder="Search events…" autocomplete="off">
     <select class="sort-select" id="sortSelect">
       <option value="newest">Newest first</option>
@@ -554,6 +564,8 @@
   let updateMode   = false;
   let editingIndex = null;
   let filterStatus = "all";
+  let filterWinner = "";
+  let filterMedalist = "";
   let searchQuery  = "";
   let sortMode     = "newest";
 
@@ -837,6 +849,8 @@
       : tp >= 1e6 ? "$" + (tp/1e6).toFixed(1) + "M"
       : tp >= 1e3 ? "$" + (tp/1e3).toFixed(0) + "K"
       : "$" + tp.toFixed(0);
+    updateWinnerFilter();
+    updateMedalistFilter();
   }
 
   // ─── ANALYSIS ────────────────────────────────
@@ -922,6 +936,17 @@
     let list = [...events];
     if (filterStatus === "major")        list = list.filter(e => e.major);
     else if (filterStatus !== "all")     list = list.filter(e => e.status === filterStatus);
+    if (filterWinner) {
+      list = list.filter(e => (e.winnerTeam||"").toLowerCase() === filterWinner.toLowerCase());
+    }
+    if (filterMedalist) {
+      const m = filterMedalist.toLowerCase();
+      list = list.filter(e => 
+        (e.mvp||"").toLowerCase() === m || 
+        (e.evp||"").toLowerCase() === m || 
+        (e.vp||"").toLowerCase() === m
+      );
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(e => [e.name, e.location, e.winnerTeam, e.mvp]
@@ -1087,6 +1112,86 @@
 
   g("searchBox").addEventListener("input",   e => { searchQuery = e.target.value.trim(); render(); });
   g("sortSelect").addEventListener("change", e => { sortMode = e.target.value; render(); });
+  g("winnerFilter").addEventListener("change", e => { 
+    filterWinner = e.target.value; 
+    e.target.classList.toggle("has-selection", filterWinner !== "");
+    render(); 
+  });
+  g("medalistFilter").addEventListener("change", e => { 
+    filterMedalist = e.target.value; 
+    e.target.classList.toggle("has-selection", filterMedalist !== "");
+    render(); 
+  });
+
+  // ─── UPDATE WINNER FILTER DROPDOWN ────────────
+  function updateWinnerFilter() {
+    const select = g("winnerFilter");
+    const currentValue = select.value;
+    
+    // Get unique winners (non-empty) sorted alphabetically
+    const winners = [...new Set(
+      events
+        .map(e => (e.winnerTeam || "").trim())
+        .filter(w => w.length > 0)
+    )].sort((a, b) => a.localeCompare(b));
+    
+    // Rebuild options
+    select.innerHTML = '<option value="">🏆 All Winners</option>';
+    winners.forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = w;
+      select.appendChild(opt);
+    });
+    
+    // Restore selection if still valid
+    if (winners.includes(currentValue)) {
+      select.value = currentValue;
+    } else {
+      select.value = "";
+      filterWinner = "";
+    }
+    
+    // Toggle highlight class
+    select.classList.toggle("has-selection", select.value !== "");
+  }
+
+  // ─── UPDATE MEDALIST FILTER DROPDOWN ──────────
+  function updateMedalistFilter() {
+    const select = g("medalistFilter");
+    const currentValue = select.value;
+    
+    // Get unique medalists from MVP, EVP, VP (non-empty) sorted alphabetically
+    const medalists = [...new Set(
+      events
+        .flatMap(e => [
+          (e.mvp || "").trim(),
+          (e.evp || "").trim(),
+          (e.vp || "").trim()
+        ])
+        .filter(m => m.length > 0)
+    )].sort((a, b) => a.localeCompare(b));
+    
+    // Rebuild options
+    select.innerHTML = '<option value="">🎖️ All Medalists</option>';
+    medalists.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    });
+    
+    // Restore selection if still valid
+    if (medalists.includes(currentValue)) {
+      select.value = currentValue;
+    } else {
+      select.value = "";
+      filterMedalist = "";
+    }
+    
+    // Toggle highlight class
+    select.classList.toggle("has-selection", select.value !== "");
+  }
 
   document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.shiftKey && ["a","A"].includes(e.key)) { e.preventDefault(); g("toggleAddBtn").click(); }
