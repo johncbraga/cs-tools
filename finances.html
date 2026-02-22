@@ -145,13 +145,17 @@ body::before {
   font-family: var(--font-data);
   font-size: 11px;
   color: var(--text-dim);
-  animation: ticker-scroll 40s linear infinite;
   gap: 40px;
+  width: max-content;
+}
+
+.ticker-inner.animated {
+  animation: ticker-scroll var(--ticker-duration, 60s) linear infinite;
 }
 
 @keyframes ticker-scroll {
-  from { transform: translateX(100%); }
-  to { transform: translateX(-100%); }
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 .tick-item { margin-right: 40px; }
@@ -1112,6 +1116,29 @@ body::before {
                 <div style="display:flex; gap:5px;">
                   <input type="number" class="nx-input" id="filter-con-min" placeholder="Min" onkeyup="refreshMarket()" style="padding:6px 8px;">
                   <input type="number" class="nx-input" id="filter-con-max" placeholder="Max" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                </div>
+              </div>
+            </div>
+            <div class="g3" style="gap:10px; margin-top:10px;">
+              <div class="form-group">
+                <div class="form-label">🏆 TOTAL TITLES</div>
+                <div style="display:flex; gap:5px;">
+                  <input type="number" class="nx-input" id="filter-titles-min" placeholder="Min" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                  <input type="number" class="nx-input" id="filter-titles-max" placeholder="Max" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="form-label">🥇 TOTAL MEDALS (MVP+EVP+VP)</div>
+                <div style="display:flex; gap:5px;">
+                  <input type="number" class="nx-input" id="filter-medals-min" placeholder="Min" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                  <input type="number" class="nx-input" id="filter-medals-max" placeholder="Max" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="form-label">💰 PRIZE POOL ($)</div>
+                <div style="display:flex; gap:5px;">
+                  <input type="number" class="nx-input" id="filter-prize-min" placeholder="Min" onkeyup="refreshMarket()" style="padding:6px 8px;">
+                  <input type="number" class="nx-input" id="filter-prize-max" placeholder="Max" onkeyup="refreshMarket()" style="padding:6px 8px;">
                 </div>
               </div>
             </div>
@@ -2098,19 +2125,36 @@ function updateTopbarStatus() {
 
 function updateTicker() {
   const items = [];
+  // Include ALL teams in the ticker
   finances.forEach(t=>{
     const {net} = getTeamFinances(t);
     const cls = net>=0?'up':'down';
     items.push(`<span class="tick-item ${cls}">${t.TeamName}: ${net>=0?'+':''}${fmtK(net)}/mo</span>`);
   });
+  // Add top form players
   players.filter(p=>getFormScore(p)>5).sort((a,b)=>getFormScore(b)-getFormScore(a)).slice(0,4).forEach(p=>{
     items.push(`<span class="tick-item up">⭐ ${String(p.PlayerName)} FORM:${getFormScore(p)}</span>`);
   });
+  // Add expiring contracts
   const expiring = players.filter(p=>p.TeamName!=='none'&&p.ContractMonths<=1);
   expiring.slice(0,3).forEach(p=>{
     items.push(`<span class="tick-item warn">⚡ ${String(p.PlayerName)} CONTRACT EXPIRING (${p.ContractMonths}m)</span>`);
   });
-  $('ticker-content').innerHTML = items.join('<span style="color:var(--border); margin:0 20px;">|</span>');
+  
+  // Create the content string
+  const separator = '<span style="color:var(--border); margin:0 20px;">|</span>';
+  const contentStr = items.join(separator);
+  
+  // Duplicate content for seamless infinite loop
+  const tickerEl = $('ticker-content');
+  tickerEl.innerHTML = contentStr + separator + contentStr;
+  
+  // Calculate animation duration based on number of items (more items = slower scroll)
+  const duration = Math.max(30, items.length * 3); // 3 seconds per item, minimum 30s
+  tickerEl.style.setProperty('--ticker-duration', duration + 's');
+  
+  // Add animation class
+  tickerEl.classList.add('animated');
 }
 
 /* ═══ COMMAND PANEL ═══ */
@@ -2406,6 +2450,10 @@ function refreshMarket() {
   const mvMin=parseFloat($('filter-mv-min').value)||0, mvMax=parseFloat($('filter-mv-max').value)||Infinity;
   const conMin=parseInt($('filter-con-min').value)||0, conMax=parseInt($('filter-con-max').value)||Infinity;
   const buyMin=parseFloat($('filter-buy-min').value)||0, buyMax=parseFloat($('filter-buy-max').value)||Infinity;
+  // New filters for medals and prize pool
+  const titlesMin=parseInt($('filter-titles-min').value)||0, titlesMax=parseInt($('filter-titles-max').value)||Infinity;
+  const medalsMin=parseInt($('filter-medals-min').value)||0, medalsMax=parseInt($('filter-medals-max').value)||Infinity;
+  const prizeMin=parseFloat($('filter-prize-min').value)||0, prizeMax=parseFloat($('filter-prize-max').value)||Infinity;
 
   let data=players.map(p=>{
     const pn=String(p.PlayerName);
@@ -2413,7 +2461,11 @@ function refreshMarket() {
     const std=p.MarketValue*0.10*(p.ContractMonths||0)*1.5;
     const buyout=isDisc?temporaryOffers[pn]:std;
     const sal=p.MarketValue*0.10, six=sal*6;
-    return {...p, pn, isDisc, buyout, sal, six};
+    // Calculate total medals and titles
+    const totalTitles=(p['Total Titles']||0)+(p.Titles||0);
+    const totalMedals=(p['Total MVP']||0)+(p.MVP||0)+(p['Total EVP']||0)+(p.EVP||0)+(p['Total VP']||0)+(p.VP||0);
+    const prizePool=p.PrizePool||0;
+    return {...p, pn, isDisc, buyout, sal, six, totalTitles, totalMedals, prizePool};
   }).filter(p=>{
     if (teamF!=='my_roster'&&p.TeamName===activeTeam) return false;
     const passRole=roleF==='all'||(roleF==='none'?p.TeamName==='none':p.Role===roleF);
@@ -2422,7 +2474,11 @@ function refreshMarket() {
     else if (teamF==='my_roster') passTeam=p.TeamName===activeTeam;
     else if (teamF==='offers') passTeam=p.isDisc;
     else passTeam=p.TeamName===teamF;
-    return passRole&&passTeam&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax;
+    // Include new filter conditions
+    const passTitles=p.totalTitles>=titlesMin&&p.totalTitles<=titlesMax;
+    const passMedals=p.totalMedals>=medalsMin&&p.totalMedals<=medalsMax;
+    const passPrize=p.prizePool>=prizeMin&&p.prizePool<=prizeMax;
+    return passRole&&passTeam&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax&&passTitles&&passMedals&&passPrize;
   });
 
   data.sort((a,b)=>{
