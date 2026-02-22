@@ -1408,28 +1408,27 @@ function handleXL(e, cb) {
 function normalizePlayers(arr) {
   return arr.map(p => {
     const row = {...p};
-    // Excel "PrizePool" (no space) = internal MarketValue
-    if (row['PrizePool'] !== undefined && row['MarketValue'] === undefined) {
-      row.MarketValue = Number(row['PrizePool']) || 0;
-    }
-    // Excel "Prize Pool" (with space) = internal PrizePool (accumulated earnings)
-    if (row['Prize Pool'] !== undefined && row['PrizePool_Earnings'] === undefined) {
-      row.PrizePool = Number(row['Prize Pool']) || 0;
-    }
-    // Ensure all fields exist with defaults
-    row.MarketValue = Number(row.MarketValue) || 0;
-    row.PrizePool = Number(row.PrizePool) || 0;
-    row.Prestige = Number(row.Prestige) || 0;
-    row.MVP = Number(row.MVP) || 0;
-    row.EVP = Number(row.EVP) || 0;
-    row.VP = Number(row.VP) || 0;
-    row.Titles = Number(row.Titles) || 0;
+    
+    // Lê EXATAMENTE os nomes corretos das colunas do seu Excel
+    row['Market Value'] = Number(row['Market Value']) || 0;
+    row['Prize Pool'] = Number(row['Prize Pool']) || 0;
+    
+    // Mantém as chaves sem espaço caso alguma outra parte do código as utilize
+    row.MarketValue = row['Market Value'];
+    row.PrizePool = row['Prize Pool'];
+    
+    // Garante que todos os outros campos existam com valores padrão (removido o Prestige)
+    row.MVP = Number(row.MVP || row['MVP']) || 0;
+    row.EVP = Number(row.EVP || row['EVP']) || 0;
+    row.VP = Number(row.VP || row['VP']) || 0;
+    row.Titles = Number(row.Titles || row['Titles']) || 0;
     row['Total MVP'] = Number(row['Total MVP']) || 0;
     row['Total EVP'] = Number(row['Total EVP']) || 0;
     row['Total VP'] = Number(row['Total VP']) || 0;
     row['Total Titles'] = Number(row['Total Titles']) || 0;
     row['Previous MV'] = Number(row['Previous MV']) || 0;
-    row.ContractMonths = Number(row.ContractMonths) || 0;
+    row.ContractMonths = Number(row.ContractMonths || row['ContractMonths']) || 0;
+    
     return row;
   });
 }
@@ -2890,7 +2889,7 @@ function exportExcels() {
   const pData = players.map(p => ({
     'PlayerName': p.PlayerName || '',
     'Role': p.Role || '',
-    'PrizePool': p.MarketValue || 0,         // Internal MarketValue → Excel "PrizePool"
+    'Market Value': p.MarketValue || 0,         // Internal MarketValue → Excel "PrizePool"
     'Prize Pool': p.PrizePool || 0,           // Accumulated earnings → Excel "Prize Pool"
     'ContractMonths': p.ContractMonths || 0,
     'TeamName': p.TeamName || '',
