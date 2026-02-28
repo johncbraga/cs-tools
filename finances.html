@@ -1066,6 +1066,10 @@ body::before {
         <div style="display:flex; flex-direction:column; gap:12px;">
           <div class="card">
             <div class="card-title">🔭 SCOUTING FILTERS</div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <div class="form-label">🔎 SEARCH PLAYER</div>
+              <input type="text" class="nx-input" id="market-name-search" placeholder="Type player name..." oninput="refreshMarket()" style="padding:6px 8px; width:100%;">
+            </div>
             <div class="g3" style="gap:10px; margin-bottom:10px;">
               <div class="form-group">
                 <div class="form-label">ROLE</div>
@@ -2443,6 +2447,7 @@ function updateHotDealsList() {
 
 function refreshMarket() {
   const roleF=$('market-filter').value, teamF=$('market-team-filter').value, sortBy=$('market-sort').value;
+  const nameSearch=($('market-name-search').value||'').toLowerCase().trim();
   const activeTeam=$('dash-team-select').value;
   const bank=(finances.find(t=>t.TeamName===activeTeam)||{}).CurrentBank||0;
   const fins=getTeamFinances(finances.find(t=>t.TeamName===activeTeam)||{});
@@ -2478,7 +2483,7 @@ function refreshMarket() {
     const passTitles=p.totalTitles>=titlesMin&&p.totalTitles<=titlesMax;
     const passMedals=p.totalMedals>=medalsMin&&p.totalMedals<=medalsMax;
     const passPrize=p.prizePool>=prizeMin&&p.prizePool<=prizeMax;
-    return passRole&&passTeam&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax&&passTitles&&passMedals&&passPrize;
+    return passRole&&passTeam&&(nameSearch===''||p.pn.toLowerCase().includes(nameSearch))&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax&&passTitles&&passMedals&&passPrize;
   });
 
   data.sort((a,b)=>{

@@ -1071,28 +1071,6 @@ input[type="file"] { cursor: pointer; }
         </div>
       </div>
 
-      <!-- HEAD-TO-HEAD HISTORY -->
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title"><div class="icon">◐</div> H2H History</div>
-          <span class="chip">Session</span>
-        </div>
-        <div class="panel-body">
-          <div class="two-col">
-            <div class="field">
-              <label class="field-label">Team A</label>
-              <select class="inp" id="h2hA"></select>
-            </div>
-            <div class="field">
-              <label class="field-label">Team B</label>
-              <select class="inp" id="h2hB"></select>
-            </div>
-          </div>
-          <button class="btn btn-full" id="btnH2H">View H2H</button>
-          <div id="h2hResult" style="display:none;margin-top:12px;"></div>
-        </div>
-      </div>
-
       <!-- TOURNAMENT WIN -->
       <div class="panel">
         <div class="panel-head">
@@ -1280,15 +1258,13 @@ function updateStatsBar() {
 /* ─── RENDER TABLE ─── */
 function fillSelects() {
   const names = teams.map(t=>t[COL.TEAM]).sort((a,b)=>a.localeCompare(b));
-  for (const id of ["teamA","teamB","tourneyTeam","h2hA","h2hB"]) {
+  for (const id of ["teamA","teamB","tourneyTeam"]) {
     const s = document.getElementById(id);
     s.innerHTML = names.map(n=>`<option value="${htmlEsc(n)}">${htmlEsc(n)}</option>`).join("");
   }
   if (names.length >= 2) {
     document.getElementById("teamA").value = names[0];
     document.getElementById("teamB").value = names[1];
-    document.getElementById("h2hA").value  = names[0];
-    document.getElementById("h2hB").value  = names[1];
   }
 }
 
@@ -1449,38 +1425,6 @@ document.getElementById("btnApplyMatch").addEventListener("click",()=>{
   if(recentMatches.length>RECENT_MAX) recentMatches.pop();
   renderTable(); renderRecent();
   showAlert(`Match applied: <strong>${htmlEsc(res==="A"?aName:res==="B"?bName:"Draw")}</strong> wins. Download Excel to persist.`,"good");
-});
-
-/* ─── H2H ─── */
-document.getElementById("btnH2H").addEventListener("click",()=>{
-  const aName=document.getElementById("h2hA").value, bName=document.getElementById("h2hB").value;
-  if(!aName||!bName||aName===bName){ showAlert("Choose two different teams for H2H.","warn"); return; }
-  const history=recentMatches.filter(m=>(m.aName===aName&&m.bName===bName)||(m.aName===bName&&m.bName===aName));
-  const box=document.getElementById("h2hResult");
-  if(!history.length){
-    box.innerHTML=`<div style="font-family:var(--mono);font-size:12px;color:var(--text-dim);padding:10px 0;">No matches found between these teams in this session.</div>`;
-    box.style.display="block";
-    return;
-  }
-  let wA=0,wB=0,draws=0;
-  for(const m of history){
-    const aIs = m.aName===aName?"A":"B";
-    const bIs = aIs==="A"?"B":"A";
-    if(m.result===aIs) wA++;
-    else if(m.result===bIs) wB++;
-    else draws++;
-  }
-  box.innerHTML=`
-    <div style="background:rgba(0,0,0,0.3);border:1px solid var(--border-dim);padding:12px;font-family:var(--mono);font-size:12px;">
-      <div style="font-size:13px;color:var(--text-bright);margin-bottom:8px;">${htmlEsc(aName)} vs ${htmlEsc(bName)}</div>
-      <div style="display:flex;gap:16px;">
-        <div><span style="color:var(--green);font-size:20px;">${wA}</span> <span style="color:var(--text-dim)">wins</span></div>
-        <div><span style="color:var(--red);font-size:20px;">${wB}</span> <span style="color:var(--text-dim)">wins</span></div>
-        <div><span style="color:var(--text-dim);font-size:20px;">${draws}</span> <span style="color:var(--text-dim)">draws</span></div>
-      </div>
-      <div style="color:var(--text-muted);margin-top:6px;">${history.length} match(es) in session</div>
-    </div>`;
-  box.style.display="block";
 });
 
 /* ─── TOURNAMENT ─── */
