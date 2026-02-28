@@ -34,6 +34,10 @@ let paFilteredOpponent = '';
 /* Dashboard state */
 let dashSortDesc = true;
 
+/* Change History state */
+let changeHistory = [];
+const CHANGE_HISTORY_KEY = 'nexus_change_history';
+
 /* ════════════════════════════════════════
    SIDEBAR TOGGLE
 ════════════════════════════════════════ */
@@ -180,12 +184,14 @@ const escHtml = s => String(s ?? '')
 async function readExcel(url) {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
+  const lastModified = res.headers.get('Last-Modified') || null;
   const data = await res.arrayBuffer();
   const wb = XLSX.read(data, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
   return {
     json: XLSX.utils.sheet_to_json(ws, { defval: '', raw: true }),
-    raw: XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' })
+    raw: XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' }),
+    lastModified
   };
 }
 
@@ -194,10 +200,12 @@ async function loadAll(force = false) {
   setStatus('Loading old.xlsx…', 'loading');
   const oldData = await readExcel(OLD_URL + bust);
   oldRowsCache = oldData.json;
+  recordChange('old.xlsx', oldData.lastModified, force ? 'reload' : 'load');
 
   setStatus('Loading ranking.xlsx…', 'loading');
   const newData = await readExcel(NEW_URL + bust);
   newRowsCache = newData.json;
+  recordChange('ranking.xlsx', newData.lastModified, force ? 'reload' : 'load');
 
   hltvHeaders = (newData.raw[0] || []).map(h => (h ?? '').toString().trim());
   hltvRows = newData.raw.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
@@ -206,6 +214,7 @@ async function loadAll(force = false) {
   try {
     const histData = await readExcel(HISTORY_URL + bust);
     historyData = parseHistoryData(histData.json);
+    recordChange('history.xlsx', histData.lastModified, force ? 'reload' : 'load');
   } catch (e) {
     console.warn('history.xlsx not found or failed to load:', e);
     historyData = [];
@@ -226,6 +235,8 @@ async function loadAll(force = false) {
   $('#btnRunVrsAnalysis').disabled = false;
   $('#btnRunHltvAnalysis').disabled = false;
   $('#btnDownloadCsv').disabled = false;
+
+  renderChangeHistory();
 }
 
 /* ════════════════════════════════════════
@@ -1170,6 +1181,12 @@ function initProAnalyses() {
   const mapSel = document.getElementById('paFilterMap');
   mapSel.innerHTML = '<option value="">All Maps</option>' + maps.map(m => `<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('');
 
+  // Also populate H2H map filter
+  const h2hMapSel = document.getElementById('h2hMapFilter');
+  if (h2hMapSel) {
+    h2hMapSel.innerHTML = '<option value="">All Maps</option>' + maps.map(m => `<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('');
+  }
+
   const eventSel = document.getElementById('paFilterEvent');
   eventSel.innerHTML = '<option value="">All Events</option>' + events.map(e => `<option value="${escHtml(e)}">${escHtml(e)}</option>`).join('');
 
@@ -1220,6 +1237,16 @@ function initProAnalyses() {
 
     // H2H button
     document.getElementById('btnH2hAnalyze').addEventListener('click', runH2hAnalysis);
+
+    // H2H map filter: re-run analysis when map changes (if teams are already selected)
+    const h2hMapFilterEl = document.getElementById('h2hMapFilter');
+    if (h2hMapFilterEl) {
+      h2hMapFilterEl.addEventListener('change', () => {
+        const a = document.getElementById('h2hTeamA').value.trim();
+        const b = document.getElementById('h2hTeamB').value.trim();
+        if (a && b) runH2hAnalysis();
+      });
+    }
   }
 
   renderHistoryTable();
@@ -1337,21 +1364,33 @@ function runH2hAnalysis() {
   const nameA = document.getElementById('h2hTeamA').value.trim();
   const nameB = document.getElementById('h2hTeamB').value.trim();
   const output = document.getElementById('h2hOutput');
+  const selectedMap = (document.getElementById('h2hMapFilter')?.value || '').trim();
 
   if (!nameA || !nameB) { output.innerHTML = '<div class="empty-state">Please select both teams.</div>'; return; }
   if (nameA.toLowerCase() === nameB.toLowerCase()) { output.innerHTML = '<div class="empty-state">Please select two different teams.</div>'; return; }
 
   const aL = nameA.toLowerCase(), bL = nameB.toLowerCase();
 
-  // Get all matches for each team
-  const matchesA = historyData.filter(m => m.team1.toLowerCase() === aL || m.team2.toLowerCase() === aL);
-  const matchesB = historyData.filter(m => m.team1.toLowerCase() === bL || m.team2.toLowerCase() === bL);
+  // Get all matches for each team (optionally filtered by map)
+  let matchesA = historyData.filter(m => m.team1.toLowerCase() === aL || m.team2.toLowerCase() === aL);
+  let matchesB = historyData.filter(m => m.team1.toLowerCase() === bL || m.team2.toLowerCase() === bL);
 
-  // H2H matches
-  const h2hMatches = historyData.filter(m =>
+  // H2H matches (all maps)
+  let h2hMatchesAll = historyData.filter(m =>
     (m.team1.toLowerCase() === aL && m.team2.toLowerCase() === bL) ||
     (m.team1.toLowerCase() === bL && m.team2.toLowerCase() === aL)
   );
+
+  // Apply map filter if selected
+  if (selectedMap) {
+    matchesA = matchesA.filter(m => m.map === selectedMap);
+    matchesB = matchesB.filter(m => m.map === selectedMap);
+  }
+
+  // H2H matches (filtered)
+  let h2hMatches = selectedMap
+    ? h2hMatchesAll.filter(m => m.map === selectedMap)
+    : h2hMatchesAll;
 
   // Stats helper
   function teamStats(matches, teamNameLower) {
@@ -1477,21 +1516,32 @@ function runH2hAnalysis() {
   // === Render ===
   let html = `<div class="h2h-report">`;
 
+  // Map filter indicator
+  if (selectedMap) {
+    // Count overall H2H wins for context
+    let h2hWinsAAll = 0, h2hWinsBAll = 0;
+    h2hMatchesAll.forEach(m => {
+      if (m.winner.toLowerCase() === aL) h2hWinsAAll++;
+      else if (m.winner.toLowerCase() === bL) h2hWinsBAll++;
+    });
+    html += `<div class="h2h-map-filter-active">🗺️ Filtered by map: <strong>${escHtml(selectedMap)}</strong> — Overall H2H: ${h2hWinsAAll}–${h2hWinsBAll} (${h2hMatchesAll.length} total matches)</div>`;
+  }
+
   // Header
   html += `<div class="h2h-header">
     <div class="h2h-team-card h2h-team-a">
       <div class="h2h-team-name">${escHtml(nameA)}</div>
-      <div class="h2h-team-record">${statsA.wins}W — ${statsA.losses}L</div>
+      <div class="h2h-team-record">${statsA.wins}W — ${statsA.losses}L${selectedMap ? ' on ' + escHtml(selectedMap) : ''}</div>
       <div class="h2h-team-wr">${statsA.wr}% WR</div>
     </div>
     <div class="h2h-vs">
       <div class="h2h-vs-label">VS</div>
       <div class="h2h-vs-score">${h2hWinsA} — ${h2hWinsB}</div>
-      <div class="h2h-vs-sub">${h2hMatches.length} H2H match${h2hMatches.length !== 1 ? 'es' : ''}</div>
+      <div class="h2h-vs-sub">${h2hMatches.length} H2H match${h2hMatches.length !== 1 ? 'es' : ''}${selectedMap ? ' on ' + escHtml(selectedMap) : ''}</div>
     </div>
     <div class="h2h-team-card h2h-team-b">
       <div class="h2h-team-name">${escHtml(nameB)}</div>
-      <div class="h2h-team-record">${statsB.wins}W — ${statsB.losses}L</div>
+      <div class="h2h-team-record">${statsB.wins}W — ${statsB.losses}L${selectedMap ? ' on ' + escHtml(selectedMap) : ''}</div>
       <div class="h2h-team-wr">${statsB.wr}% WR</div>
     </div>
   </div>`;
@@ -1709,12 +1759,100 @@ function downloadText(fn, content, mime = 'text/plain') {
 }
 
 /* ════════════════════════════════════════
+   CHANGE HISTORY
+════════════════════════════════════════ */
+function loadChangeHistory() {
+  try {
+    const saved = localStorage.getItem(CHANGE_HISTORY_KEY);
+    changeHistory = saved ? JSON.parse(saved) : [];
+  } catch (e) { changeHistory = []; }
+}
+
+function saveChangeHistory() {
+  try { localStorage.setItem(CHANGE_HISTORY_KEY, JSON.stringify(changeHistory)); } catch (e) {}
+}
+
+function recordChange(fileName, lastModified, action = 'load') {
+  const entry = {
+    file: fileName,
+    loadedAt: new Date().toISOString(),
+    fileModified: lastModified ? new Date(lastModified).toISOString() : null,
+    action
+  };
+  changeHistory.unshift(entry);
+  // Keep max 50 entries
+  if (changeHistory.length > 50) changeHistory.length = 50;
+  saveChangeHistory();
+}
+
+function renderChangeHistory() {
+  const card = document.getElementById('changeHistoryCard');
+  const list = document.getElementById('changeHistoryList');
+  if (!card || !list) return;
+
+  if (changeHistory.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  const fileIcons = {
+    'old.xlsx': '📄',
+    'ranking.xlsx': '📊',
+    'history.xlsx': '📜'
+  };
+
+  const now = new Date();
+  function timeAgo(dateStr) {
+    const d = new Date(dateStr);
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  list.innerHTML = changeHistory.slice(0, 20).map(entry => {
+    const icon = fileIcons[entry.file] || '📁';
+    const actionLabel = entry.action === 'reload' ? 'reload' : 'load';
+    const labelCls = entry.action === 'reload' ? 'reload' : '';
+    const modifiedInfo = entry.fileModified ? `File modified: ${formatDate(entry.fileModified)}` : '';
+    return `<div class="change-history-item" title="${modifiedInfo}">
+      <span class="change-history-icon">${icon}</span>
+      <span class="change-history-file">${entry.file}</span>
+      <span class="change-history-label ${labelCls}">${actionLabel}</span>
+      ${entry.fileModified ? `<span style="font-size:10px;color:var(--muted2)">mod: ${formatDate(entry.fileModified)}</span>` : ''}
+      <span class="change-history-date">${timeAgo(entry.loadedAt)}</span>
+    </div>`;
+  }).join('');
+}
+
+// Load history from localStorage on init
+loadChangeHistory();
+
+// Clear history button
+document.getElementById('btnClearHistory')?.addEventListener('click', () => {
+  changeHistory = [];
+  saveChangeHistory();
+  renderChangeHistory();
+});
+
+// Render on load (will show or hide based on data)
+renderChangeHistory();
+
+/* ════════════════════════════════════════
    EVENT LISTENERS
 ════════════════════════════════════════ */
 $('#btnCompare').addEventListener('click', () => loadAll(true));
 
 $('#btnReloadOld').addEventListener('click', async () => {
-  try { setStatus('Reloading old.xlsx…', 'loading'); const d = await readExcel(OLD_URL + '?v=' + Date.now()); oldRowsCache = d.json; computeVRS(); renderDashboard(); setStatus('Old reloaded', 'ok'); }
+  try { setStatus('Reloading old.xlsx…', 'loading'); const d = await readExcel(OLD_URL + '?v=' + Date.now()); oldRowsCache = d.json; recordChange('old.xlsx', d.lastModified, 'reload'); computeVRS(); renderDashboard(); renderChangeHistory(); setStatus('Old reloaded', 'ok'); }
   catch (e) { setStatus('Error reloading old.xlsx', 'err'); }
 });
 
@@ -1723,9 +1861,10 @@ $('#btnReloadNew').addEventListener('click', async () => {
     setStatus('Reloading ranking.xlsx…', 'loading');
     const d = await readExcel(NEW_URL + '?v=' + Date.now());
     newRowsCache = d.json;
+    recordChange('ranking.xlsx', d.lastModified, 'reload');
     hltvHeaders = (d.raw[0] || []).map(h => (h ?? '').toString().trim());
     hltvRows = d.raw.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
-    computeVRS(); renderDashboard(); renderHltvCharts();
+    computeVRS(); renderDashboard(); renderHltvCharts(); renderChangeHistory();
     setStatus('New reloaded', 'ok');
   } catch (e) { setStatus('Error reloading ranking.xlsx', 'err'); }
 });
