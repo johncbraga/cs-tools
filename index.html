@@ -717,9 +717,20 @@
           <input class="form-control" id="evmPrizePool" type="text" placeholder="e.g. $1,250,000">
         </div>
         <!-- Row 3 -->
-        <div class="form-group">
-          <label class="form-label">Event Logo URL</label>
-          <input class="form-control" id="evmLogo" type="text" placeholder="https://...">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Event Logo</label>
+          <input class="form-control" id="evmLogo" type="text" placeholder="Paste URL or upload an image below...">
+          <div class="ev-logo-upload">
+            <div class="ev-logo-upload-row">
+              <label class="btn btn-sm" style="cursor:pointer; margin:0; white-space:nowrap;">
+                📁 Upload Image
+                <input type="file" id="evmLogoFile" accept="image/*" style="display:none;">
+              </label>
+              <button type="button" class="btn btn-sm" id="evmLogoClear" style="opacity:0.7;">✕ Clear</button>
+            </div>
+            <img id="evmLogoPreview" class="ev-logo-preview" style="display:none;" alt="Logo preview">
+            <p class="ev-logo-hint">Upload a local image or paste a URL above. Uploaded images are stored as base64 in the JSON.</p>
+          </div>
         </div>
         <!-- New checkbox -->
         <div class="form-group" style="grid-column:1/-1; margin-top:4px;">
