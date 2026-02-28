@@ -1,8 +1,8 @@
 OLD.xlsx
-Stage 1
+Stage 2 [0:0] [1:0]
 
 ranking.xlsx
-Stage 2 [0:0]
+Stage 2 [0:1]
 
 
 RANKINGS:
@@ -15,7 +15,7 @@ ranking 5 [Season 0] : Europe RMRs
 ranking 6 [Season 0] : Asia RMRs
 ranking 7 [Season 0] : Global RMR
 ranking 8 [Season 0] : Second Chance RMR
-ranking 9 [Season 0] : 
+ranking 9 [Season 0] : Stage 1
 ranking 10 [Season 0] : 
 ranking n [Season 0] : 
 ranking n [Season 0] : 
