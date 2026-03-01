@@ -833,6 +833,104 @@ body::before {
 .intel-diag-item .d-val { font-family:var(--font-data); font-size:18px; font-weight:700; }
 .intel-diag-item .d-lbl { font-family:var(--font-display); font-size:9px; letter-spacing:2px; color:var(--text-dim); margin-top:3px; }
 
+/* ═══ INTEL MODAL ═══ */
+.intel-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  animation: intel-modal-fade-in 0.25s ease-out;
+}
+.intel-modal-overlay.active { display: flex; }
+
+@keyframes intel-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes intel-modal-slide-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.intel-modal {
+  background: var(--bg2);
+  border: 1px solid var(--border-hot);
+  width: 100%;
+  max-width: 780px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 0;
+  animation: intel-modal-slide-in 0.3s ease-out;
+  box-shadow: 0 0 60px rgba(0,212,255,0.12), 0 0 120px rgba(0,0,0,0.6);
+}
+
+.intel-modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--cyan));
+}
+
+.intel-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg2);
+  z-index: 2;
+}
+
+.intel-modal-header-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intel-modal-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-data);
+  font-size: 12px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 1px;
+}
+.intel-modal-close:hover { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+.intel-modal-body {
+  padding: 20px;
+}
+
+.intel-modal-body .intel-detail-card {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.intel-modal-body .intel-diag-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .topbar-back {
   display: flex;
   align-items: center;
@@ -1097,6 +1195,20 @@ body::before {
                   <option value="imp-desc">↓ 6m Impact (Risk)</option>
                   <option value="buy-asc">↑ Buyout</option>
                   <option value="buy-desc">↓ Buyout</option>
+                </select>
+              </div>
+            </div>
+            <div class="g3" style="gap:10px; margin-bottom:10px;">
+              <div class="form-group">
+                <div class="form-label">🌍 REGION</div>
+                <select class="nx-select" id="market-region-filter" onchange="onRegionChange(); refreshMarket()">
+                  <option value="all">All Regions</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <div class="form-label">🏳 COUNTRY</div>
+                <select class="nx-select" id="market-country-filter" onchange="refreshMarket()">
+                  <option value="all">All Countries</option>
                 </select>
               </div>
             </div>
@@ -1379,8 +1491,8 @@ body::before {
         <div id="intel-stable" style="overflow-y:auto; max-height:300px; border:1px solid var(--border); background:var(--bg); padding:4px; display:grid; grid-template-columns:1fr 1fr; gap:4px;"></div>
       </div>
 
-      <!-- DETAIL REPORT (expanded) -->
-      <div id="intel-detail" style="margin-top:16px; max-height:500px; overflow-y:auto;"></div>
+      <!-- DETAIL REPORT (now rendered in modal) -->
+      <div id="intel-detail" style="display:none;"></div>
 
       <!-- ═══ TEAMS BY REGION ═══ -->
       <div style="margin-top:24px;">
@@ -1418,6 +1530,17 @@ body::before {
     <button class="btn btn-cyan" onclick="runMonthlyCycle()" style="padding:6px 20px; font-size:11px; letter-spacing:2px;">⏭ RUN MONTHLY CYCLE</button>
     <button class="btn btn-ghost btn-sm" onclick="undo()">↩ UNDO</button>
     <button class="btn btn-ghost btn-sm" onclick="exportExcels()">📥 EXPORT</button>
+  </div>
+</div>
+
+<!-- ═══ INTEL ANALYSIS MODAL ═══ -->
+<div class="intel-modal-overlay" id="intel-modal-overlay" onclick="if(event.target===this)closeIntelModal()">
+  <div class="intel-modal">
+    <div class="intel-modal-header">
+      <div class="intel-modal-header-title">🧠 NEXUS INTEL — ANÁLISE INTELIGENTE</div>
+      <button class="intel-modal-close" onclick="closeIntelModal()">✕ ESC</button>
+    </div>
+    <div class="intel-modal-body" id="intel-modal-body"></div>
   </div>
 </div>
 
@@ -1752,13 +1875,12 @@ function runIntel() {
     $('intel-stable').innerHTML = intelQuery ? `<div style="color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px; grid-column:1/-1;">Nenhum resultado para "${intelQuery}".</div>` : '';
   }
 
-  // Auto-select worst team on first run
-  if (!intelSelectedTeam && falling.length > 0) {
-    intelSelectedTeam = falling[0].tName;
-  } else if (!intelSelectedTeam && profiles.length > 0) {
-    intelSelectedTeam = profiles[0].tName;
-  }
-  if (intelSelectedTeam) renderIntelDetail(profiles);
+  // Update selected card highlight (no auto-open)
+  document.querySelectorAll('.intel-team-card').forEach(c => {
+    if (intelSelectedTeam && c.textContent.includes(intelSelectedTeam)) {
+      c.classList.add('selected');
+    }
+  });
   renderRegionMap();
 }
 
@@ -1955,8 +2077,18 @@ function renderIntelDetail(profiles) {
   }
 
   html += `</div>`;
-  $('intel-detail').innerHTML = html;
-  $('intel-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('intel-modal-body').innerHTML = html;
+  openIntelModal();
+}
+
+function openIntelModal() {
+  $('intel-modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeIntelModal() {
+  $('intel-modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
 }
 
 /* ═══ REGION MAP ═══ */
@@ -2268,6 +2400,7 @@ function populateDropdowns() {
   dashSel.innerHTML = opts;
   if (cur && finances.some(t=>t.TeamName===cur)) dashSel.value=cur;
   $('perf-player-select').innerHTML = players.map(p=>`<option value="${String(p.PlayerName)}">${String(p.PlayerName)} (${p.TeamName})</option>`).join('');
+  populateRegionCountryFilters();
   updateRenewDropdown($('dash-team-select').value);
 }
 
@@ -2588,6 +2721,54 @@ function updateLeague() {
   : '<div style="color:var(--text-dim); padding:10px; font-size:12px;">No transfers recorded.</div>';
 }
 
+/* ═══ REGION / COUNTRY MAPPING ═══ */
+const REGION_MAP = {
+  'Americas': ['Brazil','Argentina','Chile','Uruguay','Colombia','Peru','Mexico','United States','Canada','Bolivia','Paraguay','Ecuador','Venezuela'],
+  'Europe': ['Denmark','Sweden','Norway','Finland','France','Germany','Spain','Portugal','Italy','Netherlands','Belgium','Poland','Czech Republic','Slovakia','Hungary','Austria','Switzerland','United Kingdom','Ireland','Greece','Turkey','Romania','Bulgaria','Serbia','Croatia','Bosnia','Montenegro','North Macedonia','Albania','Slovenia','Estonia','Latvia','Lithuania','Iceland','Malta','Luxembourg','Cyprus'],
+  'CIS': ['Russia','Ukraine','Kazakhstan','Belarus','Uzbekistan','Georgia','Armenia','Azerbaijan','Moldova','Kyrgyzstan','Tajikistan','Turkmenistan','Mongolia'],
+  'Asia': ['China','South Korea','Japan','Indonesia','Philippines','Vietnam','Thailand','Malaysia','Singapore','Taiwan','India','Pakistan','Bangladesh','Sri Lanka','Myanmar','Cambodia','Laos','Nepal','Hong Kong','Macau','Maldives'],
+  'Oceania': ['Australia','New Zealand','Fiji','Papua New Guinea'],
+  'Middle East': ['Saudi Arabia','UAE','United Arab Emirates','Israel','Jordan','Lebanon','Iraq','Iran','Qatar','Bahrain','Kuwait','Oman','Yemen','Syria','Palestine','Egypt'],
+  'Africa': ['South Africa','Morocco','Nigeria','Kenya','Tunisia','Algeria','Ghana','Senegal','Cameroon','Ethiopia','Tanzania','Uganda','Zimbabwe','Mozambique','Ivory Coast','Angola','Namibia','Botswana','Rwanda']
+};
+
+function getPlayerRegion(country) {
+  if (!country) return 'Unknown';
+  for (const [region, countries] of Object.entries(REGION_MAP)) {
+    if (countries.some(c => c.toLowerCase() === country.toLowerCase())) return region;
+  }
+  return 'Other';
+}
+
+function populateRegionCountryFilters() {
+  // Collect unique regions and countries from player data
+  const regionSet = new Set();
+  const countrySet = new Set();
+  players.forEach(p => {
+    const c = (p.Country || '').trim();
+    if (c) {
+      countrySet.add(c);
+      regionSet.add(getPlayerRegion(c));
+    }
+  });
+  const regions = [...regionSet].sort();
+  const countries = [...countrySet].sort();
+
+  $('market-region-filter').innerHTML = '<option value="all">All Regions</option>' + regions.map(r => `<option value="${r}">${r}</option>`).join('');
+  $('market-country-filter').innerHTML = '<option value="all">All Countries</option>' + countries.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function onRegionChange() {
+  const region = $('market-region-filter').value;
+  const countrySet = new Set();
+  players.forEach(p => {
+    const c = (p.Country || '').trim();
+    if (c && (region === 'all' || getPlayerRegion(c) === region)) countrySet.add(c);
+  });
+  const countries = [...countrySet].sort();
+  $('market-country-filter').innerHTML = '<option value="all">All Countries</option>' + countries.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
 /* ═══ MARKET ═══ */
 function updateHotDealsList() {
   const tName=$('dash-team-select').value;
@@ -2630,6 +2811,7 @@ function refreshMarket() {
   const titlesMin=parseInt($('filter-titles-min').value)||0, titlesMax=parseInt($('filter-titles-max').value)||Infinity;
   const medalsMin=parseInt($('filter-medals-min').value)||0, medalsMax=parseInt($('filter-medals-max').value)||Infinity;
   const prizeMin=parseFloat($('filter-prize-min').value)||0, prizeMax=parseFloat($('filter-prize-max').value)||Infinity;
+  const regionF=$('market-region-filter').value, countryF=$('market-country-filter').value;
 
   let data=players.map(p=>{
     const pn=String(p.PlayerName);
@@ -2654,7 +2836,10 @@ function refreshMarket() {
     const passTitles=p.totalTitles>=titlesMin&&p.totalTitles<=titlesMax;
     const passMedals=p.totalMedals>=medalsMin&&p.totalMedals<=medalsMax;
     const passPrize=p.prizePool>=prizeMin&&p.prizePool<=prizeMax;
-    return passRole&&passTeam&&(nameSearch===''||p.pn.toLowerCase().includes(nameSearch))&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax&&passTitles&&passMedals&&passPrize;
+    const playerCountry=(p.Country||'').trim();
+    const passRegion=regionF==='all'||getPlayerRegion(playerCountry)===regionF;
+    const passCountry=countryF==='all'||playerCountry===countryF;
+    return passRole&&passTeam&&passRegion&&passCountry&&(nameSearch===''||p.pn.toLowerCase().includes(nameSearch))&&p.MarketValue>=mvMin&&p.MarketValue<=mvMax&&(p.ContractMonths||0)>=conMin&&(p.ContractMonths||0)<=conMax&&p.buyout>=buyMin&&p.buyout<=buyMax&&passTitles&&passMedals&&passPrize;
   });
 
   data.sort((a,b)=>{
@@ -3168,6 +3353,10 @@ addLog('NEXUS COMMAND — Upload your data files to begin.', 'good');
 
 // Keyboard shortcut: press 0 to go back to portal
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('intel-modal-overlay').classList.contains('active')) {
+    closeIntelModal();
+    return;
+  }
   if (e.key === '0' && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) {
     window.location.href = 'index.html';
   }
