@@ -1382,6 +1382,29 @@ body::before {
       <!-- DETAIL REPORT (expanded) -->
       <div id="intel-detail" style="margin-top:16px; max-height:500px; overflow-y:auto;"></div>
 
+      <!-- ═══ TEAMS BY REGION ═══ -->
+      <div style="margin-top:24px;">
+        <div class="card purple" style="padding:20px;">
+          <div class="card-title" style="color:var(--purple); margin-bottom:16px;">
+            <span style="font-size:16px;">🌍</span> MAPA DE REGIÕES — TEAMS BY REGION
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+            <div class="form-group" style="margin:0; flex:0 0 auto;">
+              <select class="nx-select" id="region-filter" onchange="renderRegionMap()" style="width:200px; padding:6px 12px; font-size:12px;">
+                <option value="all">🌐 TODAS AS REGIÕES</option>
+                <option value="Americas">🌎 AMERICAS</option>
+                <option value="Europa">🌍 EUROPA</option>
+                <option value="Asia">🌏 ASIA</option>
+                <option value="MIXED">🌐 MIXED</option>
+                <option value="unknown">❓ NÃO CLASSIFICADO</option>
+              </select>
+            </div>
+            <div id="region-count-bar" style="display:flex; gap:10px; font-family:var(--font-data); font-size:11px;"></div>
+          </div>
+          <div id="region-map-list" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; max-height:400px; overflow-y:auto;"></div>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /content -->
@@ -1411,6 +1434,96 @@ const $ = id => document.getElementById(id);
 const fmt = v => '$' + Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
 const fmtK = v => { const a = Math.abs(v); const s = v < 0 ? '-' : ''; return s + (a >= 1000 ? '$' + (a/1000).toFixed(1) + 'k' : fmt(v)); };
 const clamp = (v,min,max) => Math.min(max, Math.max(min, v));
+
+/* ═══ COUNTRY → FLAG & REGION ═══ */
+const COUNTRY_DATA = {
+  'brazil':{'code':'BR','region':'Americas'},'brasil':{'code':'BR','region':'Americas'},
+  'united states':{'code':'US','region':'Americas'},'usa':{'code':'US','region':'Americas'},'us':{'code':'US','region':'Americas'},
+  'canada':{'code':'CA','region':'Americas'},'argentina':{'code':'AR','region':'Americas'},
+  'chile':{'code':'CL','region':'Americas'},'colombia':{'code':'CO','region':'Americas'},
+  'mexico':{'code':'MX','region':'Americas'},'peru':{'code':'PE','region':'Americas'},
+  'uruguay':{'code':'UY','region':'Americas'},'venezuela':{'code':'VE','region':'Americas'},
+  'ecuador':{'code':'EC','region':'Americas'},'bolivia':{'code':'BO','region':'Americas'},
+  'paraguay':{'code':'PY','region':'Americas'},
+  'france':{'code':'FR','region':'Europa'},'germany':{'code':'DE','region':'Europa'},
+  'sweden':{'code':'SE','region':'Europa'},'denmark':{'code':'DK','region':'Europa'},
+  'finland':{'code':'FI','region':'Europa'},'norway':{'code':'NO','region':'Europa'},
+  'russia':{'code':'RU','region':'Europa'},'ukraine':{'code':'UA','region':'Europa'},
+  'poland':{'code':'PL','region':'Europa'},'czech republic':{'code':'CZ','region':'Europa'},
+  'czechia':{'code':'CZ','region':'Europa'},'slovakia':{'code':'SK','region':'Europa'},
+  'hungary':{'code':'HU','region':'Europa'},'portugal':{'code':'PT','region':'Europa'},
+  'spain':{'code':'ES','region':'Europa'},'italy':{'code':'IT','region':'Europa'},
+  'netherlands':{'code':'NL','region':'Europa'},'belgium':{'code':'BE','region':'Europa'},
+  'austria':{'code':'AT','region':'Europa'},'switzerland':{'code':'CH','region':'Europa'},
+  'uk':{'code':'GB','region':'Europa'},'united kingdom':{'code':'GB','region':'Europa'},
+  'england':{'code':'GB','region':'Europa'},'latvia':{'code':'LV','region':'Europa'},
+  'lithuania':{'code':'LT','region':'Europa'},'estonia':{'code':'EE','region':'Europa'},
+  'serbia':{'code':'RS','region':'Europa'},'croatia':{'code':'HR','region':'Europa'},
+  'romania':{'code':'RO','region':'Europa'},'bulgaria':{'code':'BG','region':'Europa'},
+  'greece':{'code':'GR','region':'Europa'},'turkey':{'code':'TR','region':'Europa'},
+  'turkiye':{'code':'TR','region':'Europa'},'iceland':{'code':'IS','region':'Europa'},
+  'ireland':{'code':'IE','region':'Europa'},'georgia':{'code':'GE','region':'Europa'},
+  'kazakhstan':{'code':'KZ','region':'Europa'},'moldova':{'code':'MD','region':'Europa'},
+  'north macedonia':{'code':'MK','region':'Europa'},'slovenia':{'code':'SI','region':'Europa'},
+  'bosnia':{'code':'BA','region':'Europa'},'albania':{'code':'AL','region':'Europa'},
+  'montenegro':{'code':'ME','region':'Europa'},'belarus':{'code':'BY','region':'Europa'},
+  'china':{'code':'CN','region':'Asia'},'south korea':{'code':'KR','region':'Asia'},
+  'korea':{'code':'KR','region':'Asia'},'japan':{'code':'JP','region':'Asia'},
+  'australia':{'code':'AU','region':'Asia'},'new zealand':{'code':'NZ','region':'Asia'},
+  'indonesia':{'code':'ID','region':'Asia'},'malaysia':{'code':'MY','region':'Asia'},
+  'singapore':{'code':'SG','region':'Asia'},'thailand':{'code':'TH','region':'Asia'},
+  'vietnam':{'code':'VN','region':'Asia'},'philippines':{'code':'PH','region':'Asia'},
+  'india':{'code':'IN','region':'Asia'},'pakistan':{'code':'PK','region':'Asia'},
+  'mongolia':{'code':'MN','region':'Asia'},'taiwan':{'code':'TW','region':'Asia'},
+  'hong kong':{'code':'HK','region':'Asia'},'israel':{'code':'IL','region':'Asia'},
+  'uae':{'code':'AE','region':'Asia'},'united arab emirates':{'code':'AE','region':'Asia'},
+};
+
+function codeToFlagImg(code, size) {
+  size = size || 20;
+  if (!code || code.length !== 2) return '<img src="https://flagcdn.com/w20/xx.png" alt="?" style="width:'+size+'px;height:auto;vertical-align:middle;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,0.4);">';
+  const lc = code.toLowerCase();
+  return '<img src="https://flagcdn.com/w'+ (size <= 20 ? 20 : 40) +'/'+ lc +'.png" alt="'+code+'" title="'+code+'" style="width:'+size+'px;height:auto;vertical-align:middle;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,0.4);">';
+}
+
+function getCountryFlag(country, size) {
+  if (!country) return '';
+  const entry = COUNTRY_DATA[country.toLowerCase().trim()];
+  if (!entry) return '<img src="https://flagcdn.com/w20/xx.png" alt="?" style="width:'+(size||16)+'px;height:auto;vertical-align:middle;border-radius:2px;box-shadow:0 0 3px rgba(0,0,0,0.4);">';
+  return codeToFlagImg(entry.code, size);
+}
+
+function getCountryRegion(country) {
+  if (!country) return null;
+  const entry = COUNTRY_DATA[country.toLowerCase().trim()];
+  return entry ? entry.region : null;
+}
+
+function getTeamRegion(teamName) {
+  const starters = players.filter(p => p.TeamName === teamName && p.Role === 'Starter');
+  if (!starters.length) return null;
+  const counts = { 'Americas': 0, 'Europa': 0, 'Asia': 0 };
+  starters.forEach(p => { const r = getCountryRegion(p.Country); if (r) counts[r]++; });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const max = sorted[0][1];
+  if (max === 0) return null;
+  if (sorted.filter(e => e[1] === max).length > 1) return 'MIXED';
+  return sorted[0][0];
+}
+
+const REGION_STYLE = {
+  'Americas':{ color:'var(--green)',  icon:'\uD83C\uDF0E' },
+  'Europa':  { color:'var(--cyan)',   icon:'\uD83C\uDF0D' },
+  'Asia':    { color:'var(--purple)', icon:'\uD83C\uDF0F' },
+  'MIXED':   { color:'var(--yellow)', icon:'\uD83C\uDF10' },
+};
+
+function regionBadge(teamName) {
+  const r = getTeamRegion(teamName);
+  if (!r) return '';
+  const s = REGION_STYLE[r] || { color:'var(--text-dim)', icon:'\uD83C\uDF10' };
+  return `<span style="font-family:var(--font-data);font-size:10px;color:${s.color};background:${s.color}22;border:1px solid ${s.color}44;border-radius:4px;padding:1px 6px;letter-spacing:1px;">${s.icon} ${r.toUpperCase()}</span>`;
+}
 
 // File handling
 $('upload-finances').addEventListener('change', e => handleXL(e, d => {
@@ -1459,6 +1572,7 @@ function normalizePlayers(arr) {
     row['Total Titles'] = Number(row['Total Titles']) || 0;
     row['Previous MV'] = Number(row['Previous MV']) || 0;
     row.ContractMonths = Number(row.ContractMonths || row['ContractMonths']) || 0;
+    row.Country = String(row.Country || row['Country'] || '').trim();
     
     return row;
   });
@@ -1611,6 +1725,7 @@ function runIntel() {
           <div class="intel-metric">EXPIRING <span style="color:${prof.expiring>=3?'var(--red)':prof.expiring>=1?'var(--orange)':'var(--green)'}">${prof.expiring}</span></div>
           <div class="intel-metric">AVG FORM <span>${prof.avgForm.toFixed(1)}</span></div>
           ${prof.topPlayer ? `<div class="intel-metric">STAR <span style="color:var(--yellow)">⭐ ${String(prof.topPlayer.PlayerName)}</span></div>` : ''}
+          ${(()=>{ const r=getTeamRegion(prof.tName); const s=r?(REGION_STYLE[r]||{color:'var(--text-dim)',icon:'🌐'}):{color:'var(--text-dim)',icon:'🌐'}; return r?`<div class="intel-metric">REGION <span style="color:${s.color}">${s.icon} ${r}</span></div>`:''; })()}
         </div>
         <div class="intel-expand-hint">▸ CLIQUE PARA ANÁLISE COMPLETA</div>
       </div>
@@ -1644,6 +1759,7 @@ function runIntel() {
     intelSelectedTeam = profiles[0].tName;
   }
   if (intelSelectedTeam) renderIntelDetail(profiles);
+  renderRegionMap();
 }
 
 function selectIntelTeam(name) {
@@ -1843,6 +1959,58 @@ function renderIntelDetail(profiles) {
   $('intel-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+/* ═══ REGION MAP ═══ */
+function renderRegionMap() {
+  const filter = ($('region-filter')?.value || 'all');
+
+  // Build team→region mapping
+  const teamRegions = finances.map(t => {
+    const r = getTeamRegion(t.TeamName);
+    return { name: t.TeamName, region: r || 'unknown' };
+  });
+
+  // Count per region
+  const counts = { 'Americas': 0, 'Europa': 0, 'Asia': 0, 'MIXED': 0, 'unknown': 0 };
+  teamRegions.forEach(t => { counts[t.region] = (counts[t.region] || 0) + 1; });
+
+  // Render count bar
+  const regionStyles = {
+    'Americas': { color: 'var(--green)', icon: '🌎' },
+    'Europa':   { color: 'var(--cyan)', icon: '🌍' },
+    'Asia':     { color: 'var(--purple)', icon: '🌏' },
+    'MIXED':    { color: 'var(--yellow)', icon: '🌐' },
+    'unknown':  { color: 'var(--text-dim)', icon: '❓' }
+  };
+
+  $('region-count-bar').innerHTML = Object.entries(counts)
+    .filter(([,c]) => c > 0)
+    .map(([r, c]) => {
+      const s = regionStyles[r] || regionStyles['unknown'];
+      return `<span style="color:${s.color}; background:${s.color}15; border:1px solid ${s.color}33; padding:2px 8px; border-radius:3px;">${s.icon} ${r === 'unknown' ? 'N/A' : r}: <b>${c}</b></span>`;
+    }).join('');
+
+  // Filter
+  const filtered = filter === 'all' ? teamRegions : teamRegions.filter(t => t.region === filter);
+
+  // Sort by region then name
+  const regionOrder = { 'Americas': 0, 'Europa': 1, 'Asia': 2, 'MIXED': 3, 'unknown': 4 };
+  filtered.sort((a, b) => (regionOrder[a.region] ?? 9) - (regionOrder[b.region] ?? 9) || a.name.localeCompare(b.name));
+
+  if (!filtered.length) {
+    $('region-map-list').innerHTML = '<div style="grid-column:1/-1; color:var(--text-dim); font-family:var(--font-data); font-size:11px; padding:16px; text-align:center;">Nenhum time encontrado nessa região.</div>';
+    return;
+  }
+
+  $('region-map-list').innerHTML = filtered.map(t => {
+    const s = regionStyles[t.region] || regionStyles['unknown'];
+    return `
+      <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg3); border:1px solid ${s.color}22; border-left:3px solid ${s.color};">
+        <span style="font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.name}</span>
+        <span style="font-family:var(--font-data); font-size:10px; color:${s.color}; background:${s.color}15; border:1px solid ${s.color}33; padding:1px 6px; border-radius:3px; white-space:nowrap; flex-shrink:0;">${s.icon} ${t.region === 'unknown' ? 'N/A' : t.region.toUpperCase()}</span>
+      </div>`;
+  }).join('');
+}
+
 function launchApp() {
   if (!finLoaded || !plyLoaded) return;
   $('upload-overlay').style.display = 'none';
@@ -2011,8 +2179,8 @@ function openPlayerProfile(name) {
     <div class="player-modal">
       <button class="pm-close" onclick="this.closest('.player-modal-overlay').remove()">&times;</button>
       <div class="pm-header">
-        <div class="pm-name">${String(p.PlayerName)}</div>
-        <div class="pm-sub">${p.TeamName==='none'?'FREE AGENT':p.TeamName} • ${p.Role} • Contract: ${p.ContractMonths||0}m ${medals(p)}</div>
+        <div class="pm-name">${p.Country ? getCountryFlag(p.Country, 22)+' ' : ''}${String(p.PlayerName)}</div>
+        <div class="pm-sub">${p.TeamName==='none'?'FREE AGENT':p.TeamName} • ${p.Role} • Contract: ${p.ContractMonths||0}m${p.Country ? ' • '+p.Country : ''} ${medals(p)}</div>
       </div>
       <div class="pm-body">
 
@@ -2200,11 +2368,14 @@ function updateCommand() {
   const starters = players.filter(p=>p.TeamName===tName&&p.Role==='Starter').length;
   const bench = players.filter(p=>p.TeamName===tName&&p.Role==='Bench').length;
   const months = salaries>0?(bank/salaries).toFixed(1):'∞';
+  const teamRegion = getTeamRegion(tName);
+  const rSty = teamRegion ? (REGION_STYLE[teamRegion] || {color:'var(--text-dim)',icon:'🌐'}) : null;
   $('cmd-stat-row').innerHTML = `
     <div class="stat-box cyan"><div class="lbl">BANK BALANCE</div><div class="val">${fmtK(bank)}</div><div class="sub">${months}mo runway</div></div>
     <div class="stat-box ${net>=0?'green':'red'}"><div class="lbl">MONTHLY NET</div><div class="val">${net>=0?'+':''}${fmtK(net)}</div><div class="sub">${net>=0?'Profitable':'LOSING MONEY'}</div></div>
     <div class="stat-box ${starters>=5?'green':'orange'}"><div class="lbl">STARTERS</div><div class="val">${starters}/5</div><div class="sub">${bench} benched</div></div>
     <div class="stat-box ${oracle.score>=65?'cyan':'red'}"><div class="lbl">ORACLE SCORE</div><div class="val" style="color:${oracle.color}">${oracle.score}</div><div class="sub">Grade ${oracle.grade}</div></div>
+    ${rSty ? `<div class="stat-box" style="border-color:${rSty.color}44;"><div class="lbl">REGION</div><div class="val" style="color:${rSty.color};font-size:22px;">${rSty.icon}</div><div class="sub" style="color:${rSty.color};">${teamRegion}</div></div>` : ''}
   `;
 
   // Finances
@@ -2223,7 +2394,7 @@ function updateCommand() {
   const rosterHtml = players.filter(p=>p.TeamName===tName).map(p=>`
     <div class="list-row">
       <div>
-        <div class="name" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="openPlayerProfile('${String(p.PlayerName).replace(/'/g,"\\'")}')">${String(p.PlayerName)}</div>
+        <div class="name" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="openPlayerProfile('${String(p.PlayerName).replace(/'/g,"\\'")}')">${p.Country?`<span title="${p.Country}" style="margin-right:4px;display:inline-flex;align-items:center;">${getCountryFlag(p.Country, 16)}</span>`:''}${String(p.PlayerName)}</div>
         <div class="meta">${p.Role} • Contract: ${p.ContractMonths}m • ${fmt(p.MarketValue*0.10)}/mo ${medals(p)}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="toggleRole('${String(p.PlayerName).replace(/'/g,"\\'")}')">🔄 ${p.Role==='Starter'?'BENCH':'START'}</button>
@@ -2515,6 +2686,7 @@ function refreshMarket() {
     row.innerHTML=`
       <div style="flex:1; min-width:0;">
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          ${p.Country ? `<span title="${p.Country}" style="display:inline-flex;align-items:center;cursor:default;">${getCountryFlag(p.Country, 18)}</span>` : ''}
           <span class="name" style="cursor:pointer; text-decoration:underline; text-decoration-color:var(--border); text-underline-offset:3px;" onclick="event.stopPropagation(); openPlayerProfile('${p.pn.replace(/'/g,"\\'")}')">${p.pn}</span>
           <span style="color:var(--text-dim); font-size:11px;">[${p.TeamName}]</span>
           ${isHot?'<span class="badge badge-green">🔥 HOT</span>':''}
@@ -2962,7 +3134,8 @@ function exportExcels() {
     'Total EVP': p['Total EVP'] || 0,
     'Total VP': p['Total VP'] || 0,
     'Total Titles': p['Total Titles'] || 0,
-    'Previous MV': p['Previous MV'] || 0
+    'Previous MV': p['Previous MV'] || 0,
+    'Country': p.Country || ''
   }));
   // Export finances preserving original column names
   const fData = finances.map(t => ({

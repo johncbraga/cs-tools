@@ -2282,14 +2282,8 @@ function renderEventsGrid() {
       html += `<div class="ev-card-logo-wrap"><img src="${escHtml(e.logo)}" alt="" onerror="this.style.display='none'"></div>`;
     }
     html += `<div class="ev-card-info">`;
-    // Event name with optional Drive link
-    html += `<div class="ev-card-name">`;
-    if (e.driveLink) {
-      html += `<a href="${escHtml(e.driveLink)}" target="_blank" rel="noopener" title="Open in Google Drive">${escHtml(e.name || 'Unnamed Event')}</a>`;
-    } else {
-      html += escHtml(e.name || 'Unnamed Event');
-    }
-    html += `</div>`;
+    // Event name (no drive link here — link is in details view)
+    html += `<div class="ev-card-name">${escHtml(e.name || 'Unnamed Event')}</div>`;
     // Location
     if (e.city || e.country) {
       html += `<div class="ev-card-location">`;
@@ -2356,6 +2350,7 @@ function renderEventsGrid() {
 
     // Actions
     html += `<div class="ev-card-actions">`;
+    html += `<button class="ev-btn-details" onclick="openEventDetails(${idx})">📋 Details</button>`;
     html += `<button class="ev-btn-edit" onclick="openEditEvent(${idx})">✎ Edit</button>`;
     html += `<button class="ev-btn-delete" onclick="deleteEvent(${idx})">🗑 Delete</button>`;
     html += `</div>`;
@@ -2363,6 +2358,216 @@ function renderEventsGrid() {
   });
 
   grid.innerHTML = html;
+}
+
+/* ════════════════════════════════════════
+   EVENT DETAILS MODAL
+════════════════════════════════════════ */
+
+function openEventDetails(idx) {
+  const e = eventsData[idx];
+  if (!e) return;
+  const overlay = document.getElementById('evDetailOverlay');
+
+  // Header
+  const logoEl = document.getElementById('evdLogo');
+  if (e.logo) { logoEl.src = e.logo; logoEl.style.display = ''; }
+  else { logoEl.style.display = 'none'; }
+  document.getElementById('evdTitle').textContent = e.name || 'Unnamed Event';
+  const isLive = (e.status || '').toLowerCase() === 'live';
+  const isMajor = e.major === 'yes' || e.major === true;
+  const starStr = '⭐'.repeat(Math.min(5, Math.max(1, parseInt(e.stars) || 0)));
+  let sub = '';
+  if (e.city || e.country) sub += `${e.city || ''}${e.city && e.country ? ', ' : ''}${e.country || ''}`;
+  if (e.prizePool) sub += (sub ? ' · ' : '') + e.prizePool;
+  if (starStr) sub += (sub ? ' · ' : '') + starStr;
+  if (isMajor) sub += (sub ? ' · ' : '') + 'Major';
+  document.getElementById('evdSubtitle').textContent = sub;
+
+  let body = '';
+
+  // Drive link
+  if (e.driveLink) {
+    body += `<div class="evd-section">
+      <a class="evd-drive-link" href="${escHtml(e.driveLink)}" target="_blank" rel="noopener">
+        <span>📁</span> Open in Google Drive
+      </a>
+    </div>`;
+  }
+
+  // Results section
+  if ((e.status || '').toLowerCase() === 'finished' && (e.winner || e.second)) {
+    body += `<div class="evd-section evd-results-row">`;
+    if (e.winner) body += `<div class="evd-result-pill gold-text"><span class="evd-result-place">🏆 1st Place</span><span class="evd-result-team">${escHtml(e.winner)}</span></div>`;
+    if (e.second) body += `<div class="evd-result-pill silver-text"><span class="evd-result-place">🥈 2nd Place</span><span class="evd-result-team">${escHtml(e.second)}</span></div>`;
+    body += `</div>`;
+    // Player medals
+    const medals = [];
+    if (e.mvp) medals.push({ icon:'🥇', label:'MVP', val: e.mvp, prize: (e.playerPrizes||{}).mvp });
+    if (e.evp) medals.push({ icon:'🥈', label:'EVP', val: e.evp, prize: (e.playerPrizes||{}).evp });
+    if (e.vp)  medals.push({ icon:'🥉', label:'VP',  val: e.vp,  prize: (e.playerPrizes||{}).vp  });
+    if (medals.length) {
+      body += `<div class="evd-medals-row">`;
+      medals.forEach(m => {
+        body += `<div class="evd-medal-card"><div class="evd-medal-icon">${m.icon}</div><div class="evd-medal-label">${m.label}</div><div class="evd-medal-name">${escHtml(m.val)}</div>${m.prize ? `<div class="evd-medal-prize">${escHtml(m.prize)}</div>` : ''}</div>`;
+      });
+      body += `</div>`;
+    }
+  }
+
+  // Prize distribution
+  const pd = e.prizeDistribution || {};
+  const hasPrizes = Object.values(pd).some(v => v && v.trim());
+  if (hasPrizes) {
+    const placements = [
+      { key:'1st',    label:'🥇 1st Place',    color:'#FFD700' },
+      { key:'2nd',    label:'🥈 2nd Place',    color:'#C0C8D8' },
+      { key:'3rd-4th',label:'🥉 3rd–4th',      color:'#CD7F32' },
+      { key:'5th-8th',label:'4th–8th Place',   color:'var(--muted)' },
+      { key:'9th-11th',label:'9th–11th Place', color:'var(--muted)' },
+      { key:'12th-16th',label:'12th–16th',     color:'var(--muted)' },
+      { key:'17th-24th',label:'17th–24th',     color:'var(--muted)' },
+    ];
+    body += `<div class="evd-section"><div class="evd-section-title">💰 Prize Distribution</div><div class="evd-prize-grid">`;
+    placements.forEach(p => {
+      if (pd[p.key]) {
+        body += `<div class="evd-prize-row"><span class="evd-prize-place" style="color:${p.color}">${p.label}</span><span class="evd-prize-amount">${escHtml(pd[p.key])}</span></div>`;
+      }
+    });
+    body += `</div></div>`;
+  }
+
+  // Playoff section
+  const teams = e.playoffTeams || [];
+  if (teams.length === 8) {
+    body += `<div class="evd-section"><div class="evd-section-title">🏆 Playoff Bracket</div>`;
+
+    // Playoff teams with hover players
+    const players = e.playoffPlayers || {};
+    body += `<div class="evd-playoff-teams-list">`;
+    teams.forEach((t, ti) => {
+      const tName = t.name || `Team ${ti+1}`;
+      const tPlayers = players[tName] || [];
+      body += `<div class="evd-pt-chip" data-team-idx="${ti}">`;
+      if (t.logo) body += `<img src="${escHtml(t.logo)}" class="evd-pt-logo" alt="" onerror="this.style.display='none'">`;
+      body += `<span class="evd-pt-seed">Seed ${ti+1}</span>`;
+      body += `<span class="evd-pt-name">${escHtml(tName)}</span>`;
+      if (tPlayers.filter(Boolean).length) {
+        body += `<div class="evd-pt-players">`;
+        tPlayers.forEach((p, pi) => {
+          if (p) body += `<div class="evd-pt-player">${escHtml(p)}</div>`;
+        });
+        body += `</div>`;
+      }
+      body += `</div>`;
+    });
+    body += `</div>`;
+
+    // Bracket drawing
+    body += renderPlayoffBracket(e);
+    body += `</div>`;
+  }
+
+  document.getElementById('evDetailBody').innerHTML = body;
+  overlay.classList.add('visible');
+}
+
+function closeEventDetails() {
+  document.getElementById('evDetailOverlay').classList.remove('visible');
+}
+
+/* Determine winner of a bracket match given scores */
+function bracketWinner(t1, t2, score1, score2) {
+  const s1 = parseInt(score1) || 0;
+  const s2 = parseInt(score2) || 0;
+  if (s1 > s2) return t1;
+  if (s2 > s1) return t2;
+  return null; // no result yet
+}
+
+/* Render a static playoff bracket (view-only) from event data */
+function renderPlayoffBracket(e) {
+  const teams = e.playoffTeams || [];
+  if (teams.length !== 8) return '';
+  const bracket = e.playoffBracket || {};
+  const qf = bracket.qf || [{},{},{},{}];
+  const sf = bracket.sf || [{},{}];
+  const fn = bracket.final || {};
+
+  const tName = i => teams[i] ? (teams[i].name || `Team ${i+1}`) : `Team ${i+1}`;
+  const tLogo = i => teams[i] ? teams[i].logo : '';
+
+  // Build a map: team name → logo
+  const logoMap = {};
+  teams.forEach((t, i) => { if (t && t.name && t.logo) logoMap[t.name] = t.logo; });
+
+  // QF: 0v7, 1v6, 2v5, 3v4
+  const qfPairs = [[0,7],[1,6],[2,5],[3,4]];
+  const qfWinners = qfPairs.map((p, i) => bracketWinner(tName(p[0]), tName(p[1]), (qf[i]||{}).score1, (qf[i]||{}).score2));
+
+  // SF: use stored team names if available, otherwise use QF winners
+  const sfPairs = [[0,1],[2,3]];
+  const sfTeams = sfPairs.map((p, i) => {
+    const s = sf[i] || {};
+    return {
+      team1: s.team1 || qfWinners[p[0]] || '?',
+      team2: s.team2 || qfWinners[p[1]] || '?',
+      score1: s.score1,
+      score2: s.score2
+    };
+  });
+  const sfWinners = sfTeams.map(s => bracketWinner(s.team1, s.team2, s.score1, s.score2));
+
+  // Final: use stored team names if available, otherwise use SF winners
+  const fnTeams = {
+    team1: fn.team1 || sfWinners[0] || '?',
+    team2: fn.team2 || sfWinners[1] || '?',
+    score1: fn.score1,
+    score2: fn.score2
+  };
+  const champion = bracketWinner(fnTeams.team1, fnTeams.team2, fnTeams.score1, fnTeams.score2);
+
+  const mkTeam = (name, score, isWinner, logo) => {
+    const cls = isWinner ? 'bk-team bk-team-winner' : 'bk-team';
+    let img = logo ? `<img src="${escHtml(logo)}" class="bk-team-logo" alt="" onerror="this.style.display='none'">` : '';
+    return `<div class="${cls}">${img}<span class="bk-team-name">${escHtml(name || '?')}</span><span class="bk-team-score">${score !== undefined && score !== '' ? escHtml(String(score)) : '—'}</span></div>`;
+  };
+
+  const mkMatch = (t1, t2, s1, s2, logo1='', logo2='') => {
+    const w = bracketWinner(t1, t2, s1, s2);
+    return `<div class="bk-match">${mkTeam(t1, s1, w===t1, logo1)}${mkTeam(t2, s2, w===t2, logo2)}</div>`;
+  };
+
+  let h = `<div class="bk-bracket">`;
+
+  // Column: QF
+  h += `<div class="bk-col"><div class="bk-col-title">Quarter-Finals</div>`;
+  qfPairs.forEach((p,i) => {
+    const q = qf[i] || {};
+    h += mkMatch(tName(p[0]), tName(p[1]), q.score1, q.score2, tLogo(p[0]), tLogo(p[1]));
+  });
+  h += `</div>`;
+
+  // Column: SF (with logos from map)
+  h += `<div class="bk-col"><div class="bk-col-title">Semi-Finals</div>`;
+  sfTeams.forEach((s, i) => {
+    h += mkMatch(s.team1, s.team2, s.score1, s.score2, logoMap[s.team1]||'', logoMap[s.team2]||'');
+  });
+  h += `</div>`;
+
+  // Column: Final + Champion (with logos from map)
+  h += `<div class="bk-col"><div class="bk-col-title">Grand Final</div>`;
+  h += mkMatch(fnTeams.team1, fnTeams.team2, fnTeams.score1, fnTeams.score2, logoMap[fnTeams.team1]||'', logoMap[fnTeams.team2]||'');
+  h += `</div>`;
+
+  // Champion (with logo)
+  const champLogo = champion ? (logoMap[champion] || '') : '';
+  h += `<div class="bk-col bk-col-champion"><div class="bk-col-title">Champion</div>`;
+  h += `<div class="bk-champion">${champion ? `${champLogo ? `<img src="${escHtml(champLogo)}" class="bk-team-logo" style="width:28px;height:28px;" alt="" onerror="this.style.display='none'">` : ''}<div class="bk-champion-icon">🏆</div><div class="bk-champion-name">${escHtml(champion)}</div>` : '<div class="bk-champion-name muted">TBD</div>'}</div>`;
+  h += `</div>`;
+
+  h += `</div>`; // .bk-bracket
+  return h;
 }
 
 /* ─── Refresh entire events UI ─── */
@@ -2406,9 +2611,32 @@ function openEventModal(editIdx = -1) {
       document.getElementById('evmEVP').value = e.evp || '';
       document.getElementById('evmVP').value = e.vp || '';
     }
+
+    // Prize distribution
+    const pd = e.prizeDistribution || {};
+    document.getElementById('evmPrize1st').value  = pd['1st'] || '';
+    document.getElementById('evmPrize2nd').value  = pd['2nd'] || '';
+    document.getElementById('evmPrize34').value   = pd['3rd-4th'] || '';
+    document.getElementById('evmPrize58').value   = pd['5th-8th'] || '';
+    document.getElementById('evmPrize911').value  = pd['9th-11th'] || '';
+    document.getElementById('evmPrize1216').value = pd['12th-16th'] || '';
+    document.getElementById('evmPrize1724').value = pd['17th-24th'] || '';
+
+    // Player prizes
+    const pp = e.playerPrizes || {};
+    document.getElementById('evmPrizeMVP').value = pp.mvp || '';
+    document.getElementById('evmPrizeEVP').value = pp.evp || '';
+    document.getElementById('evmPrizeVP').value  = pp.vp  || '';
+
+    // Playoff teams & bracket
+    loadPlayoffTeamsEdit(e.playoffTeams || []);
+    loadPlayoffBracketEdit(e.playoffTeams || [], e.playoffBracket || {}, e.playoffPlayers || {});
+  } else {
+    loadPlayoffTeamsEdit([]);
+    loadPlayoffBracketEdit([], {}, {});
   }
 
-  // Always reset file picker (browsers don't allow programmatic prefill anyway)
+  // Always reset file picker
   const f = document.getElementById('evmLogoFile');
   if (f) f.value = '';
   updateEventLogoPreview();
@@ -2424,7 +2652,9 @@ function closeEventModal() {
 function clearEventModal() {
   ['evmName','evmDriveLink','evmPrizePool','evmLogo','evmTrophy','evmCity','evmCountry',
    'evmFlag','evmTeamCount','evmStage','evmNext1','evmNext2','evmNext3',
-   'evmWinner','evmSecond','evmMVP','evmEVP','evmVP'].forEach(id => {
+   'evmWinner','evmSecond','evmMVP','evmEVP','evmVP',
+   'evmPrize1st','evmPrize2nd','evmPrize34','evmPrize58','evmPrize911','evmPrize1216','evmPrize1724',
+   'evmPrizeMVP','evmPrizeEVP','evmPrizeVP'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -2480,7 +2710,6 @@ function saveEvent() {
     ev.nextMatch1 = document.getElementById('evmNext1').value.trim();
     ev.nextMatch2 = document.getElementById('evmNext2').value.trim();
     ev.nextMatch3 = document.getElementById('evmNext3').value.trim();
-    // Clear finished fields
     ev.winner = ''; ev.second = ''; ev.mvp = ''; ev.evp = ''; ev.vp = '';
   } else {
     ev.winner = document.getElementById('evmWinner').value.trim();
@@ -2488,9 +2717,35 @@ function saveEvent() {
     ev.mvp = document.getElementById('evmMVP').value.trim();
     ev.evp = document.getElementById('evmEVP').value.trim();
     ev.vp = document.getElementById('evmVP').value.trim();
-    // Clear live fields
     ev.stage = ''; ev.nextMatch1 = ''; ev.nextMatch2 = ''; ev.nextMatch3 = '';
   }
+
+  // Prize distribution
+  ev.prizeDistribution = {
+    '1st':       document.getElementById('evmPrize1st').value.trim(),
+    '2nd':       document.getElementById('evmPrize2nd').value.trim(),
+    '3rd-4th':   document.getElementById('evmPrize34').value.trim(),
+    '5th-8th':   document.getElementById('evmPrize58').value.trim(),
+    '9th-11th':  document.getElementById('evmPrize911').value.trim(),
+    '12th-16th': document.getElementById('evmPrize1216').value.trim(),
+    '17th-24th': document.getElementById('evmPrize1724').value.trim(),
+  };
+
+  // Player prizes
+  ev.playerPrizes = {
+    mvp: document.getElementById('evmPrizeMVP').value.trim(),
+    evp: document.getElementById('evmPrizeEVP').value.trim(),
+    vp:  document.getElementById('evmPrizeVP').value.trim(),
+  };
+
+  // Playoff teams
+  ev.playoffTeams = collectPlayoffTeams();
+
+  // Playoff bracket
+  ev.playoffBracket = collectPlayoffBracket();
+
+  // Playoff players
+  ev.playoffPlayers = collectPlayoffPlayers(ev.playoffTeams);
 
   if (!ev.name) {
     alert('Event name is required.');
@@ -2506,6 +2761,249 @@ function saveEvent() {
   closeEventModal();
   refreshEventsUI();
 }
+
+/* ─── Playoff edit helpers ─── */
+function loadPlayoffTeamsEdit(teams) {
+  const grid = document.getElementById('evmPlayoffTeamsGrid');
+  if (!grid) return;
+  let html = '';
+  for (let i = 0; i < 8; i++) {
+    const t = teams[i] || {};
+    const hasLogo = !!(t.logo);
+    html += `<div class="ev-playoff-team-row">
+      <span class="ev-playoff-seed">Seed ${i+1}</span>
+      <input class="form-control ev-pt-name" type="text" placeholder="Team name" value="${escHtml(t.name||'')}" data-pt-idx="${i}" data-pt-field="name">
+      <div class="ev-pt-logo-wrap">
+        <input class="form-control ev-pt-logo" type="text" placeholder="Logo URL" value="${escHtml(t.logo||'')}" data-pt-idx="${i}" data-pt-field="logo">
+        <label class="ev-pt-upload-btn" title="Upload image from computer">
+          📁
+          <input type="file" accept="image/*" data-pt-upload="${i}" style="display:none;">
+        </label>
+        <button type="button" class="ev-pt-clear-btn" data-pt-clear="${i}" title="Clear logo" style="${hasLogo ? '' : 'display:none;'}">✕</button>
+        <img class="ev-pt-logo-preview" data-pt-preview="${i}" src="${hasLogo ? escHtml(t.logo) : ''}" alt="" style="${hasLogo ? '' : 'display:none;'}" onerror="this.style.display='none'">
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+  // Update bracket labels whenever team names change
+  grid.querySelectorAll('.ev-pt-name').forEach(inp => {
+    inp.addEventListener('input', () => refreshBracketEditLabels());
+  });
+  // File upload handlers (delegated)
+  grid.querySelectorAll('[data-pt-upload]').forEach(fileInp => {
+    fileInp.addEventListener('change', () => {
+      const idx = fileInp.getAttribute('data-pt-upload');
+      const file = fileInp.files && fileInp.files[0];
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) {
+        alert('Please select an image file.');
+        fileInp.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const logoInput = grid.querySelector(`[data-pt-idx="${idx}"][data-pt-field="logo"]`);
+        if (logoInput) logoInput.value = String(reader.result || '');
+        updatePtLogoPreview(idx);
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  // Clear button handlers
+  grid.querySelectorAll('[data-pt-clear]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.getAttribute('data-pt-clear');
+      const logoInput = grid.querySelector(`[data-pt-idx="${idx}"][data-pt-field="logo"]`);
+      if (logoInput) logoInput.value = '';
+      const fileInp = grid.querySelector(`[data-pt-upload="${idx}"]`);
+      if (fileInp) fileInp.value = '';
+      updatePtLogoPreview(idx);
+    });
+  });
+  // URL input change → update preview
+  grid.querySelectorAll('.ev-pt-logo').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = inp.getAttribute('data-pt-idx');
+      updatePtLogoPreview(idx);
+    });
+  });
+}
+
+function updatePtLogoPreview(idx) {
+  const grid = document.getElementById('evmPlayoffTeamsGrid');
+  if (!grid) return;
+  const logoInput = grid.querySelector(`[data-pt-idx="${idx}"][data-pt-field="logo"]`);
+  const preview = grid.querySelector(`[data-pt-preview="${idx}"]`);
+  const clearBtn = grid.querySelector(`[data-pt-clear="${idx}"]`);
+  const val = logoInput ? logoInput.value.trim() : '';
+  if (preview) {
+    if (val) { preview.src = val; preview.style.display = ''; }
+    else { preview.src = ''; preview.style.display = 'none'; }
+  }
+  if (clearBtn) {
+    clearBtn.style.display = val ? '' : 'none';
+  }
+}
+
+function getPlayoffTeamNames() {
+  const names = [];
+  for (let i = 0; i < 8; i++) {
+    const inp = document.querySelector(`[data-pt-idx="${i}"][data-pt-field="name"]`);
+    names.push(inp ? inp.value.trim() || `Team ${i+1}` : `Team ${i+1}`);
+  }
+  return names;
+}
+
+function loadPlayoffBracketEdit(teams, bracket, players) {
+  const qf = bracket.qf || [{},{},{},{}];
+  const sf = bracket.sf || [{},{}];
+  const fn = bracket.final || {};
+  const names = teams.length === 8 ? teams.map(t => t ? (t.name||'?') : '?') : Array.from({length:8}, (_,i)=>`Team ${i+1}`);
+
+  // QF matches: 0v7, 1v6, 2v5, 3v4
+  const qfPairs = [[0,7],[1,6],[2,5],[3,4]];
+  let qfHtml = '';
+  qfPairs.forEach((p, i) => {
+    const q = qf[i] || {};
+    qfHtml += `<div class="ev-bk-match-row">
+      <span class="ev-bk-team-label bk-label-${i}-0">${escHtml(names[p[0]])}</span>
+      <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(q.score1||''))}" data-round="qf" data-match="${i}" data-pos="score1">
+      <span class="ev-bk-vs">–</span>
+      <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(q.score2||''))}" data-round="qf" data-match="${i}" data-pos="score2">
+      <span class="ev-bk-team-label bk-label-${i}-1">${escHtml(names[p[1]])}</span>
+    </div>`;
+  });
+  document.getElementById('evmQFMatches').innerHTML = qfHtml;
+
+  // SF — editable team name inputs
+  let sfHtml = '';
+  [[0,1],[2,3]].forEach((p,i) => {
+    const s = sf[i] || {};
+    const defaultT1 = s.team1 || (i===0 ? 'QF1 Winner' : 'QF3 Winner');
+    const defaultT2 = s.team2 || (i===0 ? 'QF2 Winner' : 'QF4 Winner');
+    sfHtml += `<div class="ev-bk-match-row">
+      <input class="form-control ev-bk-team-input" type="text" placeholder="${i===0?'QF1 Winner':'QF3 Winner'}" value="${escHtml(defaultT1!==`QF${i===0?1:3} Winner`?defaultT1:'')}" data-round="sf" data-match="${i}" data-pos="team1">
+      <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(s.score1||''))}" data-round="sf" data-match="${i}" data-pos="score1">
+      <span class="ev-bk-vs">–</span>
+      <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(s.score2||''))}" data-round="sf" data-match="${i}" data-pos="score2">
+      <input class="form-control ev-bk-team-input" type="text" placeholder="${i===0?'QF2 Winner':'QF4 Winner'}" value="${escHtml(defaultT2!==`QF${i===0?2:4} Winner`?defaultT2:'')}" data-round="sf" data-match="${i}" data-pos="team2">
+    </div>`;
+  });
+  document.getElementById('evmSFMatches').innerHTML = sfHtml;
+
+  // Final — editable team name inputs
+  const fDefaultT1 = fn.team1 || '';
+  const fDefaultT2 = fn.team2 || '';
+  const fHtml = `<div class="ev-bk-match-row">
+    <input class="form-control ev-bk-team-input" type="text" placeholder="SF1 Winner" value="${escHtml(fDefaultT1)}" data-round="final" data-match="0" data-pos="team1">
+    <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(fn.score1||''))}" data-round="final" data-match="0" data-pos="score1">
+    <span class="ev-bk-vs">–</span>
+    <input class="form-control ev-bk-score" type="text" placeholder="0" maxlength="2" value="${escHtml(String(fn.score2||''))}" data-round="final" data-match="0" data-pos="score2">
+    <input class="form-control ev-bk-team-input" type="text" placeholder="SF2 Winner" value="${escHtml(fDefaultT2)}" data-round="final" data-match="0" data-pos="team2">
+  </div>`;
+  document.getElementById('evmFinalMatch').innerHTML = fHtml;
+
+  // Players
+  loadPlayoffPlayersEdit(teams, players);
+}
+
+function refreshBracketEditLabels() {
+  const names = getPlayoffTeamNames();
+  const qfPairs = [[0,7],[1,6],[2,5],[3,4]];
+  qfPairs.forEach((p, i) => {
+    const l0 = document.querySelector(`.bk-label-${i}-0`);
+    const l1 = document.querySelector(`.bk-label-${i}-1`);
+    if (l0) l0.textContent = names[p[0]];
+    if (l1) l1.textContent = names[p[1]];
+  });
+}
+
+function loadPlayoffPlayersEdit(teams, players) {
+  const sec = document.getElementById('evmPlayersSection');
+  if (!sec) return;
+  let html = '';
+  for (let i = 0; i < 8; i++) {
+    const t = teams[i] || {};
+    const tName = t.name || `Team ${i+1}`;
+    const tPlayers = players[tName] || [];
+    html += `<div class="ev-players-team-block">
+      <div class="ev-players-team-name" data-players-idx="${i}">Seed ${i+1}: <span class="ev-players-team-ref">${escHtml(tName)}</span></div>
+      <div class="ev-players-inputs">`;
+    for (let j = 0; j < 5; j++) {
+      html += `<input class="form-control ev-player-inp" type="text" placeholder="Player ${j+1}" value="${escHtml((tPlayers[j]||''))}" data-team-idx="${i}" data-player-idx="${j}">`;
+    }
+    html += `</div></div>`;
+  }
+  sec.innerHTML = html;
+}
+
+function collectPlayoffTeams() {
+  const teams = [];
+  for (let i = 0; i < 8; i++) {
+    const nameEl = document.querySelector(`[data-pt-idx="${i}"][data-pt-field="name"]`);
+    const logoEl = document.querySelector(`[data-pt-idx="${i}"][data-pt-field="logo"]`);
+    teams.push({
+      name: nameEl ? nameEl.value.trim() : '',
+      logo: logoEl ? logoEl.value.trim() : ''
+    });
+  }
+  return teams;
+}
+
+function collectPlayoffBracket() {
+  const bracket = { qf: [], sf: [], final: {} };
+  // QF
+  for (let i = 0; i < 4; i++) {
+    const s1 = document.querySelector(`[data-round="qf"][data-match="${i}"][data-pos="score1"]`);
+    const s2 = document.querySelector(`[data-round="qf"][data-match="${i}"][data-pos="score2"]`);
+    bracket.qf.push({ score1: s1 ? s1.value.trim() : '', score2: s2 ? s2.value.trim() : '' });
+  }
+  // SF (with team names)
+  for (let i = 0; i < 2; i++) {
+    const t1 = document.querySelector(`[data-round="sf"][data-match="${i}"][data-pos="team1"]`);
+    const t2 = document.querySelector(`[data-round="sf"][data-match="${i}"][data-pos="team2"]`);
+    const s1 = document.querySelector(`[data-round="sf"][data-match="${i}"][data-pos="score1"]`);
+    const s2 = document.querySelector(`[data-round="sf"][data-match="${i}"][data-pos="score2"]`);
+    bracket.sf.push({
+      team1: t1 ? t1.value.trim() : '',
+      team2: t2 ? t2.value.trim() : '',
+      score1: s1 ? s1.value.trim() : '',
+      score2: s2 ? s2.value.trim() : ''
+    });
+  }
+  // Final (with team names)
+  const ft1 = document.querySelector(`[data-round="final"][data-match="0"][data-pos="team1"]`);
+  const ft2 = document.querySelector(`[data-round="final"][data-match="0"][data-pos="team2"]`);
+  const fs1 = document.querySelector(`[data-round="final"][data-match="0"][data-pos="score1"]`);
+  const fs2 = document.querySelector(`[data-round="final"][data-match="0"][data-pos="score2"]`);
+  bracket.final = {
+    team1: ft1 ? ft1.value.trim() : '',
+    team2: ft2 ? ft2.value.trim() : '',
+    score1: fs1 ? fs1.value.trim() : '',
+    score2: fs2 ? fs2.value.trim() : ''
+  };
+  return bracket;
+}
+
+function collectPlayoffPlayers(playoffTeams) {
+  const result = {};
+  for (let i = 0; i < 8; i++) {
+    const tName = (playoffTeams[i] && playoffTeams[i].name) || `Team ${i+1}`;
+    const ps = [];
+    for (let j = 0; j < 5; j++) {
+      const inp = document.querySelector(`[data-team-idx="${i}"][data-player-idx="${j}"]`);
+      ps.push(inp ? inp.value.trim() : '');
+    }
+    result[tName] = ps;
+  }
+  return result;
+}
+
+/* ─── Event Details listeners ─── */
+document.getElementById('evDetailClose').addEventListener('click', closeEventDetails);
+document.getElementById('evDetailOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('evDetailOverlay')) closeEventDetails();
+});
 
 /* ─── Edit / Delete ─── */
 function openEditEvent(idx) {

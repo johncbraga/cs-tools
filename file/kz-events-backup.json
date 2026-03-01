@@ -20,6 +20,152 @@
     "second": "",
     "mvp": "",
     "evp": "",
-    "vp": ""
+    "vp": "",
+    "prizeDistribution": {
+      "1st": "$500,000 | $150,000 [club reward]",
+      "2nd": "$170,000 | $65,000 [club reward]",
+      "3rd-4th": "$80,000 | $45,000 [club reward]",
+      "5th-8th": "$45,000 | $20,000 [club reward]",
+      "9th-11th": "$20,000 | $10,000 [club reward]",
+      "12th-16th": "$20,000 | $10,000 [club reward]",
+      "17th-24th": "$10,000 | $8,000 [club reward]"
+    },
+    "playerPrizes": {
+      "mvp": "$17,500",
+      "evp": "$12,500",
+      "vp": "$7,500"
+    },
+    "playoffTeams": [
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      },
+      {
+        "name": "",
+        "logo": ""
+      }
+    ],
+    "playoffBracket": {
+      "qf": [
+        {
+          "score1": "",
+          "score2": ""
+        },
+        {
+          "score1": "",
+          "score2": ""
+        },
+        {
+          "score1": "",
+          "score2": ""
+        },
+        {
+          "score1": "",
+          "score2": ""
+        }
+      ],
+      "sf": [
+        {
+          "team1": "",
+          "team2": "",
+          "score1": "",
+          "score2": ""
+        },
+        {
+          "team1": "",
+          "team2": "",
+          "score1": "",
+          "score2": ""
+        }
+      ],
+      "final": {
+        "team1": "",
+        "team2": "",
+        "score1": "",
+        "score2": ""
+      }
+    },
+    "playoffPlayers": {
+      "Team 1": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 2": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 3": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 4": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 5": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 6": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 7": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "Team 8": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    }
   }
 ]
