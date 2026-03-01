@@ -2236,12 +2236,15 @@ function getFilteredEvents() {
   const playerQ = document.getElementById('evFilterPlayer').value;
   const teamQ = document.getElementById('evFilterTeamWin').value;
   const starsQ = document.getElementById('evFilterStars').value;
+  const regionQ = document.getElementById('evFilterRegion').value;
 
   return eventsData.filter((e, idx) => {
     // Name filter
     if (nameQ && !(e.name || '').toLowerCase().includes(nameQ)) return false;
     // Stars filter
     if (starsQ && String(e.stars) !== starsQ) return false;
+    // Region filter
+    if (regionQ && (e.region || '') !== regionQ) return false;
     // Player medal filter
     if (playerQ) {
       const medals = [e.mvp, e.evp, e.vp].map(v => (v || '').trim());
@@ -2298,6 +2301,11 @@ function renderEventsGrid() {
     if (isFinished) html += `<span class="ev-badge ev-badge-finished">Finished</span>`;
     if (e.stars) html += `<span class="ev-badge ev-badge-stars">${starStr}</span>`;
     if (e.teamCount) html += `<span class="ev-badge ev-badge-teams">${e.teamCount} teams</span>`;
+    if (e.region) {
+      const regionEmoji = { global: '🌍', americas: '🌎', asia: '🌏', europe: '🌍' };
+      const regionName = { global: 'Global', americas: 'Americas', asia: 'Asia', europe: 'Europe' };
+      html += `<span class="ev-badge ev-badge-region ev-badge-region-${escHtml(e.region)}">${regionEmoji[e.region] || '🌐'} ${escHtml(regionName[e.region] || e.region)}</span>`;
+    }
     if (e.prizePool) html += `<span class="ev-badge ev-badge-prize">${escHtml(e.prizePool)}</span>`;
     html += `</div>`;
     html += `</div></div>`;
@@ -2382,6 +2390,10 @@ function openEventDetails(idx) {
   if (e.prizePool) sub += (sub ? ' · ' : '') + e.prizePool;
   if (starStr) sub += (sub ? ' · ' : '') + starStr;
   if (isMajor) sub += (sub ? ' · ' : '') + 'Major';
+  if (e.region) {
+    const rNames = { global: '🌍 Global', americas: '🌎 Americas', asia: '🌏 Asia', europe: '🌍 Europe' };
+    sub += (sub ? ' · ' : '') + (rNames[e.region] || e.region);
+  }
   document.getElementById('evdSubtitle').textContent = sub;
 
   let body = '';
@@ -2597,6 +2609,7 @@ function openEventModal(editIdx = -1) {
     document.getElementById('evmTeamCount').value = e.teamCount || '';
     document.getElementById('evmStars').value = String(e.stars || 3);
     document.getElementById('evmMajor').value = (e.major === 'yes' || e.major === true) ? 'yes' : 'no';
+    document.getElementById('evmRegion').value = e.region || 'global';
     document.getElementById('evmStatus').value = (e.status || 'Finished');
     toggleStatusFields();
     if ((e.status || '').toLowerCase() === 'live') {
@@ -2663,6 +2676,7 @@ function clearEventModal() {
   updateEventLogoPreview();
   document.getElementById('evmStars').value = '3';
   document.getElementById('evmMajor').value = 'no';
+  document.getElementById('evmRegion').value = 'global';
   document.getElementById('evmStatus').value = 'Finished';
   toggleStatusFields();
 }
@@ -2702,6 +2716,7 @@ function saveEvent() {
     teamCount: parseInt(document.getElementById('evmTeamCount').value) || 0,
     stars: parseInt(document.getElementById('evmStars').value) || 3,
     major: document.getElementById('evmMajor').value,
+    region: document.getElementById('evmRegion').value,
     status: status
   };
 
@@ -3077,7 +3092,7 @@ document.getElementById('evModalOverlay').addEventListener('click', (e) => {
 });
 
 // Filters
-['evFilterName', 'evFilterPlayer', 'evFilterTeamWin', 'evFilterStars'].forEach(id => {
+['evFilterName', 'evFilterPlayer', 'evFilterTeamWin', 'evFilterStars', 'evFilterRegion'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', renderEventsGrid);
 });
@@ -3087,6 +3102,7 @@ document.getElementById('btnClearEvFilters').addEventListener('click', () => {
   document.getElementById('evFilterPlayer').value = '';
   document.getElementById('evFilterTeamWin').value = '';
   document.getElementById('evFilterStars').value = '';
+  document.getElementById('evFilterRegion').value = '';
   renderEventsGrid();
 });
 
